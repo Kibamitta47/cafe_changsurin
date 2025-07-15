@@ -12,12 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('admin_id', function (Blueprint $table) {
-            $table->id('AdminID');
-            $table->string('UserName', 50)->unique();
-            $table->string('Email')->unique();
-            $table->string('Password', 100)->unique();
-            $table->timestamps(); // เพิ่มคอลัมน์ created_at และ updated_at
-        });
+    $table->id('AdminID');
+    $table->string('UserName', 50)->unique();
+    $table->string('Email')->unique();
+    $table->string('password', 255);  // ชื่อคอลัมน์เป็น password ตัวพิมพ์เล็ก และไม่ unique
+    $table->timestamps();
+});
     }
 
     /**

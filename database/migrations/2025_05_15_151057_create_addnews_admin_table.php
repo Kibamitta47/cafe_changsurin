@@ -6,13 +6,14 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     public function up(): void {
-        Schema::create('Addnews_admin', function (Blueprint $table) {
-            $table->id();
-            $table->string('title');
-            $table->text('content');
-            $table->json('images')->nullable();
-            $table->timestamps();
-        });
+        Schema::create('addnews_admin', function (Blueprint $table) {
+    $table->id();
+    $table->string('title');
+    $table->text('content');
+    $table->json('images')->nullable();
+    $table->timestamps();
+});
+
     }
 
     public function down(): void {

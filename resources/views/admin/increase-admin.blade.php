@@ -1,509 +1,708 @@
-@include('components.adminmenu')
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เพิ่มข้อมูลคาเฟ่</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ isset($cafe) ? 'แก้ไขข้อมูลคาเฟ่' : 'เพิ่มข้อมูลคาเฟ่ใหม่' }} | ระบบจัดการ</title>
 
- 
-    
-    <style>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <style>
+
+    .form-check-label {
+    font-weight: 600; /* ทำให้ข้อความเป็นตัวหนา */
+    color: #333; /* กำหนดให้เป็นสีดำ (หรือสีที่ต้องการ) */
+}
+    :root {
+        --primary-blue: #3b82f6;
+        --dark-blue: #2563eb;
+        --red-error: #dc2626;
+        --red-dark: #b91c1c;
+        --gray-light: #e5e7eb;
+        --gray-text: #333;
+        --white: #ffffff;
+        --shadow-light: rgba(0, 0, 0, 0.08);
+        --transition-ease: all 0.3s ease-in-out;
+    }
+
     body {
-        background-color: #f5f7fa;
-        font-family: 'Sarabun', sans-serif;
-        font-size: 0.9rem;
-    }
-
-    .form-section {
-        background-color: #ffffff;
-        padding: 20px;
-        margin-bottom: 30px;
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    }
-
-    .form-section h2 {
-        border-left: 5px solid #0d6efd;
-        padding-left: 15px;
-        font-size: 1.2rem;
-        margin-bottom: 15px;
+        font-family: 'Sarabun', 'Inter', sans-serif; /* เพิ่มฟอนต์ไทย */
+        background-color: #f0f2f5; /* Lighter background for the entire page */
         color: #333;
+        padding-top: 20px; /* Space from top */
+        padding-bottom: 20px; /* Space from bottom */
+        transition: padding-left 0.3s ease; /* For sidebar transition */
     }
 
-    .form-group {
-        margin-bottom: 15px;
+    body.sidebar-open {
+        padding-left: 250px; /* Needs to match your sidebar width */
     }
 
-    label {
+    .container.mt-5.mb-5 {
+        background-color: var(--white);
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        padding: 40px; /* More internal spacing */
+    }
+
+    h2 {
+        color: var(--dark-blue);
+        border-bottom: 2px solid var(--gray-light);
+        padding-bottom: 15px;
+        margin-bottom: 30px;
+        font-weight: 700;
+    }
+
+    .form-label {
         font-weight: 600;
-        margin-bottom: 6px;
-        display: block;
-        color: #444;
+        color: #555;
+        margin-bottom: 8px; /* Space below labels */
     }
 
-    input.form-control,
-    select.form-control,
-    textarea.form-control {
-        border-radius: 8px;
-        border: 1px solid #ced4da;
-        box-shadow: none;
-        transition: all 0.2s ease-in-out;
-        font-size: 0.9rem;
-        padding: 6px 10px;
+    .form-control, .form-select, .input-group-text {
+        border-radius: 8px; /* More rounded inputs */
+        border-color: #ced4da;
     }
 
-    input.form-control:focus,
-    select.form-control:focus,
-    textarea.form-control:focus {
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-    }
-
-    .input-group .input-group-text {
-        background-color: #e9ecef;
-        border-radius: 8px 0 0 8px;
-        font-size: 0.9rem;
-    }
-
-    .btn-primary {
-        padding: 8px 18px;
-        border-radius: 10px;
-        font-weight: bold;
-        font-size: 0.9rem;
+    .form-control:focus, .form-select:focus {
+        box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25); /* Primary blue focus */
+        border-color: var(--primary-blue);
     }
 
     .form-check-inline {
-        margin-right: 20px;
+        margin-right: 1.5rem;
+        margin-bottom: 0.5rem;
     }
 
-    .map-container {
-        width: 100%;
-        height: 200px;
-        border-radius: 10px;
-        border: 1px solid #ccc;
-        margin-top: 10px;
+    .btn-check + .btn {
+        border-radius: 8px;
+        padding: 8px 15px;
+        font-size: 0.95rem;
     }
 
-    @media (min-width: 768px) {
-        .form-group.row {
-            display: flex;
-            gap: 20px;
+    #map {
+        height: 400px;
+        margin-bottom: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+    }
+    .leaflet-container {
+        background: #e9ecef;
+        border-radius: 8px;
+    }
+
+    .d-flex.justify-content-end.gap-2.mt-3 {
+        padding-top: 20px;
+        border-top: 1px solid var(--gray-light);
+        margin-top: 30px !important;
+    }
+    .btn-primary {
+        background-color: var(--primary-blue);
+        border-color: var(--primary-blue);
+        font-weight: 600;
+        padding: 10px 25px;
+        border-radius: 8px;
+        transition: background-color 0.2s, transform 0.2s;
+    }
+    .btn-primary:hover {
+        background-color: var(--dark-blue);
+        border-color: var(--dark-blue);
+        transform: translateY(-1px);
+    }
+    .btn-secondary {
+        background-color: #6c757d;
+        border-color: #6c757d;
+        font-weight: 600;
+        padding: 10px 25px;
+        border-radius: 8px;
+        transition: background-color 0.2s, transform 0.2s;
+    }
+    .btn-secondary:hover {
+        background-color: #5c636a;
+        border-color: #5c636a;
+        transform: translateY(-1px);
+    }
+
+    .form-text {
+        font-size: 0.875em;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+
+    @media (max-width: 768px) {
+        body.sidebar-open {
+            padding-left: 0;
         }
-        .form-group.row > div {
-            flex: 1;
+        .container.mt-5.mb-5 {
+            padding: 20px;
+            margin-top: 20px !important;
+            margin-bottom: 20px !important;
+        }
+        h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+        .btn-check + .btn {
+            display: block;
+            width: 100%;
+            margin-right: 0 !important;
+            margin-bottom: 0.5rem !important;
+        }
+        .d-flex.justify-content-end.gap-2.mt-3 {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .d-flex.justify-content-end.gap-2.mt-3 .btn {
+            width: 100%;
         }
     }
-
-    .style-options {
-        border: 1px solid #ffffff;
-        border-radius: 12px;
-        padding: 15px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }
-
-    .style-options h5 {
-        color: #5c3d2e;
-        font-weight: bold;
-        margin-bottom: 12px;
-        font-size: 1rem;
-    }
-</style>
-
-    
+  </style>
 </head>
-
 <body>
-    <div class="container mt-5">
-        <h2>เพิ่มข้อมูลคาเฟ่</h2>
-        <p>กรุณากรอกข้อมูลคาเฟ่ของคุณให้ครบถ้วนและถูกต้องเพื่อให้ผู้ใช้งานเว็บสามารถหาคุณเจอได้ง่ายขึ้น</p>
 
-        <!-- ฟอร์มข้อมูลคาเฟ่ -->
-        <form action="#" method="POST" enctype="multipart/form-data">
-            @csrf
+@include('components.adminmenu')
 
-            <!-- ข้อมูลพื้นฐาน -->
-            <div class="form-section">
-                <h2>ข้อมูลพื้นฐาน</h2>
-                <div class="form-group">
-                    <label for="cafe_name">ชื่อคาเฟ่</label>
-                    <input type="text" class="form-control" id="cafe_name" name="cafe_name" required>
-                </div>
-                <div class="form-group">
-                    <label for="cafe_image">อัพโหลดรูปภาพ</label>
-                    <input type="file" class="form-control" id="cafe_image" name="cafe_image[]" accept="image/*" multiple>
-                </div>
-            
-            <div class="form-group">
-                <label class="mb-2">ช่วงราคา (บาท)</label><br>
+<div class="container mt-5 mb-5">
+  <h2 class="mb-4"><i class="bi bi-shop me-2"></i> {{ isset($cafe) ? 'แก้ไขข้อมูลคาเฟ่' : 'เพิ่มข้อมูลคาเฟ่ใหม่' }}</h2>
+  @if(session('success'))
+  <div class="alert alert-success alert-dismissible fade show" role="alert">
+    {{ session('success') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  @endif
+
+  @if ($errors->any())
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <strong>ข้อผิดพลาด!</strong> กรุณาตรวจสอบข้อมูลที่กรอก:
+    <ul>
+        @foreach ($errors->all() as $error)
+            <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  @endif
+
+  @if(session('db_error'))
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    {{ session('db_error') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  @endif
+
+  <form action="{{ isset($cafe) ? route('admin.cafe.update', $cafe->id) : route('admin.cafe.store') }}" method="POST" enctype="multipart/form-data" class="p-4 rounded" id="cafeForm">
+    @csrf
+    @if(isset($cafe))
+        @method('PUT')
+    @endif
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="mb-3">
+          <label for="cafe_name" class="form-label">ชื่อคาเฟ่ <span class="text-danger">*</span></label>
+          <input type="text" id="cafe_name" name="cafe_name" class="form-control @error('cafe_name') is-invalid @enderror" placeholder="ชื่อคาเฟ่เต็ม" required value="{{ old('cafe_name', $cafe->cafe_name ?? '') }}" />
+          @error('cafe_name')
+            <div class="invalid-feedback">{{ $message }}</div>
+          @enderror
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">สถานะ</label><br />
+            <div class="form-check form-check-inline">
+                <input type="checkbox" id="new_opening" name="is_new_opening" value="1" class="form-check-input"
+                    {{ old('is_new_opening', $cafe->is_new_opening ?? false) ? 'checked' : '' }} />
+                <label for="new_opening" class="form-check-label">เปิดใหม่</label>
+            </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="images" class="form-label">รูปภาพคาเฟ่ <span class="text-muted">(สูงสุด 5 รูป)</span></label>
+          <input type="file" class="form-control @error('images.*') is-invalid @enderror" id="images" name="images[]" accept="image/*" multiple>
+          <div class="form-text">เลือกรูปภาพได้หลายรูป (JPG, PNG)</div>
+          @error('images.*')
+            <div class="invalid-feedback">{{ $message }}</div>
+          @enderror
+
+          @if(isset($cafe) && !empty($cafe->images) && is_array($cafe->images))
+            <div class="mt-3">
+                <p class="form-label">รูปภาพที่มีอยู่:</p>
                 <div class="d-flex flex-wrap gap-2">
-                <input type="radio" class="btn-check" name="price_range" id="price1" value="ต่ำกว่า 100" required autocomplete="off">
-                <label class="btn btn-outline-primary" for="price1" data-price="ต่ำกว่า 100 บาท"><i class="bi bi-currency-bitcoin"></i></label>
-                <input type="radio" class="btn-check" name="price_range" id="price2" value="101 - 250" required autocomplete="off">
-                <label class="btn btn-outline-success" for="price2" data-price="101 - 250 บาท"><i class="bi bi-currency-bitcoin"></i></label>
-                <input type="radio" class="btn-check" name="price_range" id="price3" value="251 - 500" required autocomplete="off">
-                <label class="btn btn-outline-warning" for="price3" data-price="251 - 500 บาท"><i class="bi bi-currency-bitcoin"></i></label>
-                <input type="radio" class="btn-check" name="price_range" id="price4" value="501 - 1,000" required autocomplete="off">
-                <label class="btn btn-outline-danger" for="price4" data-price="501 - 1,000 บาท"><i class="bi bi-currency-bitcoin"></i></label>
-                <input type="radio" class="btn-check" name="price_range" id="price5" value="มากกว่า 1,000" required autocomplete="off">
-                <label class="btn btn-outline-dark" for="price5" data-price="มากกว่า 1,000 บาท"><i class="bi bi-currency-bitcoin"></i></label>
+                    @foreach($cafe->images as $index => $imagePath)
+                        <div class="position-relative">
+                            <img src="{{ asset('storage/' . $imagePath) }}" alt="Cafe Image" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
+                        </div>
+                    @endforeach
+                </div>
+                <div class="form-text mt-2">หากอัปโหลดรูปภาพใหม่ รูปภาพที่มีอยู่จะถูกแทนที่</div>
             </div>
-                <div id="selected-price" class="mt-3 text-primary fw-bold"></div>
-            </div>
-                <script>
-                    const labels = document.querySelectorAll('label');
-            
-                    labels.forEach(label => {
-                    label.addEventListener('mouseenter', () => {
-                        const price = label.getAttribute('data-price');
-                        const display = document.getElementById('selected-price');
-                        display.innerHTML = `<i class="bi bi-cash-coin me-1"></i>ราคาช่วง: ${price}`;});
-                    });
-                </script>
-            </div>
-
-           <!-- ที่อยู่ -->
-    <div class="form-section">
-        <h2>ที่อยู่</h2>
-        <div class="form-group">
-            <label for="address">ที่อยู่</label>
-            <textarea class="form-control" id="address" name="address" rows="3" required></textarea>
+          @endif
         </div>
-        <div class="form-group">
-            <label for="province">จังหวัด</label>
-            <select class="form-control" id="province" name="province" required>
-                <option value="">-- เลือกจังหวัด --</option>
+
+        <div class="mb-3">
+          <label class="form-label">ช่วงราคา <span class="text-danger">*</span></label>
+          <div class="d-flex flex-wrap gap-2">
+            @foreach([
+              'ต่ำกว่า 100' => 'primary',
+              '101 - 250' => 'success',
+              '251 - 500' => 'warning',
+              '501 - 1,000' => 'danger',
+              'มากกว่า 1,000' => 'dark'
+            ] as $label => $color)
+              @php $id = 'price' . $loop->index; @endphp
+              <input type="radio" class="btn-check" name="price_range" id="{{ $id }}" value="{{ $label }}" required autocomplete="off"
+                {{ old('price_range', $cafe->price_range ?? '') == $label ? 'checked' : '' }} />
+              <label for="{{ $id }}" class="btn btn-outline-{{ $color }}"><i class="bi bi-currency-bitcoin"></i> {{ $label }}</label>
+            @endforeach
+          </div>
+          @error('price_range')
+            <div class="text-danger small mt-1">{{ $message }}</div>
+          @enderror
+        </div>
+
+       <h5 class="mt-4 mb-3 text-primary">สไตล์คาเฟ่</h5>
+        <div class="mb-3 d-flex flex-wrap gap-2">
+            @foreach([
+                'มินิมอล', 'วินเทจ', 'โมเดิร์น', 'อินดัสเทรียล', 'ธรรมชาติ/สวน',
+                'โคซี่/อบอุ่น', 'อาร์ต/แกลเลอรี่', 'ลอฟท์', 'ญี่ปุ่น', 'ยุโรป'
+            ] as $style)
+                @php $id = 'style_' . \Illuminate\Support\Str::slug($style); @endphp
+                <div class="form-check form-check-inline">
+                    <input type="checkbox" id="{{ $id }}" name="cafe_styles[]" value="{{ $style }}" class="form-check-input"
+                        {{ in_array($style, old('cafe_styles', $cafe->cafe_styles ?? [])) ? 'checked' : '' }} />
+                    <label for="{{ $id }}" class="form-check-label">{{ $style }}</label>
+                </div>
+            @endforeach
+        </div>
+
+        <h5 class="mt-4 mb-3 text-primary">สไตล์อื่นๆ</h5>
+        <div class="mb-3">
+            <label for="other_style" class="form-label">ระบุสไตล์อื่นๆ ที่ไม่มีในรายการ</label>
+            <input type="text" id="other_style" name="other_style" class="form-control @error('other_style') is-invalid @enderror" placeholder="เช่น สไตล์ลึกลับ, สไตล์อนาคต"
+                value="{{ old('other_style', $cafe->other_style ?? '') }}" />
+            @error('other_style')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+            <div class="form-text">สามารถระบุสไตล์เพิ่มเติมได้</div>
+        </div>
+
+        <h5 class="mt-4 mb-3 text-primary">ข้อมูลติดต่อ</h5>
+        <div class="mb-3">
+          <label for="phone" class="form-label">📞 เบอร์ติดต่อ</label>
+          <input type="tel" id="phone" name="phone" class="form-control @error('phone') is-invalid @enderror" pattern="^\d{9,10}$" placeholder="เช่น 0812345678"
+            value="{{ old('phone', $cafe->phone ?? '') }}" />
+            @error('phone')
+              <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
+        <div class="mb-3">
+          <label for="email" class="form-label">📧 อีเมล์</label>
+          <input type="email" id="email" name="email" class="form-control @error('email') is-invalid @enderror" placeholder="เช่น example@email.com"
+            value="{{ old('email', $cafe->email ?? '') }}" />
+            @error('email')
+              <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">🌐 เว็บไซต์</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-globe"></i></span>
+                <input type="url" name="website" class="form-control @error('website') is-invalid @enderror" placeholder="เช่น https://www.yourcafe.com"
+                    value="{{ old('website', $cafe->website ?? '') }}" />
+            </div>
+            @error('website')
+            <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
+
+        <h5 class="mt-4 mb-3 text-primary">Social Media</h5>
+        <div class="mb-3">
+          <label class="form-label">📘 Facebook</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fab fa-facebook-f"></i></span>
+            <input type="text" name="facebook_page" class="form-control @error('facebook_page') is-invalid @enderror" placeholder="ชื่อผู้ใช้ หรือ ลิงก์เพจ"
+                value="{{ old('facebook_page', $cafe->facebook_page ?? '') }}" />
+          </div>
+          @error('facebook_page')
+            <div class="invalid-feedback">{{ $message }}</div>
+          @enderror
+        </div>
+        <div class="mb-3">
+          <label class="form-label">📸 Instagram</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fab fa-instagram"></i></span>
+            <input type="text" name="instagram_page" class="form-control @error('instagram_page') is-invalid @enderror" placeholder="ชื่อผู้ใช้"
+                value="{{ old('instagram_page', $cafe->instagram_page ?? '') }}" />
+          </div>
+          @error('instagram_page')
+            <div class="invalid-feedback">{{ $message }}</div>
+          @enderror
+        </div>
+        <div class="mb-3">
+          <label class="form-label">📱 Line</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fab fa-line"></i></span>
+            <input type="text" name="line_id" class="form-control @error('line_id') is-invalid @enderror" placeholder="ID Line หรือ @บัญชี"
+                value="{{ old('line_id', $cafe->line_id ?? '') }}" />
+          </div>
+          @error('line_id')
+            <div class="invalid-feedback">{{ $message }}</div>
+          @enderror
+        </div>
+
+      </div>
+
+      <div class="col-md-6">
+        <h5 class="mb-3 text-primary">ที่ตั้ง</h5>
+        <div class="mb-3">
+          <label for="place_name" class="form-label">ชื่อสถานที่ <span class="text-danger">*</span></label>
+          <input type="text" id="place_name" name="place_name" class="form-control @error('place_name') is-invalid @enderror" placeholder="ชื่ออาคาร, ชื่อโครงการ" required
+            value="{{ old('place_name', $cafe->place_name ?? '') }}" />
+            @error('place_name')
+              <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
+
+        <div class="mb-3">
+          <label for="address" class="form-label">ที่อยู่ <span class="text-danger">*</span></label>
+          <textarea id="address" name="address" rows="3" class="form-control @error('address') is-invalid @enderror" placeholder="บ้านเลขที่, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์" required>{{ old('address', $cafe->address ?? '') }}</textarea>
+          @error('address')
+            <div class="invalid-feedback">{{ $message }}</div>
+          @enderror
+        </div>
+
+        <label class="form-label">เลือกตำแหน่งบนแผนที่ <span class="text-danger">*</span></label>
+        <div id="map" class="mb-3 position-relative"></div>
+
+        <div class="d-grid mb-3">
+          <button type="button" class="btn btn-outline-secondary" id="resetBtn">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> รีเซ็ตตำแหน่งบนแผนที่
+          </button>
+        </div>
+
+        <div class="row mb-4">
+          <div class="col">
+            <label for="lat" class="form-label">ละติจูด <small class="text-muted">(Latitude)</small></label>
+            <input type="text" id="lat" name="lat" class="form-control @error('lat') is-invalid @enderror" placeholder="คลิกบนแผนที่ หรือ พิมพ์เอง" required
+                value="{{ old('lat', $cafe->lat ?? '') }}" />
+            @error('lat')
+              <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+          </div>
+          <div class="col">
+            <label for="lng" class="form-label">ลองจิจูด <small class="text-muted">(Longitude)</small></label>
+            <input type="text" id="lng" name="lng" class="form-control @error('lng') is-invalid @enderror" placeholder="คลิกบนแผนที่ หรือ พิมพ์เอง" required
+                value="{{ old('lng', $cafe->lng ?? '') }}" />
+            @error('lng')
+              <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+          </div>
+        </div>
+        <div id="duplicateCoordsWarning" class="alert alert-warning d-none" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>พิกัดนี้มีคาเฟ่อื่นใช้งานอยู่แล้ว! กรุณาเลือกพิกัดอื่น
+        </div>
+        <div id="outOfBoundsWarning" class="alert alert-danger d-none" role="alert">
+            <i class="bi bi-geo-alt-fill me-2"></i>ตำแหน่งที่เลือกอยู่นอกเขตอำเภอเมืองสุรินทร์ กรุณาเลือกภายในขอบเขต
+        </div>
+
+
+               <h5 class="mt-4 mb-3 text-primary">เวลาทำการ</h5>
+        <div class="row mb-3">
+          <div class="col-md-6 mb-3 mb-md-0">
+            <label for="open_day" class="form-label">📅 วันเปิด</label>
+            <select class="form-select @error('open_day') is-invalid @enderror" id="open_day" name="open_day">
+              <option value="">-- เลือกวัน --</option>
+              @php
+                $days = ['ทุกวัน', 'จันทร์-ศุกร์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
+              @endphp
+              @foreach($days as $day)
+                <option value="{{ $day }}" {{ (isset($cafe) && $cafe->open_day == $day) || old('open_day') == $day ? 'selected' : '' }}>{{ $day }}</option>
+              @endforeach
             </select>
-        </div>
-        <div class="form-group">
-            <label for="district">เขต / อำเภอ</label>
-            <select class="form-control" id="district" name="district" required>
-                <option value="">-- เลือกเขต/อำเภอ --</option>
+            @error('open_day')
+              <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+          </div>
+          <div class="col-md-6">
+            <label for="close_day" class="form-label">📅 วันปิด <small class="text-muted">(หากไม่มี ให้เลือก "ไม่มีวันปิด")</small></label>
+            <select class="form-select @error('close_day') is-invalid @enderror" id="close_day" name="close_day">
+              <option value="">ไม่มีวันปิด</option>
+              @php
+                $closeDays = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
+              @endphp
+              @foreach($closeDays as $day)
+                <option value="{{ $day }}" {{ (isset($cafe) && $cafe->close_day == $day) || old('close_day') == $day ? 'selected' : '' }}>{{ $day }}</option>
+              @endforeach
             </select>
+            @error('close_day')
+              <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+          </div>
         </div>
-        <div class="form-group">
-            <label for="subdistrict">แขวง / ตำบล</label>
-            <select class="form-control" id="subdistrict" name="subdistrict" required>
-                <option value="">-- เลือกแขวง/ตำบล --</option>
-            </select>
-        </div>
-            <script>
-                const data = {
-                    "กรุงเทพมหานคร": {
-                        "บางรัก": ["มหาพฤฒาราม", "สีลม", "สุริยวงศ์"],
-                        "ปทุมวัน": ["รองเมือง", "วังใหม่"]
-                    },
-                    "สุรินทร์": {
-                        "เมืองสุรินทร์": ["ในเมือง", "ตั้งใจ"],
-                        "รัตนบุรี": ["รัตนบุรี", "หนองเทพ"]
-                    }
-                };
 
-                const provinceSelect = document.getElementById("province");
-                const districtSelect = document.getElementById("district");
-                const subdistrictSelect = document.getElementById("subdistrict");
-
-                window.onload = function () {
-                    for (let province in data) {
-                        provinceSelect.innerHTML += `<option value="${province}">${province}</option>`;
-                    }
-                };
-
-                provinceSelect.addEventListener("change", function () {
-                    const districts = data[this.value];
-                    districtSelect.innerHTML = '<option value="">-- เลือกเขต/อำเภอ --</option>';
-                    subdistrictSelect.innerHTML = '<option value="">-- เลือกแขวง/ตำบล --</option>';
-                    if (districts) {
-                        for (let district in districts) {
-                            districtSelect.innerHTML += `<option value="${district}">${district}</option>`;
-                        }
-                    }
-                });
-
-                districtSelect.addEventListener("change", function () {
-                    const subdistricts = data[provinceSelect.value][this.value];
-                    subdistrictSelect.innerHTML = '<option value="">-- เลือกแขวง/ตำบล --</option>';
-                    if (subdistricts) {
-                        for (let sub of subdistricts) {
-                            subdistrictSelect.innerHTML += `<option value="${sub}">${sub}</option>`;
-                        }
-                    }
-                });
-            </script>
-
-    <!-- แผนที่ -->
-    <div class="form-group">
-        <label for="search-location">ค้นหาชื่อสถานที่</label>
-        <input type="text" class="form-control" id="search-location" placeholder="ค้นหาชื่อสถานที่" required>
-    </div>
-        <div class="map-container" id="map"></div>
-        <small>กรุณาเลื่อนหมุดในแผนที่เพื่อเลือกตำแหน่งก่อน submit</small>
-    </div>
-
-            <!-- ข้อมูลติดต่อ -->
-            <div class="form-section">
-                <h2>ข้อมูลติดต่อ</h2>
-<div class="form-group row">
-    <div>
-        <label for="phone">📞 เบอร์ติดต่อ</label>
-        <input type="text" class="form-control" id="phone" name="phone" pattern="^\d{10}$">
-    </div>
-    <div>
-        <label for="email">📧 อีเมล์</label>
-        <input type="email" class="form-control" id="email" name="email">
-    </div>
-</div>
-
-<div class="form-group">
-    <label for="website">🌐 Website</label>
-    <input type="text" class="form-control" id="website" name="website">
-</div>
-<div class="form-group">
-    <label for="facebook_page">📘Facebook Page</label>
-    <div class="input-group">
-        <div class="input-group-prepend">
-            <span class="input-group-text">https://www.facebook.com/</span>
+       <!-- START: โค้ดที่แก้ไขสำหรับเวลาเปิด-ปิด (บังคับ 24-Hour Format) -->
+       <div class="row mb-3">
+        <div class="col-md-6 mb-3 mb-md-0">
+          <label for="open_time" class="form-label">⏰ เวลาเปิด</label>
+          <div class="input-group">
+            <input type="text"
+                   class="form-control @error('open_time') is-invalid @enderror"
+                   id="open_time"
+                   name="open_time"
+                   pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
+                   placeholder="HH:MM (ตัวอย่าง: 09:30)"
+                   value="{{ old('open_time', isset($cafe) && $cafe->open_time ? Carbon\Carbon::parse($cafe->open_time)->format('H:i') : '') }}">
+            <span class="input-group-text">น.</span>
+          </div>
+          @error('open_time')
+            <div class="invalid-feedback">{{ $message }}</div>
+          @enderror
         </div>
-        <input type="text" class="form-control" id="facebook_page" name="facebook_page" placeholder="ชื่อเพจ">
-    </div>
-</div>
-<div class="form-group">
-    <label for="instagram_page">📸 Instagram</label>
-    <div class="input-group">
-        <div class="input-group-prepend">
-            <span class="input-group-text">https://www.instagram.com/</span>
+        <div class="col-md-6">
+          <label for="close_time" class="form-label">⏰ เวลาปิด</label>
+          <div class="input-group">
+            <input type="text"
+                   class="form-control @error('close_time') is-invalid @enderror"
+                   id="close_time"
+                   name="close_time"
+                   pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
+                   placeholder="HH:MM (ตัวอย่าง: 18:00)"
+                   value="{{ old('close_time', isset($cafe) && $cafe->close_time ? Carbon\Carbon::parse($cafe->close_time)->format('H:i') : '') }}">
+            <span class="input-group-text">น.</span>
+          </div>
+          @error('close_time')
+            <div class="invalid-feedback">{{ $message }}</div>
+          @enderror
         </div>
-        <input type="text" class="form-control" id="instagram_page" name="instagram_page" placeholder="ชื่อบัญชี Instagram">
-    </div>
-</div>
-<div class="form-group">
-    <label for="line">💬LINE@</label>
-    <input type="text" class="form-control" id="line" name="line">
-</div>
-
-<!-- ข้อมูลเพิ่มเติม -->
-<div class="form-section">
-    <h2>ข้อมูลเพิ่มเติม</h2>
-    <div class="form-group">
-        <label for="open_day">📅 วันที่เปิดให้บริการ</label>
-        <select class="form-control" id="open_day" name="open_day">
-            <option value="">-- เลือกวัน --</option>
-            <option value="ทุกวัน">ทุกวัน</option>
-            <option value="จันทร์-ศุกร์">จันทร์-ศุกร์</option>
-            <option value="จันทร์">จันทร์</option>
-            <option value="อังคาร">อังคาร</option>
-            <option value="พุธ">พุธ</option>
-            <option value="พฤหัสบดี">พฤหัสบดี</option>
-            <option value="ศุกร์">ศุกร์</option>
-            <option value="เสาร์">เสาร์</option>
-            <option value="อาทิตย์">อาทิตย์</option>
-        </select>
-    </div>
-    <div class="form-group">
-        <label for="open_time">⏰ เวลาเปิด</label>
-        <input type="time" class="form-control" id="open_time" name="open_time">
-    </div>
-    <div class="form-group">
-        <label for="close_time">⏰ เวลาปิด</label>
-        <input type="time" class="form-control" id="close_time" name="close_time">
-    </div>
-    <div class="style-options">
-        <h5>🎨 สไตล์ของร้าน</h5>
-    
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" id="style_minimal" name="cafe_style[]" value="มินิมอล">
-            <label class="form-check-label" for="style_minimal">มินิมอล</label>
-        </div>
-    
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" id="style_loft" name="cafe_style[]" value="ลอฟท์">
-            <label class="form-check-label" for="style_loft">ลอฟท์</label>
-        </div>
-    
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" id="style_vintage" name="cafe_style[]" value="วินเทจ">
-            <label class="form-check-label" for="style_vintage">วินเทจ</label>
-        </div>
-    
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" id="style_nature" name="cafe_style[]" value="ธรรมชาติ">
-            <label class="form-check-label" for="style_nature">ธรรมชาติ</label>
-        </div>
-    
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" id="style_japanese" name="cafe_style[]" value="ญี่ปุ่น">
-            <label class="form-check-label" for="style_japanese">ญี่ปุ่น</label>
-        </div>
-    
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" id="style_korean" name="cafe_style[]" value="เกาหลี">
-            <label class="form-check-label" for="style_korean">เกาหลี</label>
-        </div>
-    
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" id="style_moroccan" name="cafe_style[]" value="โมรอคโค">
-            <label class="form-check-label" for="style_moroccan">โมรอคโค</label>
-        </div>
-    
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" id="style_colorful" name="cafe_style[]" value="สดใส / หวาน ๆ">
-            <label class="form-check-label" for="style_colorful">สดใส / หวาน ๆ</label>
-        </div>
-    
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" id="style_modern" name="cafe_style[]" value="โมเดิร์น">
-            <label class="form-check-label" for="style_modern">โมเดิร์น</label>
-        </div>
-    
-        <!-- ช่องกรอกข้อมูลเพิ่มเติม -->
-        <div class="form-group mt-3">
-            <label for="other_style">สไตล์คาเฟ่เพิ่มเติม (ถ้ามี)</label>
-            <input type="text" class="form-control" id="other_style" name="other_style" placeholder="กรุณาระบุสไตล์เพิ่มเติม">
-        </div>
-    </div>
-    
-    <div class="form-group">
-        <label class="mb-2">🚗 ที่จอดรถ</label>
-        <div class="form-check form-check-inline">
-            <input type="checkbox" id="parking_on_site" name="parking[]" value="มีในร้าน" class="form-check-input">
-            <label for="parking_on_site" class="form-check-label">มีในร้าน</label>
-        </div>
-        <div class="form-check form-check-inline">
-            <input type="checkbox" id="parking_nearby" name="parking[]" value="มีใกล้เคียง" class="form-check-input">
-            <label for="parking_nearby" class="form-check-label">มีใกล้เคียง</label>
-        </div>
-        <div class="form-check form-check-inline">
-            <input type="checkbox" id="parking_none" name="parking[]" value="ไม่มี" class="form-check-input">
-            <label for="parking_none" class="form-check-label">ไม่มี</label>
-        </div>
-    </div>
-    <div class="form-group">
-        <label class="mb-2">💳 รับบัตรเครดิต</label>
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" id="credit_unspecified" name="credit_card" value="ไม่ระบุ">
-            <label class="form-check-label" for="credit_unspecified">ไม่ระบุ</label>
-        </div>
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" id="credit_yes" name="credit_card" value="รับ">
-            <label class="form-check-label" for="credit_yes">ใช่</label>
-        </div>
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" id="credit_no" name="credit_card" value="ไม่รับ">
-            <label class="form-check-label" for="credit_no">ไม่ใช่</label>
-        </div>
-    </div>
-    
-    <div class="form-group">
-        <label class="mb-2">👥 สำหรับกลุ่ม</label>
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" id="group_unspecified" name="for_group" value="ไม่ระบุ">
-            <label class="form-check-label" for="group_unspecified">ไม่ระบุ</label>
-        </div>
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" id="group_yes" name="for_group" value="ใช่">
-            <label class="form-check-label" for="group_yes">ใช่</label>
-        </div>
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" id="group_no" name="for_group" value="ไม่ใช่">
-            <label class="form-check-label" for="group_no">ไม่ใช่</label>
-        </div>
-    </div>
-    
-    <div class="form-group">
-        <label class="mb-2">🧒 สำหรับเด็ก</label>
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" id="kids_unspecified" name="for_kids" value="ไม่ระบุ">
-            <label class="form-check-label" for="kids_unspecified">ไม่ระบุ</label>
-        </div>
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" id="kids_yes" name="for_kids" value="ใช่">
-            <label class="form-check-label" for="kids_yes">ใช่</label>
-        </div>
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" id="kids_no" name="for_kids" value="ไม่ใช่">
-            <label class="form-check-label" for="kids_no">ไม่ใช่</label>
-        </div>
-    </div>
-    
-    <div class="form-group">
-        <label class="mb-2">🐶 สัตว์เลี้ยงเข้าได้</label>
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" id="pet_unspecified" name="pet_allowed" value="ไม่ระบุ">
-            <label class="form-check-label" for="pet_unspecified">ไม่ระบุ</label>
-        </div>
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" id="pet_yes" name="pet_allowed" value="ใช่">
-            <label class="form-check-label" for="pet_yes">ใช่</label>
-        </div>
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" id="pet_no" name="pet_allowed" value="ไม่ใช่">
-            <label class="form-check-label" for="pet_no">ไม่ใช่</label>
-        </div>
-    </div>    
-</div>
-
-                
-         <div class="d-flex justify-content-end gap-2 mt-3">
-  <a href="/home-admin" class="btn btn-secondary">
-    <i class="fas fa-times me-1"></i> ยกเลิก
-  </a>
-  <button type="submit" class="btn btn-primary">
-    เพิ่มคาเฟ่
-  </button>
-</div>
-
+      </div>
+      <!-- END: โค้ดที่แก้ไขสำหรับเวลาเปิด-ปิด -->
+        <h5 class="mt-4 mb-3 text-primary">วิธีชำระเงิน</h5>
+        <div class="mb-3 d-flex flex-wrap gap-2">
+          @foreach(['เงินสด', 'บัตรเครดิต', 'บัตรเดบิต', 'จ่ายผ่านมือถือ', 'ไม่ระบุ'] as $payment)
+            @php $id = 'pay_' . \Illuminate\Support\Str::slug($payment); @endphp
+            <div class="form-check form-check-inline">
+              <input type="checkbox" id="{{ $id }}" name="payment_methods[]" value="{{ $payment }}" class="form-check-input"
+                {{ in_array($payment, old('payment_methods', $cafe->payment_methods ?? [])) ? 'checked' : '' }} />
+              <label for="{{ $id }}" class="form-check-label">{{ $payment }}</label>
             </div>
-        </form>
+          @endforeach
+        </div>
+
+        <h5 class="mt-4 mb-3 text-primary">สิ่งอำนวยความสะดวก</h5>
+        <div class="mb-3 d-flex flex-wrap gap-2">
+          @foreach(['ห้องประชุม', 'โซนเด็กเล่น', 'ที่จอดรถ', 'เครื่องปรับอากาศ', 'Wi-Fi'] as $facility)
+            @php $id = 'facility_' . \Illuminate\Support\Str::slug($facility); @endphp
+            <div class="form-check form-check-inline">
+              <input type="checkbox" id="{{ $id }}" name="facilities[]" value="{{ $facility }}" class="form-check-input"
+                {{ in_array($facility, old('facilities', $cafe->facilities ?? [])) ? 'checked' : '' }} />
+              <label for="{{ $id }}" class="form-check-label">{{ $facility }}</label>
+            </div>
+          @endforeach
+        </div>
+
+        <h5 class="mt-4 mb-3 text-primary">บริการเพิ่มเติม</h5>
+        <div class="mb-3 d-flex flex-wrap gap-2">
+          @foreach(['ส่งเดลิเวอรี่', 'รับจัดงาน', 'ซื้อกลับบ้าน', 'รับจองโต๊ะ'] as $service)
+            @php $id = 'service_' . \Illuminate\Support\Str::slug($service); @endphp
+            <div class="form-check form-check-inline">
+              <input type="checkbox" id="{{ $id }}" name="other_services[]" value="{{ $service }}" class="form-check-input"
+                {{ in_array($service, old('other_services', $cafe->other_services ?? [])) ? 'checked' : '' }} />
+              <label for="{{ $id }}" class="form-check-label">{{ $service }}</label>
+            </div>
+          @endforeach
+        </div>
+      </div>
     </div>
 
-    <!-- ใส่ Google Maps API -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places&callback=initMap" async defer></script>
+    <div class="d-flex justify-content-end gap-2 mt-3">
+        <a href="/home-admin" class="btn btn-secondary d-flex align-items-center">
+            <i class="fas fa-times me-1"></i> ยกเลิก
+        </a>
+        <button type="submit" class="btn btn-primary px-4" id="submitBtn">
+            <i class="fas fa-save me-1"></i> บันทึกข้อมูล
+        </button>
+    </div>
+  </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const imageInput = document.getElementById('images');
+    const cafeForm = document.getElementById('cafeForm');
     
-    <script>
-        let map;
-        let marker;
-        let geocoder;
-        let searchBox;
+    imageInput.addEventListener('change', () => {
+      if (imageInput.files.length > 5) {
+        alert('เลือกได้สูงสุด 5 รูปภาพเท่านั้น');
+        imageInput.value = ''; // ล้างไฟล์ที่เลือก
+      }
+    });
 
-        function initMap() {
-            map = new google.maps.Map(document.getElementById("map"), {
-                center: { lat: 13.736717, lng: 100.523186 }, // กำหนดตำแหน่งเริ่มต้น (กรุงเทพฯ)
-                zoom: 12,
-            });
+    cafeForm.addEventListener('submit', function(e) {
+      if (imageInput.files.length > 5) {
+        e.preventDefault();
+        alert('กรุณาอัปโหลดรูปภาพไม่เกิน 5 รูปเท่านั้น');
+        imageInput.focus();
+        return;
+      }
 
-            marker = new google.maps.Marker({
-                map: map,
-                draggable: true,
-                position: map.getCenter(),
-            });
+      if (!document.getElementById('duplicateCoordsWarning').classList.contains('d-none') ||
+          !document.getElementById('outOfBoundsWarning').classList.contains('d-none')) {
+          e.preventDefault();
+          alert('โปรดแก้ไขข้อผิดพลาดเกี่ยวกับพิกัดก่อนบันทึกข้อมูล');
+          return;
+      }
+    });
 
-            geocoder = new google.maps.Geocoder();
-            searchBox = new google.maps.places.SearchBox(document.getElementById("search-location"));
+    const latInput = document.getElementById('lat');
+    const lngInput = document.getElementById('lng');
+    const duplicateCoordsWarning = document.getElementById('duplicateCoordsWarning');
+    const outOfBoundsWarning = document.getElementById('outOfBoundsWarning');
+    const submitBtn = document.getElementById('submitBtn');
 
-            searchBox.addListener("places_changed", () => {
-                const places = searchBox.getPlaces();
-                if (places.length === 0) return;
-                map.setCenter(places[0].geometry.location);
-                map.setZoom(15);
-                marker.setPosition(places[0].geometry.location);
-            });
+    // --- การตั้งค่าแผนที่ ---
+    // 1. กำหนดขอบเขตและจุดศูนย์กลางของ อ.เมืองสุรินทร์
+    const mueangSurinBounds = L.latLngBounds([[14.75, 103.35], [15.00, 103.65]]);
+    const mueangSurinCenter = [14.885, 103.490]; 
 
-            google.maps.event.addListener(marker, 'dragend', function () {
-                geocoder.geocode({ 'location': marker.getPosition() }, function (results, status) {
-                    if (status === 'OK') {
-                        if (results[0]) {
-                            document.getElementById("address").value = results[0].formatted_address;
-                        }
-                    }
-                });
-            });
+    // 2. สร้างแผนที่และตั้งค่าเริ่มต้น
+    const map = L.map('map').setView(mueangSurinCenter, 12); // เริ่มต้นที่ อ.เมืองสุรินทร์
+    map.setMaxBounds(mueangSurinBounds); // จำกัดขอบเขตการเลื่อนแผนที่
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    let marker;
+
+    // --- การจัดการ Marker และพิกัด ---
+
+    // ถ้าเป็นหน้าแก้ไข ให้ปักหมุดที่ตำแหน่งเดิม
+    if (latInput.value && lngInput.value) {
+        const initialLatLng = [parseFloat(latInput.value), parseFloat(lngInput.value)];
+        if (mueangSurinBounds.contains(initialLatLng)) {
+            marker = L.marker(initialLatLng).addTo(map);
+            map.setView(initialLatLng, 15);
+            checkCoordinates(initialLatLng[0], initialLatLng[1]);
+        } else {
+            marker = L.marker(initialLatLng).addTo(map);
+            map.setView(initialLatLng, 15);
+            displayOutOfBoundsWarning(true);
         }
-    </script>
+    }
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    // การทำงานเมื่อคลิกบนแผนที่ (ปักหมุด)
+    map.on('click', function(e) {
+      const { lat, lng } = e.latlng;
+      
+      // ตรวจสอบว่าคลิกในขอบเขตหรือไม่
+      if (mueangSurinBounds.contains(e.latlng)) {
+          if (marker) {
+              marker.setLatLng(e.latlng);
+          } else {
+              marker = L.marker(e.latlng).addTo(map);
+          }
+          latInput.value = lat.toFixed(6);
+          lngInput.value = lng.toFixed(6);
+          displayOutOfBoundsWarning(false);
+          checkCoordinates(lat, lng);
+      } else {
+          alert('ตำแหน่งที่เลือกอยู่นอกเขตอำเภอเมืองสุรินทร์ กรุณาเลือกภายในขอบเขต');
+          displayOutOfBoundsWarning(true);
+      }
+    });
+
+    // ปุ่มรีเซ็ตตำแหน่ง
+    document.getElementById('resetBtn').addEventListener('click', function() {
+      if (marker) {
+        map.removeLayer(marker);
+        marker = null;
+      }
+      latInput.value = '';
+      lngInput.value = '';
+      displayOutOfBoundsWarning(false);
+      duplicateCoordsWarning.classList.add('d-none');
+      submitBtn.disabled = false;
+    });
+
+    // การทำงานเมื่อกรอกค่าในช่อง ละติจูด/ลองจิจูด เอง
+    latInput.addEventListener('input', validateAndCheckCoordinates);
+    lngInput.addEventListener('input', validateAndCheckCoordinates);
+
+    function validateAndCheckCoordinates() {
+        const lat = parseFloat(latInput.value);
+        const lng = parseFloat(lngInput.value);
+
+        if (isNaN(lat) || isNaN(lng)) {
+            submitBtn.disabled = true;
+            return;
+        }
+
+        const currentLatLng = L.latLng(lat, lng);
+
+        if (!mueangSurinBounds.contains(currentLatLng)) {
+            displayOutOfBoundsWarning(true);
+            submitBtn.disabled = true;
+        } else {
+            displayOutOfBoundsWarning(false);
+            if (marker) {
+                marker.setLatLng(currentLatLng);
+            } else {
+                marker = L.marker(currentLatLng).addTo(map);
+            }
+            map.setView(currentLatLng, 15);
+            checkCoordinates(lat, lng);
+        }
+    }
+
+    // ฟังก์ชันแสดง/ซ่อนคำเตือน
+    function displayOutOfBoundsWarning(show) {
+        outOfBoundsWarning.classList.toggle('d-none', !show);
+    }
+
+    // ฟังก์ชันตรวจสอบพิกัดซ้ำกับในฐานข้อมูล
+    async function checkCoordinates(lat, lng) {
+        if (!lat || !lng) {
+            duplicateCoordsWarning.classList.add('d-none');
+            submitBtn.disabled = false;
+            return;
+        }
+
+        const cafeId = "{{ $cafe->id ?? 'null' }}";
+        
+        try {
+            const response = await fetch("{{ route('admin.cafe.check_coordinates') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ lat: lat, lng: lng, cafe_id: cafeId })
+            });
+
+            const data = await response.json();
+
+            duplicateCoordsWarning.classList.toggle('d-none', !data.exists);
+            
+            // ปิดปุ่มบันทึกถ้ามีพิกัดซ้ำ หรืออยู่นอกขอบเขต
+            if (data.exists || !mueangSurinBounds.contains([lat, lng])) {
+                submitBtn.disabled = true;
+            } else {
+                submitBtn.disabled = false;
+            }
+
+        } catch (error) {
+            console.error('Error checking coordinates:', error);
+            submitBtn.disabled = false; // กรณีเกิด error ให้ปุ่มทำงานได้ไว้ก่อน
+        }
+    }
+  });
+</script>
 </body>
 </html>
-</div>

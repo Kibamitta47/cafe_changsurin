@@ -16,15 +16,22 @@ class RedirectIfAuthenticated
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next, string ...$guards): Response
-    {
-        $guards = empty($guards) ? [null] : $guards;
+{
+    $guards = empty($guards) ? [null] : $guards;
 
-        foreach ($guards as $guard) {
-            if (Auth::guard($guard)->check()) {
-                return redirect(RouteServiceProvider::HOME);
+    foreach ($guards as $guard) {
+        if (Auth::guard($guard)->check()) {
+            // ถ้าเป็น admin ให้ redirect ไป /home-admin
+            if ($guard === 'admin') {
+                return redirect()->route('home.admin');
+            }
+            // ถ้าเป็น user ให้ redirect ไป /welcome
+            else {
+                return redirect()->route('welcome');
             }
         }
-
-        return $next($request);
     }
+
+    return $next($request);
+}
 }
