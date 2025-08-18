@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use App\Models\Cafe; // ย้ายมาไว้ตรงนี้
+use App\Models\Cafe;
+use App\Models\Review;
 
 class User extends Authenticatable
 {
@@ -18,6 +19,7 @@ class User extends Authenticatable
         'email',
         'password',
         'profile_image',
+        'line_id',
     ];
 
     protected $hidden = [
@@ -38,5 +40,10 @@ class User extends Authenticatable
     public function likedCafes()
     {
         return $this->belongsToMany(Cafe::class, 'cafe_likes', 'user_id', 'cafe_id')->withTimestamps();
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
     }
 }

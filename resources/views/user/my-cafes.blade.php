@@ -139,6 +139,9 @@
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('user.dashboard') ? 'active' : '' }}" href="{{ route('user.dashboard') }}">แดชบอร์ด</a></li>
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('user.cafes.my') ? 'active' : '' }}" href="{{ route('user.cafes.my') }}">คาเฟ่ของฉัน</a></li>
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('user.cafes.myLiked') ? 'active' : '' }}" href="{{ route('user.cafes.myLiked') }}">คาเฟ่ที่ถูกใจ</a></li>
+                <li class="nav-item">
+        <a class="nav-link {{ request()->routeIs('user.reviews.my*') ? 'active bg-blue-500 text-white' : '' }}" href="{{ route('user.reviews.my') }}">รีวิวของฉัน</a>
+    </li>
             </ul>
             <div class="d-flex align-items-center gap-2">
                 <a href="{{ route('user.cafes.create') }}" class="btn btn-primary rounded-pill d-none d-lg-flex align-items-center gap-2">
@@ -221,21 +224,7 @@
                             @endif
                         </div>
                         
-                        <!-- *** START: Updated Stats Section *** -->
-                        <div class="card-stats mt-3">
-                            <span class="stat-item" title="ยอดเข้าชมทั้งหมด">
-                                <i class="bi bi-eye-fill me-1"></i>
-                                {{ number_format($cafe->view_count) }}
-                            </span>
-                            <span class="stat-item" title="จำนวนคนกดถูกใจ">
-                                <i class="bi bi-heart-fill me-1 text-danger"></i>
-                                {{ number_format($cafe->likers_count) }}
-                            </span>
-                        </div>
-                        <!-- *** END: Updated Stats Section *** -->
-                    </div>
-                </div>
-
+                        
                 <!-- Delete Confirmation Modal -->
                 <div class="modal fade" id="deleteModal{{ $cafe->id }}" tabindex="-1">
                     <div class="modal-dialog modal-dialog-centered">

@@ -83,11 +83,17 @@
 
             <!-- Main Navigation Links -->
             <div class="hidden md:flex items-center space-x-2">
-                <a href="{{ route('welcome') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-200">หน้าแรก</a>
-                <a href="{{ route('user.dashboard') }}" class="px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('user.dashboard') ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200' }}">แดชบอร์ด</a>
-                <a href="{{ route('user.cafes.my') }}" class="px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('user.cafes.my') ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200' }}">คาเฟ่ของฉัน</a>
-                <a href="{{ route('user.cafes.myLiked') }}" class="px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('user.cafes.myLiked') ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200' }}">คาเฟ่ที่ถูกใจ</a>
-            </div>
+    <a href="{{ route('welcome') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-200">หน้าแรก</a>
+    
+    <a href="{{ route('user.dashboard') }}" class="px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('user.dashboard') ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200' }}">แดชบอร์ด</a>
+    
+    <a href="{{ route('user.cafes.my') }}" class="px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('user.cafes.my') ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200' }}">คาเฟ่ของฉัน</a>
+    
+    <a href="{{ route('user.cafes.myLiked') }}" class="px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('user.cafes.myLiked') ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200' }}">คาเฟ่ที่ถูกใจ</a>
+
+    <!-- เมนูที่เพิ่มเข้ามาใหม่ -->
+    <a href="{{ route('user.reviews.my') }}" class="px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('user.reviews.my*') ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200' }}">รีวิวของฉัน</a>
+</div>
 
             <!-- Profile Dropdown & CTA Button -->
             <div class="flex items-center gap-4">
@@ -139,21 +145,21 @@
                 <div class="stat-card-icon bg-blue-500"><i class="fas fa-coffee"></i></div>
                 <div>
                     <p class="text-gray-600">คาเฟ่ทั้งหมดของคุณ</p>
-                    <p class="text-3xl font-bold text-gray-800">{{-- {{ $totalCafes }} --}}15</p>
+                   <p class="text-3xl font-bold text-gray-800">{{ $totalCafes }}</p>
                 </div>
             </div>
             <div class="stat-card glass-morphism p-6 rounded-2xl flex items-center gap-6 card-base">
                 <div class="stat-card-icon bg-green-500"><i class="fas fa-check-circle"></i></div>
                 <div>
                     <p class="text-gray-600">อนุมัติแล้ว</p>
-                    <p class="text-3xl font-bold text-gray-800">{{-- {{ $approvedCafes }} --}}12</p>
+                  <p class="text-3xl font-bold text-gray-800">{{ $approvedCafes }}</p>
                 </div>
             </div>
             <div class="stat-card glass-morphism p-6 rounded-2xl flex items-center gap-6 card-base">
                 <div class="stat-card-icon bg-yellow-500"><i class="fas fa-hourglass-half"></i></div>
                 <div>
                     <p class="text-gray-600">รอการอนุมัติ</p>
-                    <p class="text-3xl font-bold text-gray-800">{{-- {{ $pendingCafes }} --}}3</p>
+                    <p class="text-3xl font-bold text-gray-800">{{ $pendingCafes }}</p>
                 </div>
             </div>
         </div>

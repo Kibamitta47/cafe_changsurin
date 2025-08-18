@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use App\Models\AdminID;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use App\Models\User;
+use App\Models\Cafe;
+use App\Models\AddnewsAdmin;
 
 class AdminAuthController extends Controller
 {
@@ -19,18 +23,17 @@ class AdminAuthController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:admin_id,Email',
-            'password' => 'required|min:6',
-            'profile_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'email' => 'required|string|email|max:255|unique:admin_id,Email',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
         AdminID::create([
             'UserName' => $request->name,
             'Email' => $request->email,
-            'password' => Hash::make($request->password),
+            'password' => $request->password, // cast hashed จะ hash ให้อัตโนมัติ
         ]);
 
-        return redirect()->route('login.admin')->with('success', 'สมัครสมาชิกสำเร็จ');
+        return redirect()->route('login.admin')->with('success', 'สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ');
     }
 
     public function showLogin()
@@ -40,42 +43,38 @@ class AdminAuthController extends Controller
 
     public function login(Request $request)
     {
-        Log::info('Admin login attempt:', $request->all());
-
-        $request->validate([
-            'Email' => 'required|email',
-            'Password' => 'required',
+        $credentials = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
         ]);
 
-        $admin = AdminID::where('Email', $request->Email)->first();
+        Log::info('Admin login attempt for email: ' . $credentials['email']);
 
-        if (!$admin) {
-            Log::info('Admin not found with email: ' . $request->Email);
-            return back()->withErrors([
-                'Email' => 'ไม่พบอีเมลนี้ในระบบ',
-            ])->withInput($request->only('Email'));
+        if (Auth::guard('admin')->attempt([
+            'Email' => $credentials['email'],
+            'password' => $credentials['password'],
+        ], $request->boolean('remember'))) {
+            
+            $request->session()->regenerate();
+            Log::info('Admin login successful: ' . $credentials['email']);
+            
+            return redirect()->intended(route('home.admin'))->with('success', 'เข้าสู่ระบบสำเร็จ');
         }
 
-        if (!Hash::check($request->Password, $admin->password)) {
-            Log::info('Password mismatch for admin: ' . $request->Email);
-            return back()->withErrors([
-                'Password' => 'รหัสผ่านไม่ถูกต้อง',
-            ])->withInput($request->only('Email'));
-        }
-
-        Auth::guard('admin')->login($admin);
-        $request->session()->regenerate();
-
-        Log::info('Admin login successful: ' . $request->Email);
-
-        return redirect()->intended('/home-admin')->with('success', 'เข้าสู่ระบบสำเร็จ');
+        Log::warning('Admin login failed for: ' . $credentials['email']);
+        return back()->withErrors([
+            'email' => 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
+        ])->onlyInput('email');
     }
 
     public function logout(Request $request)
     {
-        Log::info('Admin logout: ' . Auth::guard('admin')->user()->Email);
+        if (Auth::guard('admin')->check()) {
+            Log::info('Admin logout: ' . Auth::guard('admin')->user()->Email);
+        }
 
         Auth::guard('admin')->logout();
+
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
@@ -84,19 +83,59 @@ class AdminAuthController extends Controller
 
     public function home()
     {
-        $admin = Auth::guard('admin')->user();
-
-        if (!$admin) {
-            return redirect()->route('login.admin');
+        // --- 1. ดึงข้อมูลสำหรับ Stat Cards ---
+        $totalUsers = User::count();
+        $totalCafes = Cafe::count();
+        $pendingCafes = Cafe::where('status', 'pending')->count();
+        $totalNews = AddnewsAdmin::count();
+        
+        // --- 2. ดึงข้อมูลสำหรับกราฟ (โค้ดเดิม) ---
+        // (โค้ดดึงข้อมูล userRegistrationData, cafeStatusData, topCafes ทั้งหมดเหมือนเดิม)
+        $userRegistrationData = User::select(DB::raw('DATE(created_at) as registration_date'), DB::raw('count(*) as user_count'))->where('created_at', '>=', now()->subDays(15))->groupBy('registration_date')->orderBy('registration_date', 'asc')->get()->keyBy('registration_date');
+        $chartLabels = [];
+        $chartData = [];
+        for ($i = 14; $i >= 0; $i--) {
+            $date = now()->subDays($i);
+            $dateString = $date->format('Y-m-d');
+            $chartLabels[] = $date->translatedFormat('j M');
+            if (isset($userRegistrationData[$dateString])) {
+                $chartData[] = $userRegistrationData[$dateString]->user_count;
+            } else {
+                $chartData[] = 0;
+            }
         }
+        $cafeStatusData = Cafe::select('status', DB::raw('count(*) as count'))->groupBy('status')->get();
+        $cafeStatusLabels = $cafeStatusData->pluck('status')->map(function ($status) { /* ... */ });
+        $cafeStatusCounts = $cafeStatusData->pluck('count');
+        $topCafes = Cafe::where('status', 'approved')->withAvg('reviews', 'rating')->orderBy('reviews_avg_rating', 'desc')->take(10)->get();
+        $topCafeLabels = $topCafes->pluck('cafe_name');
+        $topCafeData = $topCafes->pluck('reviews_avg_rating');
 
-        Log::info('Admin accessing home: ' . $admin->Email);
-        return view('admin.home', compact('admin'));
+        
+        // --- 3. ส่งข้อมูลทั้งหมดไปยัง View ---
+        return view('admin.home', [
+            // ข้อมูลใหม่สำหรับ Stat Cards
+            'totalUsers' => $totalUsers,
+            'totalCafes' => $totalCafes,
+            'pendingCafes' => $pendingCafes,
+            'totalNews' => $totalNews,
+
+            // ข้อมูลเดิมสำหรับกราฟ
+            'chartLabels' => $chartLabels,
+            'chartData' => $chartData,
+            'cafeStatusLabels' => $cafeStatusLabels,
+            'cafeStatusCounts' => $cafeStatusCounts,
+            'topCafeLabels' => $topCafeLabels,
+            'topCafeData' => $topCafeData,
+        ]);
     }
+
 
     public function editProfile()
     {
-        return view('admin.edit-profileadmin');
+        return view('admin.edit-profileadmin', [
+            'admin' => Auth::guard('admin')->user()
+        ]);
     }
 
     public function updateProfile(Request $request)
@@ -106,30 +145,28 @@ class AdminAuthController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:admin_id,Email,' . $admin->AdminID . ',AdminID',
-            'password' => 'nullable|min:6',
-            'profile_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'password' => 'nullable|min:8|confirmed',
+            'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
         $admin->UserName = $request->input('name');
         $admin->Email = $request->input('email');
 
         if ($request->filled('password')) {
-            $admin->password = Hash::make($request->password);
+            $admin->password = $request->password; // cast hashed hash ให้เอง
         }
 
         if ($request->hasFile('profile_image')) {
             if ($admin->profile_image) {
-                \Storage::disk('public')->delete('profile_images/' . $admin->profile_image);
+                Storage::disk('public')->delete($admin->profile_image);
             }
 
-            $image = $request->file('profile_image');
-            $imageName = time() . '.' . $image->getClientOriginalExtension();
-            $image->storeAs('profile_images', $imageName, 'public');
-            $admin->profile_image = $imageName;
+            $path = $request->file('profile_image')->store('profile_images', 'public');
+            $admin->profile_image = $path;
         }
 
         $admin->save();
 
-        return redirect()->back()->with('success', 'อัปเดตข้อมูลเรียบร้อยแล้ว');
+        return redirect()->back()->with('success', 'อัปเดตข้อมูลโปรไฟล์เรียบร้อยแล้ว');
     }
 }

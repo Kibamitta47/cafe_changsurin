@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\User;
+use App\Models\AdminID;
+use App\Models\Review;
 
 class Cafe extends Model
 {
@@ -13,7 +16,7 @@ class Cafe extends Model
 
     protected $fillable = [
         'user_id',
-        'admin_id', // ต้องมี admin_id อยู่ใน fillable
+        'admin_id',
         'cafe_name',
         'place_name',
         'address',
@@ -55,22 +58,14 @@ class Cafe extends Model
         'credit_card'       => 'boolean',
     ];
 
-    /**
-     * ความสัมพันธ์กับ User Model (สำหรับผู้ใช้ทั่วไป)
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }
-    
-    /**
-     * ความสัมพันธ์กับ AdminID Model (สำหรับผู้ดูแลระบบ)
-     */
+
     public function admin(): BelongsTo
     {
-        // ชี้ไปที่ AdminID Model และระบุ foreign key (admin_id ในตาราง cafes)
-        // และ local key (AdminID ในตาราง admin_id)
-        return $this->belongsTo(AdminID::class, 'admin_id', 'AdminID'); 
+        return $this->belongsTo(AdminID::class, 'admin_id', 'AdminID');
     }
 
     public function reviews(): HasMany
@@ -83,8 +78,15 @@ class Cafe extends Model
         return $this->belongsToMany(User::class, 'cafe_likes', 'cafe_id', 'user_id')->withTimestamps();
     }
 
-    public function isLikedBy(\App\Models\User $user)
+    /**
+     * ตรวจสอบว่าผู้ใช้กดไลก์คาเฟ่นี้หรือไม่
+     *
+     * @param User $user
+     * @return bool
+     */
+    public function isLikedBy(User $user): bool
     {
-        return $this->likers()->where('user_id', $user->id)->exists();
+        return $this->likers()->where('user_id', $user->getKey())->exists();
     }
+    
 }

@@ -8,8 +8,8 @@ use App\Models\AddnewsAdmin;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use App\Models\AdminID; // เพิ่มการ use AdminID Model
-use App\Models\User; // เพิ่มการ use User Model
+use App\Models\AdminID;
+use App\Models\User;
 
 class AdminCafeController extends Controller
 {
@@ -23,8 +23,6 @@ class AdminCafeController extends Controller
         $authenticatedUser = Auth::user();
         $authenticatedUserId = Auth::id();
         
-        // Log::info("Admin creating cafe: Authenticated User ID = {$authenticatedUserId}, Class = " . get_class($authenticatedUser));
-
         $validatedData = $request->validate([
             'cafe_name' => 'required|string|max:255',
             'place_name' => 'required|string|max:255',
@@ -54,13 +52,10 @@ class AdminCafeController extends Controller
 
         $cafe = new Cafe($validatedData);
         
-        // --- Logic สำหรับการกำหนด user_id หรือ admin_id ---
-        // ตรวจสอบว่าเป็น AdminID model หรือไม่ (ถ้า Admin ล็อกอินด้วย guard ที่ใช้ AdminID)
         if ($authenticatedUser instanceof AdminID) {
             $cafe->admin_id = $authenticatedUserId;
             $cafe->user_id = null; 
         } elseif ($authenticatedUser instanceof User) {
-            // กรณีเป็น User ทั่วไป (เช่น Admin อาจจะใช้ User model แต่มี role)
             $cafe->user_id = $authenticatedUserId;
             $cafe->admin_id = null; 
         } else {
@@ -68,9 +63,7 @@ class AdminCafeController extends Controller
             $cafe->admin_id = null;
             Log::warning('Cafe created by unidentifiable user type.');
         }
-        // ----------------------------------------------------
-
-        // เมื่อ Admin สร้าง จะให้สถานะเป็น 'approved' ทันที
+        
         $cafe->status = 'approved'; 
 
         $cafe->is_new_opening = $request->has('is_new_opening');
@@ -102,7 +95,6 @@ class AdminCafeController extends Controller
 
     public function index()
     {
-        // ดึงข้อมูลคาเฟ่พร้อมกับความสัมพันธ์ user และ admin
         $cafes = Cafe::with(['user', 'admin'])->orderBy('created_at', 'desc')->paginate(10); 
         
         $approvedCount = Cafe::where('status', 'approved')->count();
@@ -157,7 +149,6 @@ class AdminCafeController extends Controller
         $cafe->other_services = $request->input('other_services', []);
         $cafe->cafe_styles = $request->input('cafe_styles', []);
         
-        // จัดการรูปภาพ
         if ($request->hasFile('images')) {
             if ($cafe->images && is_array($cafe->images)) {
                 foreach ($cafe->images as $oldImage) {
@@ -230,16 +221,40 @@ class AdminCafeController extends Controller
         return response()->json(['is_duplicate' => $query->exists()]);
     }
     
+    /**
+     * Display the welcome page.
+     * This is the corrected and final version of the function.
+     */
     public function welcome()
     {
-        $cafes = Cafe::where('status', 'approved')->latest()->paginate(9);
-        $news = AddnewsAdmin::where('is_visible', true)->latest()->paginate(6);
-        return view('welcome', compact('cafes', 'news'));
+        // 1. Get approved cafes
+        // 2. Eager load the average rating from the 'reviews' table's 'rating' column.
+        //    Laravel will automatically create a 'reviews_avg_rating' property.
+        $cafes = Cafe::where('status', 'approved')
+                     ->withAvg('reviews', 'rating') // <<< This is the essential line
+                     ->latest()
+                     ->get(); // Use get() to fetch all results for JavaScript filtering
+
+        // Get visible news
+        $news = AddnewsAdmin::where('is_visible', true)->latest()->get();
+
+        // Get liked cafe IDs for the authenticated user
+        $likedCafeIds = [];
+        if (Auth::check()) {
+            $likedCafeIds = Auth::user()->likedCafes()->pluck('cafe_id')->toArray();
+        }
+
+        return view('welcome', compact('cafes', 'news', 'likedCafeIds'));
     }
 
+    /**
+     * Show the details for a specific cafe.
+     */
     public function show($id)
     {
-        $cafe = Cafe::findOrFail($id);
+        // Also add average rating calculation here for the detail page
+        $cafe = Cafe::withAvg('reviews', 'rating')->findOrFail($id); 
+        
         $reviews = $cafe->reviews()->latest()->paginate(5);
         return view('cafes.show', compact('cafe', 'reviews'));
     }

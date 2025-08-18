@@ -120,11 +120,11 @@
         <form method="POST" action="{{ route('login.admin.post') }}">
             @csrf
 
-            <label for="Email">Email:</label>
-            <input type="email" name="Email" id="Email" value="{{ old('Email') }}" required>
+            <label for="email">Email:</label>
+            <input type="email" name="email" id="email" value="{{ old('email') }}" required>
 
-            <label for="Password">Password:</label>
-            <input type="password" name="Password" id="Password" required>
+            <label for="password">Password:</label>
+            <input type="password" name="password" id="password" required>
 
             <button type="submit">เข้าสู่ระบบ</button>
         </form>

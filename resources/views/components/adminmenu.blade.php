@@ -401,11 +401,11 @@
                         $profileImage = $adminUser ? $adminUser->profile_image : null;
                         $userName = $adminUser ? $adminUser->UserName : 'Guest Admin';
                     @endphp
-                    @if($profileImage && file_exists(public_path('storage/profile_images/' . $profileImage)))
-                        <img src="{{ asset('storage/profile_images/' . $profileImage) }}" alt="Profile Image">
-                    @else
-                        <img src="{{ asset('images/default-profile.jpg') }}" alt="Default Profile Image">
-                    @endif
+                    @if($profileImage && file_exists(storage_path('app/public/' . $profileImage)))
+    <img src="{{ asset('storage/' . $profileImage) }}" alt="Profile Image">
+@else
+    <img src="{{ asset('images/default-profile.jpg') }}" alt="Default Profile Image">
+@endif
                 </div>
                 <div class="profile-details">
                     <span>{{ $userName }}</span>

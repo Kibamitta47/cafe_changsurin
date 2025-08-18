@@ -14,7 +14,7 @@ class UserCafeController extends Controller
     // แสดงฟอร์มสำหรับสร้างคาเฟ่ใหม่
     public function create()
     {
-        return view('user.cafes.create');
+       return view('user.cafes.create'); 
     }
 
     // บันทึกข้อมูลคาเฟ่ที่สร้างใหม่ลงฐานข้อมูล
@@ -179,22 +179,43 @@ class UserCafeController extends Controller
         return view('user.cafe-detail', compact('cafe', 'reviews'));
     }
 
-    // เพิ่มเมธอด myLikedCafes เพื่อแสดงรายการคาเฟ่ที่ผู้ใช้ชื่นชอบ
+    // เพิ่มเมธอด myLikedCafes เพื่อแสดงรายการคาเฟ่ที่ผู้ใช้ชื่นชอบ แสดงหน้าคาเฟ่ที่ผู้ใช้ปัจจุบันกดถูกใจ
     public function myLikedCafes()
     {
         // ตรวจสอบว่าผู้ใช้ล็อกอินอยู่หรือไม่
         if (Auth::check()) {
+            // ดึงข้อมูลผู้ใช้ที่ล็อกอินอยู่
             $user = Auth::user();
 
-            // ดึงคาเฟ่ที่ผู้ใช้กดไลค์ (Liked)
-            // โดยสมมติว่าคุณมี Relationship ชื่อ 'likedCafes' ใน User Model ของคุณ
-            $likedCafes = $user->likedCafes()->paginate(10); // หรือใช้ get() หากคุณไม่ต้องการ pagination
+            // ดึงข้อมูลคาเฟ่ที่ผู้ใช้คนนี้กดถูกใจ (ผ่าน relationship)
+            // พร้อมกับแบ่งหน้า (paginate) เพื่อประสิทธิภาพ
+            $likedCafes = $user->likedCafes()->paginate(10);
 
-            // ส่งข้อมูลไปยัง view ที่คุณต้องการแสดงรายการคาเฟ่ที่ชอบ
+            // ส่งตัวแปร $likedCafes ไปที่ View ที่ชื่อว่า 'user.liked-cafes.blade.php'
+            // (หากไฟล์ View ของคุณชื่ออื่น ให้แก้ตรงนี้)
             return view('user.liked-cafes', compact('likedCafes'));
         }
         
-        // หากผู้ใช้ไม่ได้ล็อกอิน ให้เปลี่ยนเส้นทางไปยังหน้าล็อกอิน
+        // หากผู้ใช้ไม่ได้ล็อกอินอยู่ จะถูกส่งไปที่หน้า login
         return redirect()->route('login');
     }
+    public function toggleLike(Request $request, Cafe $cafe)
+{
+    $user = Auth::user();
+    if (!$user) {
+        return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+    }
+
+    // ใช้ toggle เพื่อเพิ่มหรือลบข้อมูลในตารางกลางโดยอัตโนมัติ
+    $user->likedCafes()->toggle($cafe->id);
+
+    $isLiked = $user->likedCafes()->where('cafe_id', $cafe->id)->exists();
+
+    return response()->json([
+        'status' => 'success',
+        'is_liked' => $isLiked,
+        'message' => $isLiked ? 'Cafe liked successfully.' : 'Cafe unliked successfully.'
+    ]);
+}
+
 }

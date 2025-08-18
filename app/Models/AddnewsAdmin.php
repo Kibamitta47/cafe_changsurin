@@ -9,22 +9,21 @@ class AddnewsAdmin extends Model
 {
     use HasFactory;
 
-    // ตั้งชื่อตารางให้ตรงกับฐานข้อมูล
-    // จาก migrate:status คุณใช้ 'addnews_admin' ซึ่งถูกต้อง
-    protected $table = 'addnews_admin';
+    protected $table = 'addnews_admins';
 
     protected $fillable = [
         'title',
         'content',
-        'images',
+        'link_url',
         'start_datetime',
         'end_datetime',
-        'is_visible', // <--- ต้องมีใน fillable
+        'images',
+        'is_visible',
     ];
 
     protected $casts = [
         'images' => 'array',
-        'is_visible' => 'boolean', // <--- ต้องมี cast เป็น boolean
+        'is_visible' => 'boolean',
         'start_datetime' => 'datetime',
         'end_datetime' => 'datetime',
     ];

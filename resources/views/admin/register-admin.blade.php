@@ -76,18 +76,37 @@
         a:hover {
             color: #3a5a99;
         }
+        .errors {
+            color: red;
+            font-size: 0.9rem;
+            text-align: left;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h2>เพิ่มบัญชี Admin</h2>
-        <form action="{{ url('/register-admin') }}" method="POST">
+
+        @if ($errors->any())
+            <div class="errors">
+                <ul>
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <form action="{{ route('register.admin.post') }}" method="POST">
             @csrf
-            <input type="text" name="name" placeholder="Username" required>
-            <input type="email" name="email" placeholder="Email" required>
+            <input type="text" name="name" placeholder="Username" value="{{ old('name') }}" required>
+            <input type="email" name="email" placeholder="Email" value="{{ old('email') }}" required>
             <input type="password" name="password" placeholder="Password" required>
+            <input type="password" name="password_confirmation" placeholder="ยืนยันรหัสผ่าน" required>
             <button type="submit">เพิ่มบัญชี</button>
         </form>
+
         <a href="{{ url('/login-admin') }}">เข้าสู่ระบบ</a>
     </div>
 </body>
