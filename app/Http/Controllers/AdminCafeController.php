@@ -258,4 +258,64 @@ class AdminCafeController extends Controller
         $reviews = $cafe->reviews()->latest()->paginate(5);
         return view('cafes.show', compact('cafe', 'reviews'));
     }
+    
+ // ✅ ฟังก์ชันสำหรับ "เปิด/ปิด" สถานะแนะนำ (สำหรับ Admin)
+    public function toggleRecommend(Request $request, Cafe $cafe)
+    {
+        $cafe->is_recommended = !$cafe->is_recommended;
+        $cafe->save();
+        return back()->with('success', 'เปลี่ยนสถานะแนะนำสำเร็จ!');
+    }
+
+    // ✅ ฟังก์ชันสำหรับหน้า "เลือกคาเฟ่แนะนำ" (สำหรับ Admin) ที่ถูกต้อง
+    public function recommend()
+    {
+        // 1. ดึงข้อมูลคาเฟ่ทั้งหมดที่อนุมัติแล้ว พร้อมคำนวณเรตติ้งเฉลี่ย
+        $allCafes = Cafe::where('status', 'approved')->withAvg('reviews', 'rating')->get();
+
+        // 2. จัดอันดับคาเฟ่ตามเรตติ้งสูงสุด และเอามา 10 อันดับแรก
+        $topRatedCafes = $allCafes->sortByDesc('reviews_avg_rating')->take(10);
+
+        // 3. ค้นหาคาเฟ่เปิดใหม่ และเอามาล่าสุด 5 ร้าน
+        $newCafes = $allCafes->where('is_new_opening', true)->sortByDesc('created_at')->take(5);
+
+        // 4. จัดกลุ่มคาเฟ่ตามสไตล์ (แสดงผลสไตล์ละ 5 ร้าน)
+        $cafesByStyle = $allCafes->flatMap(function ($cafe) {
+            $styles = is_array($cafe->cafe_styles) ? $cafe->cafe_styles : json_decode($cafe->cafe_styles, true) ?? [];
+            return collect($styles)->map(function ($style) use ($cafe) {
+                return ['style' => $style, 'cafe' => $cafe];
+            });
+        })->groupBy('style')->map(function ($group) {
+            return $group->pluck('cafe')->take(5);
+        });
+
+        // 5. ส่งตัวแปรทั้งหมดไปที่ View
+        return view('admin.recommend', compact('topRatedCafes', 'newCafes', 'cafesByStyle'));
+    }
+
+    // ✅ ฟังก์ชันสำหรับหน้า "แสดงคาเฟ่แนะนำ" (สำหรับผู้ใช้ทั่วไป) ที่แก้ไขแล้ว
+// ✅ ฟังก์ชันสำหรับหน้า "แสดงคาเฟ่แนะนำ" (สำหรับผู้ใช้ทั่วไป) ที่แก้ไขแล้ว
+public function showRecommendPage()
+{
+    // 1. ดึงเฉพาะคาเฟ่ที่ Admin เลือกให้เป็น "แนะนำ" ทั้งหมด
+    $recommendedCafes = Cafe::where('status', 'approved')
+                             ->where('is_recommended', true)
+                             ->withAvg('reviews', 'rating')
+                             ->get();
+    
+    // 2. จัดหมวดหมู่ข้อมูลเหมือนเดิม
+    $topRatedCafes = $recommendedCafes->sortByDesc('reviews_avg_rating')->take(10);
+    $newCafes = $recommendedCafes->where('is_new_opening', true)->sortByDesc('created_at')->take(5);
+    $cafesByStyle = $recommendedCafes->flatMap(function ($cafe) {
+        $styles = is_array($cafe->cafe_styles) ? $cafe->cafe_styles : json_decode($cafe->cafe_styles, true) ?? [];
+        return collect($styles)->map(function ($style) use ($cafe) {
+            return ['style' => $style, 'cafe' => $cafe];
+        });
+    })->groupBy('style')->map(function ($group) {
+        return $group->pluck('cafe')->take(5);
+    });
+
+    // 3. ส่งตัวแปรทั้งหมดไปที่ View
+    return view('cafes.recommend', compact('recommendedCafes', 'topRatedCafes', 'newCafes', 'cafesByStyle'));
+}
 }

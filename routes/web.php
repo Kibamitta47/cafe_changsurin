@@ -24,10 +24,11 @@ Route::get('/news/{id}', [NewsController::class, 'show'])->name('news.show');
 Route::get('/news', [NewsController::class, 'index'])->name('news.index');
 Route::get('/add-line', [PageController::class, 'showLinePage'])->name('line.add');
 Route::get('/advertising-packages', [PageController::class, 'showAdvertisingPackages'])->name('advertising.packages');
-// Route สำหรับแสดงหน้าข้อมูลการแจ้งปัญหา
 Route::get('/report-a-problem', [PageController::class, 'showProblemInfoPage'])->name('problem.info');
-// Route สำหรับแสดงหน้าเกี่ยวกับเรา
 Route::get('/about-us', [PageController::class, 'showAboutPage'])->name('about.us');
+// ✅ MOVED PUBLIC RECOMMEND ROUTE HERE
+Route::get('/recommend-cafes', [AdminCafeController::class, 'showRecommendPage'])->name('cafes.recommend');
+Route::get('/recommend-cafes/style/{style}', [AdminCafeController::class, 'showCafesByStyle'])->name('cafes.style');
 
 /*
 |--------------------------------------------------------------------------
@@ -109,7 +110,10 @@ Route::middleware('auth:admin')->group(function () {
         Route::delete('/delete/{id}', [AddnewsAdminController::class, 'deleteNews'])->name('delete');
         Route::patch('/toggle/{id}', [AddnewsAdminController::class, 'toggleVisibility'])->name('toggle');
         Route::post('/delete-image/{id}', [AddnewsAdminController::class, 'deleteImage'])->name('deleteImage');
+        
     });
+
+    Route::get('/admin/recommend-cafes', [AdminCafeController::class, 'recommend'])->name('admin.recommend');
 
     Route::get('/edit-profile', [AdminAuthController::class, 'editProfile'])->name('admin.edit.profile');
     Route::post('/edit-profile', [AdminAuthController::class, 'updateProfile'])->name('admin.update.profile');
@@ -121,3 +125,12 @@ Route::middleware('auth:admin')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::get('/cafes/{id}', [AdminCafeController::class, 'show'])->name('cafes.show');
+// ในส่วน Public Routes
+Route::get('/recommend-cafes', [AdminCafeController::class, 'showRecommendPage'])->name('cafes.recommend');
+
+// ในกลุ่ม middleware('auth:admin')
+Route::middleware('auth:admin')->group(function () {
+    // ... (Route เดิมของ Admin) ...
+    Route::get('/admin/recommend-cafes', [AdminCafeController::class, 'recommend'])->name('admin.recommend');
+    Route::post('/admin/cafes/{cafe}/toggle-recommend', [AdminCafeController::class, 'toggleRecommend'])->name('admin.cafes.toggle_recommend');
+});

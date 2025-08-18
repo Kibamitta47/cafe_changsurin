@@ -1,145 +1,217 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>เขียนรีวิว: {{ $cafe->cafe_name }}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-  <style>
-    body {
-      font-family: 'Kanit', sans-serif;
-      background-image: url('https://images.unsplash.com/photo-1511920183303-52c142c6772c?auto=format&fit=crop&w=1470&q=80');
-      background-size: cover;
-      background-position: center;
-      background-attachment: fixed;
-      display: flex;
-      flex-direction: column; /* <<< แก้ไขตรงนี้: เปลี่ยน body เป็นคอลัมน์ */
-      min-height: 100vh;
-      overflow-y: auto; /* เผื่อกรณีเนื้อหายาว */
-    }
-    body::before {
-        content: ''; position: fixed; inset: 0;
-        background: rgba(0,0,0,0.35); z-index: -1;
-    }
-    [x-cloak] { display: none !important; }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>เขียนรีวิว: {{ $cafe->cafe_name }}</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #F9F7F5;
+            overflow: hidden;
+        }
+        .font-serif {
+            font-family: 'Playfair Display', serif;
+        }
+        [x-cloak] { display: none !important; }
 
-    /* Form Container ไม่ต้องเปลี่ยน */
-    .form-container {
-      max-width: 750px;
-      width: 95%;
-      background: rgba(255 255 255 / 0.98);
-      backdrop-filter: blur(12px);
-      padding: 1.75rem 2rem;
-      border-radius: 1rem;
-      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
+        .form-input-elegant {
+            background: transparent;
+            border: 0;
+            border-bottom: 1.5px solid #d1d5db;
+            border-radius: 0;
+            padding: 0.25rem 0.25rem;
+            font-size: 0.9rem;
+            transition: border-color 0.3s ease;
+        }
+        .form-input-elegant:focus {
+            outline: none;
+            box-shadow: none;
+            border-color: #6F4E37;
+            --tw-ring-shadow: 0 0 #0000;
+        }
 
-    /* สไตล์อื่นๆ ไม่ต้องเปลี่ยน */
-    .form-label { font-weight: 600; color: #4b5563; font-size: 0.875rem; margin-bottom: 0.375rem; }
-    .form-control { background-color: #f9fafb; border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.5rem 0.75rem; font-size: 0.875rem; transition: all 0.2s ease-in-out; }
-    .form-control:focus { outline: none; border-color: #c49a6c; box-shadow: 0 0 0 3px rgba(196, 154, 108, 0.2); background-color: white; }
-    .rating { direction: rtl; display: flex; justify-content: center; gap: 0.25rem; }
-    .rating input[type="radio"] { display: none; }
-    .rating label { font-size: 2rem; color: #e5e7eb; cursor: pointer; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); transition: all 0.2s ease-in-out; }
-    .rating label::before { content: "★"; }
-    .rating label:hover, .rating label:hover ~ label, .rating input:checked ~ label { color: #f59e0b; transform: scale(1.1); }
-    .btn { font-size: 0.875rem; padding: 0.5rem 1rem; border-radius: 0.375rem; font-weight: 600; transition: all 0.2s ease-in-out; border: none; }
-    .btn-submit { background-color: #c49a6c; color: white; box-shadow: 0 4px 10px -5px rgba(196, 154, 108, 0.6); }
-    .btn-submit:hover { background-color: #b58859; transform: translateY(-2px); box-shadow: 0 6px 15px -5px rgba(196, 154, 108, 0.5); }
-    .btn-cancel { background-color: transparent; color: #6b7280; }
-    .btn-cancel:hover { background-color: #f3f4f6; }
-  </style>
+        /* Star Rating */
+        .star-rating input { display: none; }
+        .star-rating label {
+            font-size: 1.5rem;
+            color: #e0e0e0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .star-rating label:hover,
+        .star-rating label:hover ~ label,
+        .star-rating input:checked ~ label { color: #f59e0b; }
+        .star-rating label:hover { transform: scale(1.05); }
+    </style>
 </head>
-<body>
+<body class="h-screen flex flex-col">
   
-  {{-- Navbar จะแสดงผลที่ด้านบนสุดของหน้าอย่างถูกต้อง --}}
-  @include('components.2navbar')
+    @include('components.2navbar')
 
-  {{-- <<< แก้ไขตรงนี้: main จะขยายเต็มพื้นที่และจัดฟอร์มให้อยู่ตรงกลาง --}}
-  <main class="flex-grow flex items-center justify-center p-4">
-    <div class="form-container">
-        <div class="text-center mb-6">
-            <h2 class="text-2xl font-bold text-slate-800">เขียนรีวิวสำหรับ: {{ $cafe->cafe_name }}</h2>
-        </div>
-
-        <form action="{{ route('user.reviews.store') }}" method="POST" enctype="multipart/form-data" novalidate>
+    <main class="flex-grow w-full max-w-4xl mx-auto p-2 flex" x-data="reviewForm()">
+        <!-- ✨ MODIFIED: เพิ่ม @submit.prevent เพื่อเรียกฟังก์ชัน validateAndSubmit ก่อนส่งฟอร์ม -->
+        <form action="{{ route('user.reviews.store') }}" method="POST" enctype="multipart/form-data"
+              @submit.prevent="validateAndSubmit($event)" 
+              class="w-full h-full bg-white rounded-xl shadow-lg border border-slate-100 flex overflow-hidden">
             @csrf
             <input type="hidden" name="cafe_id" value="{{ $cafe->id }}">
             
-            <div class="grid grid-cols-1 md:grid-cols-2 md:gap-x-8">
-                {{-- Left Column --}}
-                <div class="space-y-4">
-                    <div>
-                        <label for="title" class="form-label">หัวข้อรีวิว</label>
-                        <input type="text" class="form-control w-full" id="title" name="title" placeholder="เช่น บรรยากาศดี, กาแฟอร่อย" required>
+            <!-- Left Column -->
+            <div 
+                class="w-1/2 p-4 bg-slate-50 border-r border-slate-200 flex flex-col"
+                @dragover.prevent="isDragging = true" 
+                @dragleave.prevent="isDragging = false" 
+                @drop.prevent="handleDrop($event)">
+                
+                <template x-if="files.length === 0">
+                    <div class="flex-grow flex items-center justify-center border-2 border-dashed rounded-lg transition-colors"
+                         :class="isDragging ? 'border-cyan-500 bg-cyan-50' : 'border-slate-300'">
+                        <div class="text-center text-slate-500 text-sm">
+                            <i class="fa-solid fa-images text-3xl"></i>
+                            <p class="mt-2 font-semibold">ลากรูปภาพของคุณมาวางที่นี่</p>
+                            <p class="text-xs mt-1">หรือ</p>
+                            <label for="images" class="mt-2 inline-block px-3 py-1.5 bg-white border border-slate-300 rounded-md text-xs font-semibold cursor-pointer hover:bg-slate-100">
+                                เลือกไฟล์
+                            </label>
+                            <input @change="handleSelect($event)" id="images" name="images[]" type="file" class="hidden" multiple accept="image/*" x-ref="fileInput">
+                        </div>
                     </div>
-                    <div>
-                        <label for="content" class="form-label">รายละเอียด</label>
-                        <textarea class="form-control w-full" id="content" name="content" rows="9" placeholder="เล่าประสบการณ์ของคุณที่นี่..." required></textarea>
-                    </div>
-                </div>
+                </template>
 
-                {{-- Right Column --}}
-                <div class="space-y-4 mt-4 md:mt-0">
-                    <div class="text-center bg-slate-50 p-4 rounded-lg">
-                        <label class="form-label">ให้คะแนนความประทับใจ</label>
-                        <div class="rating mt-1">
-                            <input type="radio" name="rating" value="5" id="star5" required /><label for="star5" title="5 ดาว"></label>
-                            <input type="radio" name="rating" value="4" id="star4" required /><label for="star4" title="4 ดาว"></label>
-                            <input type="radio" name="rating" value="3" id="star3" required /><label for="star3" title="3 ดาว"></label>
-                            <input type="radio" name="rating" value="2" id="star2" required /><label for="star2" title="2 ดาว"></label>
-                            <input type="radio" name="rating" value="1" id="star1" required /><label for="star1" title="1 ดาว"></label>
-                        </div>
-                    </div>
-                    <div x-data="fileUploader()">
-                        <label class="form-label">แนบรูปภาพ</label>
-                        <div 
-                            class="mt-1 flex justify-center rounded-md border border-dashed border-slate-900/25 px-4 py-6 transition-colors"
-                            :class="{ 'bg-amber-50 border-amber-400': isDragging }"
-                            @dragover.prevent="isDragging = true" @dragleave.prevent="isDragging = false" @drop.prevent="handleDrop($event)">
-                            <div class="text-center">
-                                <i class="fa-solid fa-cloud-arrow-up text-2xl text-slate-400"></i>
-                                <div class="mt-2 flex text-xs leading-5 text-slate-600">
-                                    <label for="images" class="relative cursor-pointer rounded-md font-semibold text-amber-600 hover:text-amber-500">
-                                        <span>อัปโหลด</span>
-                                        <input @change="handleSelect($event)" id="images" name="images[]" type="file" class="sr-only" multiple accept="image/*" x-ref="fileInput">
-                                    </label>
-                                    <p class="pl-1">หรือลากมาวาง</p>
-                                </div>
-                            </div>
-                        </div>
-                        <template x-if="files.length > 0">
-                            <div class="mt-2 max-h-20 overflow-y-auto space-y-1 pr-2">
+                <template x-if="files.length > 0">
+                    <div class="flex-grow relative">
+                         <div class="absolute inset-0 overflow-y-auto pr-2">
+                             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                 <template x-for="(file, index) in files" :key="index">
-                                    <div class="flex items-center justify-between text-xs bg-slate-50 p-1.5 rounded">
-                                        <span class="truncate w-4/5" x-text="file.name"></span>
-                                        <button @click.prevent="removeFile(index)" type="button" class="ml-2 text-red-500 hover:text-red-700">
-                                            <i class="fa-solid fa-xmark"></i>
-                                        </button>
+                                    <div class="relative aspect-square">
+                                        <img :src="file.preview" class="w-full h-full object-cover rounded-md shadow">
+                                        <button @click.prevent="removeFile(index)" type="button" class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold shadow">&times;</button>
                                     </div>
                                 </template>
                             </div>
-                        </template>
+                         </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Right Column -->
+            <div class="w-1/2 p-4 flex flex-col">
+                <header class="mb-4">
+                    <p class="text-slate-500 text-sm">เขียนรีวิวสำหรับ</p>
+                    <h1 class="font-serif text-2xl font-bold text-[#6F4E37]">{{ $cafe->cafe_name }}</h1>
+                </header>
+
+                <div class="flex-grow flex flex-col space-y-4 overflow-y-auto pr-2 text-sm">
+                    <!-- Rating -->
+                    <div class="text-center">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">ให้คะแนน</label>
+                        <div class="star-rating inline-flex flex-row-reverse justify-center">
+                            <input type="radio" id="star5" name="rating" value="5" required /><label for="star5">★</label>
+                            <input type="radio" id="star4" name="rating" value="4" /><label for="star4">★</label>
+                            <input type="radio" id="star3" name="rating" value="3" /><label for="star3">★</label>
+                            <input type="radio" id="star2" name="rating" value="2" /><label for="star2">★</label>
+                            <input type="radio" id="star1" name="rating" value="1" /><label for="star1">★</label>
+                        </div>
+                    </div>
+                    
+                    <!-- Title -->
+                    <div>
+                        <label for="title" class="block text-sm font-semibold text-slate-700 mb-1">หัวข้อรีวิว</label>
+                        <!-- ✨ MODIFIED: เพิ่ม x-model="title" -->
+                        <input x-model="title" type="text" class="form-input-elegant w-full" id="title" name="title" placeholder="สรุปสั้นๆ..." required>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="flex flex-col flex-grow">
+                        <label for="content" class="block text-sm font-semibold text-slate-700 mb-1">รายละเอียด</label>
+                        <!-- ✨ MODIFIED: เพิ่ม x-model="content" -->
+                        <textarea x-model="content" class="form-input-elegant w-full flex-grow text-sm" id="content" name="content" placeholder="เล่าประสบการณ์ของคุณ..." required></textarea>
                     </div>
                 </div>
-            </div>
 
-            <div class="mt-6 flex items-center justify-end gap-x-3 border-t border-slate-200 pt-5">
-                <a href="{{ route('cafes.show', $cafe->id) }}" class="btn btn-cancel">ยกเลิก</a>
-                <button type="submit" class="btn btn-submit">ส่งรีวิว</button>
+                <!-- Buttons -->
+                <div class="mt-auto pt-4 flex gap-2">
+                    <button type="submit" class="w-full px-4 py-2 text-sm font-semibold bg-[#6F4E37] text-white rounded-lg hover:bg-[#5a3e2b] transition-all shadow-md">
+                        ส่งรีวิว
+                    </button>
+                    <a href="{{ route('cafes.show', $cafe->id) }}" class="w-full text-center px-4 py-2 text-sm font-semibold bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200">
+                        ยกเลิก
+                    </a>
+                </div>
             </div>
         </form>
-    </div>
-  </main>
+    </main>
 
   <script>
-    function fileUploader(){return{isDragging:!1,files:[],handleSelect(e){this.addFiles(e.target.files)},handleDrop(e){this.isDragging=!1,this.addFiles(e.dataTransfer.files)},addFiles(e){const t=Array.from(e);this.files.push(...t),this.updateFileInput()},removeFile(e){this.files.splice(e,1),this.updateFileInput()},updateFileInput(){const e=new DataTransfer;this.files.forEach(t=>e.items.add(t)),this.$refs.fileInput.files=e.files}}}
+    function reviewForm() {
+      // ✨ NEW: กำหนดรายการคำหยาบ (สามารถเพิ่มคำอื่นๆ ได้ตามต้องการ)
+      const badWords = ['เหี้ย', 'สัส', 'ควย', 'ไอ้', 'อี', 'ชิบหาย'];
+
+      return {
+        isDragging: false,
+        files: [],
+        // ✨ NEW: สร้างตัวแปรสำหรับเก็บค่าจากฟอร์ม
+        title: '',
+        content: '',
+
+        // ✨ NEW: ฟังก์ชันสำหรับตรวจสอบคำหยาบ
+        containsBadWords(text) {
+          if (!text) return false;
+          // ตรวจสอบว่ามีคำใดใน badWords อยู่ใน text หรือไม่
+          return badWords.some(word => text.toLowerCase().includes(word));
+        },
+
+        // ✨ NEW: ฟังก์ชันที่จะทำงานเมื่อกดปุ่ม Submit
+        validateAndSubmit(event) {
+          // ตรวจสอบหัวข้อและเนื้อหา
+          if (this.containsBadWords(this.title) || this.containsBadWords(this.content)) {
+            // ถ้าเจอคำหยาบ ให้แจ้งเตือนและหยุดการทำงาน
+            alert('กรุณาอย่าใช้คำไม่สุภาพในการรีวิว');
+          } else {
+            // ถ้าไม่เจอคำหยาบ ให้ส่งฟอร์มตามปกติ
+            event.target.submit();
+          }
+        },
+
+        handleSelect(event) {
+          this.addFiles(event.target.files);
+        },
+        handleDrop(event) {
+          this.isDragging = false;
+          this.addFiles(event.dataTransfer.files);
+        },
+        addFiles(fileList) {
+          const newFiles = Array.from(fileList);
+          newFiles.forEach(file => {
+            if (file.type.startsWith('image/')) {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                this.files.push({ file: file, preview: e.target.result });
+                this.updateFileInput();
+              };
+              reader.readAsDataURL(file);
+            }
+          });
+        },
+        removeFile(index) {
+          this.files.splice(index, 1);
+          this.updateFileInput();
+        },
+        updateFileInput() {
+          const dataTransfer = new DataTransfer();
+          this.files.forEach(item => dataTransfer.items.add(item.file));
+          this.$refs.fileInput.files = dataTransfer.files;
+        }
+      }
+    }
   </script>
 </body>
 </html>

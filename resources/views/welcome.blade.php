@@ -259,7 +259,6 @@
         </div>
     </div>
 
-
     <div id="cafe-data-source" class="hidden">
         @if ($cafes && $cafes->count() > 0)
             @foreach ($cafes as $cafe)

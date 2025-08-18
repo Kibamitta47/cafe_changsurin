@@ -17,7 +17,7 @@
             --card-light-bg: #ffffff; /* White cards */
             --text-dark: #333333; /* Dark text for contrast */
             --text-secondary-dark: #666666; /* Slightly lighter dark text */
-            --text-accent-light: var(--primary-light); /* Accent color matches primary */
+            --text-primary: #ffffff; /* White text for headers */
             --border-light-color: #e0e0e0; /* Light grey border */
             --shadow-light-mild: 0 4px 15px rgba(0, 0, 0, 0.08); /* Soft shadow */
             --shadow-light-strong: 0 8px 25px rgba(0, 0, 0, 0.15); /* Stronger shadow on hover */
@@ -44,7 +44,7 @@
             top: 0;
             left: 0;
             width: 100%;
-            background: rgba(255, 255, 255, 0.95); /* White, slightly transparent */
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(8px);
             z-index: 999;
             display: flex;
@@ -73,7 +73,7 @@
             right: 30px;
             z-index: 1010;
             background: var(--primary-light);
-            color: var(--sidebar-light-bg); /* White text on blue button */
+            color: var(--sidebar-light-bg);
             border: none;
             padding: 12px 18px;
             border-radius: 8px;
@@ -121,19 +121,6 @@
             overflow-y: auto;
         }
 
-        .admin-sidebar::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .admin-sidebar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .admin-sidebar::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.1); /* Light scrollbar thumb */
-            border-radius: 10px;
-        }
-
         .admin-sidebar.show {
             transform: translateX(0);
         }
@@ -144,37 +131,15 @@
 
         /* Sidebar Header */
         .sidebar-header {
-            background: var(--primary-light); /* Blue header */
+            background: var(--primary-light);
             padding: 30px 25px;
-            position: relative;
-            overflow: hidden;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            color: var(--text-primary); /* White text on blue header */
+            color: var(--text-primary);
         }
 
-        .sidebar-header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-            animation: float 6s ease-in-out infinite;
-        }
-
-        /* Profile Info */
         .profile-info {
             display: flex;
             align-items: center;
             gap: 20px;
-            position: relative;
-            z-index: 2;
-        }
-
-        .profile-avatar {
-            position: relative;
-            flex-shrink: 0;
         }
 
         .profile-info img {
@@ -182,42 +147,21 @@
             height: 65px;
             border-radius: 50%;
             object-fit: cover;
-            border: 3px solid rgba(255, 255, 255, 0.5); /* White border */
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-            transition: var(--transition-smooth);
-        }
-
-        .profile-avatar::after {
-            content: '';
-            position: absolute;
-            top: -3px;
-            left: -3px;
-            right: -3px;
-            bottom: -3px;
-            background: rgba(255, 255, 255, 0.3); /* Lighter glow */
-            border-radius: 50%;
-            z-index: -1;
-            opacity: 0;
-            transition: var(--transition-smooth);
-        }
-
-        .profile-info:hover .profile-avatar::after {
-            opacity: 1;
-            animation: pulse 2s infinite;
+            border: 3px solid rgba(255, 255, 255, 0.5);
         }
 
         .profile-details span {
             display: block;
             font-size: 18px;
             font-weight: 700;
-            color: var(--text-primary); /* White text on blue header */
+            color: var(--text-primary);
             margin-bottom: 5px;
         }
 
         .profile-status {
             font-size: 12px;
             color: rgba(255, 255, 255, 0.9);
-            background: rgba(0, 0, 0, 0.1); /* Darker background for status bubble */
+            background: rgba(0, 0, 0, 0.1);
             padding: 4px 12px;
             border-radius: 20px;
             display: inline-block;
@@ -233,30 +177,10 @@
             padding: 0 15px;
         }
 
-        /* Menu Items */
         .menu-item {
             margin-bottom: 8px;
-            position: relative;
-            overflow: hidden;
         }
-
-        .menu-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: var(--primary-light); /* Blue highlight */
-            transition: var(--transition-smooth);
-            z-index: 0;
-            opacity: 0.1; /* Subtle overlay */
-        }
-
-        .menu-item:hover::before {
-            left: 0;
-        }
-
+        
         .menu-item a,
         .menu-item button {
             display: flex;
@@ -264,19 +188,15 @@
             gap: 15px;
             padding: 18px 20px;
             font-size: 16px;
-            color: var(--text-secondary-dark); /* Dark grey text */
+            color: var(--text-secondary-dark);
             text-decoration: none;
-            background: transparent;
             border: none;
             width: 100%;
             text-align: left;
             font-weight: 500;
             cursor: pointer;
-            font-family: inherit;
             border-radius: 15px;
             transition: var(--transition-smooth);
-            position: relative;
-            z-index: 1;
         }
 
         .menu-item a .icon,
@@ -284,113 +204,59 @@
             font-size: 20px;
             width: 25px;
             text-align: center;
-            color: var(--primary-light); /* Blue icons */
+            color: var(--primary-light);
         }
 
         .menu-item:hover a,
         .menu-item:hover button {
-            color: var(--text-dark); /* Darker text on hover */
-            background: #f0f0f0; /* Light grey background on hover */
+            color: var(--text-dark);
+            background: #f0f0f0;
             transform: translateX(10px);
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
         }
 
-        .menu-item.active a,
-        .menu-item.active button {
-            color: var(--primary-light); /* Primary blue for active text */
-            background: #e6f0fa; /* Very light blue background for active */
-            border-left: 4px solid var(--primary-light); /* Blue active border */
-            padding-left: 16px;
+        .menu-item.active a {
+            color: var(--primary-light);
+            background: #e6f0fa;
         }
-
-        .menu-item.active a .icon,
-        .menu-item.active button .icon {
-            color: var(--primary-light); /* Primary blue icon for active */
-        }
-
-
-        /* Logout Button Special Styling */
-        .menu-item.logout {
-            margin-top: 30px;
-            padding: 0 15px;
-        }
-
-        .menu-item.logout::before {
-            background: #ff4d4f; /* Red highlight */
-            opacity: 0.1;
-        }
-
+        
+        /* Logout Button */
         .menu-item.logout button {
-            color: #d9534f; /* Red text */
-            border: 1px solid rgba(217, 83, 79, 0.3); /* Red border */
-            background: rgba(217, 83, 79, 0.05); /* Very light red background */
+            color: #d9534f;
         }
 
         .menu-item.logout:hover button {
-            color: var(--sidebar-light-bg); /* White text on hover */
-            background: #d9534f; /* Solid red background on hover */
-            border-color: transparent;
+            color: var(--sidebar-light-bg);
+            background: #d9534f;
         }
 
-        /* Main Content Styling */
+        /* Main Content */
         .main-content {
             padding: 100px 30px 30px;
             transition: var(--transition-smooth);
-            min-height: calc(100vh - 100px);
-            background: var(--background-light); /* Match body background */
-            color: var(--text-dark);
         }
 
         body.sidebar-open .main-content {
             padding-left: calc(320px + 30px);
         }
 
-        /* Responsive Design */
+        /* Responsive */
         @media (max-width: 768px) {
-            .admin-sidebar {
-                width: 280px;
-            }
-            
-            body.sidebar-open {
-                padding-left: 0;
-            }
-
-            .main-content {
-                padding: 100px 20px 20px;
-            }
-
-            body.sidebar-open .main-content {
-                padding-left: 20px;
-            }
-            
-            .sidebar-toggle {
-                top: 15px;
-                right: 15px;
-                padding: 10px 14px;
-                font-size: 14px;
-            }
-
-            .top-bar {
-                padding: 10px 20px;
-            }
-
-            .top-bar-title {
-                font-size: 20px;
-            }
-
-            body.sidebar-open .top-bar {
-                left: 0;
-                width: 100%;
-            }
+            .admin-sidebar { width: 280px; }
+            body.sidebar-open { padding-left: 0; }
+            .main-content, body.sidebar-open .main-content { padding: 100px 20px 20px; }
+            .sidebar-toggle { top: 15px; right: 15px; padding: 10px 14px; font-size: 14px; }
+            .top-bar { padding: 10px 20px; }
+            .top-bar-title { font-size: 20px; }
+            body.sidebar-open .top-bar { left: 0; width: 100%; }
         }
     </style>
 </head>
 <body>
    
-        <button class="sidebar-toggle" onclick="toggleSidebar()">
-            <i class="fas fa-bars icon"></i>
-            <span>เมนู</span>
-        </button>
+    <button class="sidebar-toggle" onclick="toggleSidebar()">
+        <i class="fas fa-bars icon"></i>
+        <span>เมนู</span>
+    </button>
   
     <div class="admin-sidebar" id="adminSidebar">
         <div class="sidebar-header">
@@ -402,10 +268,10 @@
                         $userName = $adminUser ? $adminUser->UserName : 'Guest Admin';
                     @endphp
                     @if($profileImage && file_exists(storage_path('app/public/' . $profileImage)))
-    <img src="{{ asset('storage/' . $profileImage) }}" alt="Profile Image">
-@else
-    <img src="{{ asset('images/default-profile.jpg') }}" alt="Default Profile Image">
-@endif
+                        <img src="{{ asset('storage/' . $profileImage) }}" alt="Profile Image">
+                    @else
+                        <img src="{{ asset('images/default-profile.jpg') }}" alt="Default Profile Image">
+                    @endif
                 </div>
                 <div class="profile-details">
                     <span>{{ $userName }}</span>
@@ -417,122 +283,54 @@
         <div class="menu-container">
             <div class="menu-list">
                 <div class="menu-item @if(request()->routeIs('home.admin')) active @endif">
-                    <a href="{{ route('home.admin') }}">
-                        <i class="fas fa-home icon"></i>
-                        หน้าแรก
-                    </a>
+                    <a href="{{ route('home.admin') }}"><i class="fas fa-home icon"></i> หน้าแรก</a>
                 </div>
                 <div class="menu-item @if(request()->routeIs('admin.cafe.create')) active @endif">
-                    <a href="{{ route('admin.cafe.create') }}">
-                        <i class="fas fa-plus-circle icon"></i>
-                        เพิ่มคาเฟ่ใหม่
-                    </a>
+                    <a href="{{ route('admin.cafe.create') }}"><i class="fas fa-plus-circle icon"></i> เพิ่มคาเฟ่ใหม่</a>
                 </div>
                 <div class="menu-item @if(request()->is('admin/news*')) active @endif"> 
-    <a href="{{ url('admin/news') }}">
-        <i class="fas fa-newspaper icon"></i>
-        โปรโมชั่น/ข่าวสาร
-    </a>
-</div>
-
+                    <a href="{{ url('admin/news') }}"><i class="fas fa-newspaper icon"></i> โปรโมชั่น/ข่าวสาร</a>
+                </div>
                 <div class="menu-item @if(request()->is('edit-profile*')) active @endif">
-                    <a href="{{ url('/edit-profile') }}">
-                        <i class="fas fa-user-edit icon"></i>
-                        แก้ไขข้อมูลส่วนตัว
-                    </a>
+                    <a href="{{ url('/edit-profile') }}"><i class="fas fa-user-edit icon"></i> แก้ไขข้อมูลส่วนตัว</a>
                 </div>
-               <div class="menu-item @if(request()->routeIs('admin.cafe.index')) active @endif">
-    <a href="{{ route('admin.cafe.index') }}">
-        รายการคาเฟ่
-    </a>
-</div>
-
+                <div class="menu-item @if(request()->routeIs('admin.cafe.index')) active @endif">
+                    <a href="{{ route('admin.cafe.index') }}"><i class="fas fa-list icon"></i> รายการคาเฟ่</a>
                 </div>
-
-            <form action="{{ url('/logout-admin') }}" method="POST">
-                @csrf
-                <div class="menu-item logout">
-                    <button type="submit">
-                        <i class="fas fa-sign-out-alt icon"></i>
-                        ออกจากระบบ
-                    </button>
+                <div class="menu-item @if(request()->routeIs('admin.recommend')) active @endif">
+                    <a href="{{ route('admin.recommend') }}"><i class="fas fa-star icon"></i> แนะนำคาเฟ่</a>
                 </div>
-            </form>
+            </div>
         </div>
+
+        <form action="{{ url('/logout-admin') }}" method="POST">
+            @csrf
+            <div class="menu-item logout">
+                <button type="submit"><i class="fas fa-sign-out-alt icon"></i> ออกจากระบบ</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="main-content">
+        {{-- This is where the content of each page will be displayed --}}
+        {{-- For example, in home.admin.blade.php, you would extend this layout --}}
+        {{-- @yield('content') --}}
+        
+        <div class="top-bar">
+            <h1 class="top-bar-title">ยินดีต้อนรับ, {{ $userName }}</h1>
+        </div
+
     </div>
 
     <script>
         function toggleSidebar() {
-            const sidebar = document.getElementById('adminSidebar');
-            const body = document.body;
-            const toggleBtn = document.querySelector('.sidebar-toggle');
-            
-            sidebar.classList.toggle('show');
-            body.classList.toggle('sidebar-open');
-            toggleBtn.classList.toggle('active');
-
-            // Save sidebar state to localStorage (optional)
-            if (sidebar.classList.contains('show')) {
-                localStorage.setItem('sidebarState', 'open');
-            } else {
-                localStorage.removeItem('sidebarState');
-            }
+            document.getElementById('adminSidebar').classList.toggle('show');
+            document.body.classList.toggle('sidebar-open');
+            document.querySelector('.sidebar-toggle').classList.toggle('active');
         }
 
-        // Close sidebar when clicking outside (on desktop/tablet)
-        document.addEventListener('click', function(event) {
-            const sidebar = document.getElementById('adminSidebar');
-            const toggleButton = document.querySelector('.sidebar-toggle');
-            
-            if (window.innerWidth > 768 && 
-                !sidebar.contains(event.target) && 
-                !toggleButton.contains(event.target) && 
-                sidebar.classList.contains('show')) {
-                toggleSidebar();
-            }
-        });
-
-        // Initialize sidebar state on load
         document.addEventListener('DOMContentLoaded', function() {
-            const currentPath = window.location.pathname;
-            document.querySelectorAll('.menu-item a').forEach(item => {
-                const linkPath = new URL(item.href).pathname;
-                if (currentPath === linkPath || 
-                    (linkPath !== '/' && currentPath.startsWith(linkPath))) {
-                    item.closest('.menu-item').classList.add('active');
-                } else {
-                    item.closest('.menu-item').classList.remove('active');
-                }
-            });
-
-            if (localStorage.getItem('sidebarState') === 'open' && window.innerWidth > 768) {
-                toggleSidebar();
-            }
-        });
-
-        // Handle active state for menu items (re-evaluate on click)
-        document.querySelectorAll('.menu-item a, .menu-item button').forEach(item => {
-            item.addEventListener('click', function() {
-                document.querySelectorAll('.menu-item').forEach(menuItem => {
-                    menuItem.classList.remove('active');
-                });
-                this.closest('.menu-item').classList.add('active');
-
-                if (window.innerWidth <= 768 && document.getElementById('adminSidebar').classList.contains('show')) {
-                    toggleSidebar();
-                }
-            });
-        });
-
-        // Ensure proper padding on resize
-        window.addEventListener('resize', function() {
-            const body = document.body;
-            const sidebar = document.getElementById('adminSidebar');
-            if (window.innerWidth <= 768) {
-                body.classList.remove('sidebar-open');
-            } else if (sidebar.classList.contains('show')) {
-                body.classList.add('sidebar-open');
-            }
+            // Logic to keep sidebar open on larger screens if preferred
         });
     </script>
 </body>

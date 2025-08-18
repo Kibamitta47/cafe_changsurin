@@ -140,8 +140,8 @@
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('user.cafes.my') ? 'active' : '' }}" href="{{ route('user.cafes.my') }}">คาเฟ่ของฉัน</a></li>
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('user.cafes.myLiked') ? 'active' : '' }}" href="{{ route('user.cafes.myLiked') }}">คาเฟ่ที่ถูกใจ</a></li>
                 <li class="nav-item">
-        <a class="nav-link {{ request()->routeIs('user.reviews.my*') ? 'active bg-blue-500 text-white' : '' }}" href="{{ route('user.reviews.my') }}">รีวิวของฉัน</a>
-    </li>
+                    <a class="nav-link {{ request()->routeIs('user.reviews.my*') ? 'active' : '' }}" href="{{ route('user.reviews.my') }}">รีวิวของฉัน</a>
+                </li>
             </ul>
             <div class="d-flex align-items-center gap-2">
                 <a href="{{ route('user.cafes.create') }}" class="btn btn-primary rounded-pill d-none d-lg-flex align-items-center gap-2">
@@ -223,25 +223,26 @@
                                 <span class="badge rounded-pill text-bg-warning status-badge"><i class="bi bi-hourglass-split"></i> รอการอนุมัติ</span>
                             @endif
                         </div>
-                        
-                        
-                <!-- Delete Confirmation Modal -->
-                <div class="modal fade" id="deleteModal{{ $cafe->id }}" tabindex="-1">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content">
-                            <div class="modal-header border-0"><h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>ยืนยันการลบ</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-                            <div class="modal-body">คุณแน่ใจหรือไม่ว่าต้องการลบคาเฟ่ "<strong>{{ $cafe->cafe_name }}</strong>"?</div>
-                            <div class="modal-footer border-0">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                                <form method="POST" action="{{ route('user.cafes.destroy', $cafe->id) }}">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-danger">ยืนยันการลบ</button>
-                                </form>
+                    </div> <!-- ### CORRECTION: Added closing </div> for .card ### -->
+                
+                    <!-- Delete Confirmation Modal -->
+                    <div class="modal fade" id="deleteModal{{ $cafe->id }}" tabindex="-1">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header border-0"><h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>ยืนยันการลบ</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                                <div class="modal-body">คุณแน่ใจหรือไม่ว่าต้องการลบคาเฟ่ "<strong>{{ $cafe->cafe_name }}</strong>"?</div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                                    <form method="POST" action="{{ route('user.cafes.destroy', $cafe->id) }}">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-danger">ยืนยันการลบ</button>
+                                    </form>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </div> <!-- ### CORRECTION: Added closing </div> for .col-lg-4 ### -->
             @empty
                 <div class="col-12">
                      <div class="empty-state-card" id="empty-state">
