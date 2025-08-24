@@ -1,6 +1,6 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use Illuminate from\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
@@ -11,32 +11,28 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // === ส่วนของการลบ Foreign Key เก่า (ถ้ามี) ===
+        // === แก้ไขตาราง cafes ===
         Schema::table('cafes', function (Blueprint $table) {
-            $table->dropForeign(['user_id']);
-            $table->dropForeign(['admin_id']);
-        });
-        Schema::table('reviews', function (Blueprint $table) {
-            $table->dropForeign(['user_id']);
-            $table->dropForeign(['cafe_id']);
-        });
-        Schema::table('cafe_likes', function (Blueprint $table) {
-            $table->dropForeign(['user_id']);
-            $table->dropForeign(['cafe_id']);
-        });
-
-        // === ส่วนของการสร้าง Foreign Key ใหม่ทั้งหมด ===
-        Schema::table('cafes', function (Blueprint $table) {
+            // Foreign Key 'user_id' เชื่อมกับ PK 'id' ของตาราง users (ค่ามาตรฐาน)
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            
+            // Foreign Key 'admin_id' เชื่อมกับ PK 'AdminID' ของตาราง admin_id (ตามโค้ดเดิม)
+            // หมายเหตุ: ตรวจสอบให้แน่ใจว่า PK ของตาราง admin_id ชื่อ 'AdminID' จริงๆ
             $table->foreign('admin_id')->references('AdminID')->on('admin_id')->onDelete('set null');
         });
+
+        // === แก้ไขตาราง reviews ===
         Schema::table('reviews', function (Blueprint $table) {
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('cafe_id')->references('id')->on('cafes')->onDelete('cascade');
+            // สำคัญ: Foreign Key 'cafe_id' ต้องเชื่อมกับ PK 'cafe_id' ของตาราง cafes
+            $table->foreign('cafe_id')->references('cafe_id')->on('cafes')->onDelete('cascade');
         });
+
+        // === แก้ไขตาราง cafe_likes ===
         Schema::table('cafe_likes', function (Blueprint $table) {
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('cafe_id')->references('id')->on('cafes')->onDelete('cascade');
+            // สำคัญ: Foreign Key 'cafe_id' ต้องเชื่อมกับ PK 'cafe_id' ของตาราง cafes
+            $table->foreign('cafe_id')->references('cafe_id')->on('cafes')->onDelete('cascade');
         });
     }
 
@@ -45,6 +41,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // ... ไม่ต้องแก้ไขส่วนนี้ ...
+        // ... ส่วนของ down ไม่ต้องแก้ไข ...
     }
 };
