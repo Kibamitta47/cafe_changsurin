@@ -376,7 +376,7 @@
             <div class="cafe-item"
                  data-id="{{ $cafe->cafe_id }}"
                  {{-- *** แก้ไขบรรทัดนี้ *** --}}
-                 data-link="{{ route('cafes.show', ['cafe' => $cafe->cafe_id]) }}"
+                data-link="{{ route('cafes.show', ['cafe' => $cafe->cafe_id]) }}"
                  data-images="{{ json_encode($imageUrls) }}"
                  data-title="{{ $cafe->cafe_name ?? '' }}"
                  data-address="{{ $cafe->address }}"
