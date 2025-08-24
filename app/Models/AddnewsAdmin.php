@@ -10,6 +10,7 @@ class AddnewsAdmin extends Model
     use HasFactory;
 
     protected $table = 'addnews_admins';
+    protected $primaryKey = 'addnews_admin_id';
 
     protected $fillable = [
         'title',

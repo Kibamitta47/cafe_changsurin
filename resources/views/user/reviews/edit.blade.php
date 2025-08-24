@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>แก้ไขรีวิวสำหรับ: {{ $review->cafe->name }}</title>
+     <title>แก้ไขรีวิวสำหรับ: {{ $review->cafe->cafe_name }}</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -77,7 +77,14 @@
         <!-- ส่วนหัวของฟอร์ม -->
         <div class="text-center mb-4">
             <h1 class="page-title">แก้ไขรีวิว</h1>
-            <p class="text-muted fs-5">สำหรับคาเฟ่: <a href="{{ route('cafes.show', $review->cafe->id) }}" class="text-decoration-none">{{ $review->cafe->name }}</a></p>
+             <p class="text-muted fs-5">
+                สำหรับคาเฟ่: 
+                {{-- ใช้ $review->cafe (Object) แทน $review->cafe->id --}}
+                <a href="{{ route('cafes.show', $review->cafe) }}" class="text-decoration-none">
+                    {{-- ใช้ cafe_name ตามที่คุณมีในฐานข้อมูล --}}
+                    {{ $review->cafe->cafe_name }}
+                </a>
+            </p>
         </div>
 
       <form action="{{ route('user.reviews.update', $review) }}" method="POST" enctype="multipart/form-data">

@@ -23,20 +23,21 @@ class NewsController extends Controller
     }
 
     /**
-     * แสดงรายละเอียดข่าว 1 ชิ้น
-     * (สำหรับ Route 'news.show')
+     * ✅ แก้ไข: ฟังก์ชัน show() ทั้งหมด
+     * ใช้ Route Model Binding (AddnewsAdmin $news)
      */
-    public function show($id)
+    public function show(AddnewsAdmin $news)
     {
-        // 1. ค้นหาข่าวหลักที่กำลังดูอยู่ (ถ้าไม่เจอจะแสดง 404)
-        $newsItem = AddnewsAdmin::findOrFail($id);
+        // 1. ข่าวหลักที่กำลังดูอยู่:
+        //    Laravel หามาให้แล้วในตัวแปร $news ไม่ต้อง findOrFail อีกต่อไป
+        $newsItem = $news;
 
         // 2. ค้นหาข่าวแนะนำ (ข่าวอื่นๆ) สำหรับ Sidebar
-        //    - ไม่ใช่ข่าวที่กำลังดูอยู่
+        //    - ไม่ใช่ข่าวที่กำลังดูอยู่ (ใช้ Primary Key ใหม่ในการเทียบ)
         //    - เป็นข่าวที่ is_visible = true
         //    - เรียงตามวันที่ล่าสุด
         //    - เอามา 5 ข่าว
-        $recommendedNews = AddnewsAdmin::where('id', '!=', $id)
+        $recommendedNews = AddnewsAdmin::where('addnews_admin_id', '!=', $newsItem->addnews_admin_id)
                                     ->where('is_visible', true)
                                     ->latest('start_datetime')
                                     ->take(5)

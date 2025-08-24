@@ -13,7 +13,7 @@ class AdminID extends Authenticatable
     use Notifiable;
 
     protected $table = 'admin_id';
-    protected $primaryKey = 'AdminID';
+  protected $primaryKey = 'admin_id_pk';
     public $timestamps = true;
     public $incrementing = true;
 

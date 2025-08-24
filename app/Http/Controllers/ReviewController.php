@@ -12,59 +12,55 @@ use Illuminate\Http\RedirectResponse; // สำหรับ Type Hinting
 
 class ReviewController extends Controller
 {
-    // เพิ่ม Middleware เพื่อตรวจสอบการล็อกอินสำหรับทุกเมธอด ยกเว้น create
     public function __construct()
     {
-        $this->middleware('auth')->except(['create', 'store']);
-        // Store จะมีการเช็คข้างในอีกทีเพื่อ redirect พร้อมข้อความที่ชัดเจน
+        $this->middleware('auth');
     }
 
-    // แสดงฟอร์มเขียนรีวิว
-    public function create(string $cafe_id): View
+    public function create($cafe_id): View
     {
-        $cafe = Cafe::findOrFail($cafe_id);
+        $cafe = Cafe::where('cafe_id', $cafe_id)->firstOrFail(); 
         return view('review', compact('cafe'));
     }
 
-    // บันทึกรีวิวใหม่
     public function store(Request $request): RedirectResponse
     {
-        if (!Auth::check()) {
-            return redirect()->route('login')->with('error', 'กรุณาเข้าสู่ระบบก่อนเขียนรีวิว');
-        }
-
-        $validated = $request->validate([
-            'cafe_id' => 'required|exists:cafes,id',
-            'title' => 'required|string|max:255',
+        $validatedData = $request->validate([
+            'cafe_id' => 'required|exists:cafes,cafe_id',
+            'title'   => 'required|string|max:255',
             'content' => 'required|string',
-            'rating' => 'required|integer|min:1|max:5',
-            'images' => 'nullable|array|max:5', // จำกัดจำนวนไฟล์ไม่เกิน 5 รูป
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120',
+            'rating'  => 'required|integer|min:1|max:5',
+            'images'   => 'nullable|array|max:5',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        $imagePaths = [];
+        $dataToStore = [
+            'cafe_id'   => $validatedData['cafe_id'],
+            'user_id'   => auth()->id(),
+            'user_name' => auth()->user()->name,
+            'title'     => $validatedData['title'],
+            'content'   => $validatedData['content'],
+            'rating'    => $validatedData['rating'],
+            'images'    => [],
+        ];
+
         if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                if ($image->isValid()) {
-                    $path = $image->store('public/review_images');
-                    $imagePaths[] = str_replace('public/', '', $path);
+            $imagePaths = [];
+            foreach ($request->file('images') as $imageFile) {
+                if ($imageFile->isValid()) {
+                    $path = $imageFile->store('reviews', 'public');
+                    $imagePaths[] = $path;
                 }
             }
+            $dataToStore['images'] = $imagePaths;
         }
 
-        Review::create([
-            'cafe_id' => $validated['cafe_id'],
-            'user_id' => Auth::id(),
-            'user_name' => Auth::user()->name,
-            'title' => $validated['title'],
-            'content' => $validated['content'],
-            'rating' => $validated['rating'],
-            'images' => json_encode($imagePaths), // ตอนบันทึกยังคงต้อง encode เป็น string
-        ]);
+        Review::create($dataToStore);
 
-        return redirect()->route('cafes.show', $validated['cafe_id'])
-            ->with('success', 'ส่งรีวิวเรียบร้อยแล้ว ขอบคุณสำหรับความคิดเห็นครับ!');
+        return redirect()->route('cafes.show', $dataToStore['cafe_id'])
+                         ->with('success', 'ขอบคุณสำหรับรีวิวของคุณ!');
     }
+
 
     // *** START: เมธอดที่เพิ่มเข้ามาใหม่ ***
 

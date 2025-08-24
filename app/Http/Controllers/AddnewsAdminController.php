@@ -55,16 +55,15 @@ class AddnewsAdminController extends Controller
     /**
      * แสดงหน้าฟอร์มสำหรับแก้ไขข่าวสาร
      */
-    public function editNews($id)
+    public function editNews(AddnewsAdmin $news)
     {
-        $news = AddnewsAdmin::findOrFail($id);
         return view('admin.edit-news', compact('news'));
     }
 
     /**
      * อัปเดตข้อมูลข่าวสาร
      */
-    public function updateNews(Request $request, $id)
+    public function updateNews(Request $request, AddnewsAdmin $news)
     {
         $validatedData = $request->validate([
             'title' => 'required|string|max:255',
@@ -75,48 +74,37 @@ class AddnewsAdminController extends Controller
             'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
         
-        $news = AddnewsAdmin::findOrFail($id);
-
-        // --- ส่วนจัดการรูปภาพ ---
         $existingImagesToKeep = $request->input('existing_images', []);
         $currentImagePaths = $news->images ?? [];
         $newImagePaths = [];
 
-        // 1. ลบรูปเก่าที่ผู้ใช้ไม่ต้องการเก็บไว้
         foreach ($currentImagePaths as $oldImagePath) {
             if (!in_array($oldImagePath, $existingImagesToKeep)) {
                 Storage::disk('public')->delete($oldImagePath);
             }
         }
 
-        // 2. อัปโหลดรูปใหม่ (ถ้ามี)
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
                 $newImagePaths[] = $image->store('news_images', 'public');
             }
         }
 
-        // 3. รวม path รูปเก่าที่เก็บไว้กับรูปใหม่
         $validatedData['images'] = array_values(array_merge($existingImagesToKeep, $newImagePaths));
-
-        // อัปเดตข้อมูลข่าวสาร
         $news->update($validatedData);
 
         return redirect()->route('admin.news.add')->with('success', 'อัปเดตข่าวสารเรียบร้อยแล้ว');
     }
 
+
     /**
      * ลบข่าวสาร (รวมถึงไฟล์รูปภาพทั้งหมดที่เกี่ยวข้อง)
      */
-    public function deleteNews($id)
+    public function deleteNews(AddnewsAdmin $news)
     {
-        $news = AddnewsAdmin::findOrFail($id);
-
-        // ลบไฟล์รูปภาพทั้งหมดที่เชื่อมกับข่าวนี้
         if ($news->images && is_array($news->images)) {
             Storage::disk('public')->delete($news->images);
         }
-
         $news->delete();
 
         return redirect()->route('admin.news.add')->with('success', 'ลบข่าวสารเรียบร้อยแล้ว');
@@ -125,10 +113,9 @@ class AddnewsAdminController extends Controller
     /**
      * สลับสถานะการแสดงผลหน้าแรก (เปิด/ปิด)
      */
-    public function toggleVisibility(Request $request, $id)
+    public function toggleVisibility(Request $request, AddnewsAdmin $news)
     {
-        $news = AddnewsAdmin::findOrFail($id);
-        $news->is_visible = $request->has('is_visible'); // ถ้ามี checkbox 'is_visible' ส่งมาคือ true
+        $news->is_visible = $request->has('is_visible');
         $news->save();
 
         return redirect()->route('admin.news.add')->with('success', 'อัปเดตการแสดงผลหน้าแรกเรียบร้อย');
@@ -137,19 +124,14 @@ class AddnewsAdminController extends Controller
     /**
      * ลบรูปภาพเพียงรูปเดียว (สำหรับใช้กับ AJAX)
      */
-    public function deleteImage(Request $request, $id)
+    public function deleteImage(Request $request, AddnewsAdmin $news)
     {
         $request->validate(['image_path' => 'required|string']);
-
-        $news = AddnewsAdmin::findOrFail($id);
         $imagePath = $request->input('image_path');
 
-        // ตรวจสอบว่ารูปภาพนี้เป็นของข่าวนี้จริงหรือไม่
         if ($news->images && is_array($news->images) && in_array($imagePath, $news->images)) {
-            // ลบไฟล์ออกจาก Storage
             Storage::disk('public')->delete($imagePath);
 
-            // ลบ path ออกจาก array ในฐานข้อมูล
             $updatedImages = array_filter($news->images, fn($img) => $img !== $imagePath);
             $news->images = array_values($updatedImages);
             $news->save();

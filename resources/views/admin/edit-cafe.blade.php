@@ -227,10 +227,10 @@
     </div>
     @endif
 
-    <form action="{{ isset($cafe) ? route('admin.cafe.update', $cafe->id) : route('admin.cafe.store') }}" method="POST" enctype="multipart/form-data" class="p-4 rounded" id="cafeForm">
+    <form action="{{ isset($cafe) ? route('admin.cafe.update', $cafe) : route('admin.cafe.store') }}" method="POST" enctype="multipart/form-data" class="p-4 rounded" id="cafeForm">
         @csrf
         @if(isset($cafe))
-            @method('PUT') {{-- ใช้ PUT method สำหรับการอัปเดต --}}
+            @method('PUT')
         @endif
 
         <div class="row">
@@ -727,7 +727,7 @@
 
     // Function to check for duplicate coordinates
     async function checkCoordinates(lat, lng) {
-        const currentCafeId = "{{ $cafe->id ?? 'null' }}"; // Get the current cafe ID if in edit mode
+        const currentCafeId = "{{ $cafe->cafe_id ?? 'null' }}"; // Get the current cafe ID if in edit mode
 
         // Only check if lat and lng are valid numbers
         if (isNaN(lat) || isNaN(lng)) {

@@ -111,13 +111,13 @@
                         <div class="space-y-4">
                             {{-- วนลูปแสดงข่าวแนะนำ --}}
                             @foreach($recommendedNews as $recItem)
-                                <a href="{{ route('news.show', $recItem->id) }}" class="flex items-start gap-4 group hover:bg-slate-50 p-2 rounded-lg transition-colors">
+                                {{-- ใช้ $recItem (Object) แทน $recItem->id --}}
+                                <a href="{{ route('news.show', $recItem) }}" class="flex items-start gap-4 group hover:bg-slate-50 p-2 rounded-lg transition-colors">
                                     {{-- รูปของข่าวแนะนำ --}}
                                     <div class="w-24 h-20 shrink-0">
                                         @php
-                                            // เตรียมรูปภาพสำหรับข่าวแนะนำ
                                             $recImages = is_array($recItem->images) ? $recItem->images : [];
-                                            $recImageUrl = !empty($recImages) ? asset('storage/' . $recImages[0]) : asset('images/no-image.png'); // ใส่ fallback image ของคุณ
+                                            $recImageUrl = !empty($recImages) ? asset('storage/' . $recImages[0]) : asset('images/no-image.png');
                                         @endphp
                                         <img src="{{ $recImageUrl }}" alt="{{ $recItem->title }}" class="w-full h-full object-cover rounded-md">
                                     </div>

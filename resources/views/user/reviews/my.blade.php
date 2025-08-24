@@ -173,49 +173,53 @@
         <div class="list-group-item px-1 py-4 review-card">
             <div class="d-flex flex-column flex-md-row w-100">
                 <!-- ส่วนเนื้อหารีวิว (ซ้าย) -->
-                <div class="flex-grow-1 mb-3 mb-md-0">
+                 <div class="flex-grow-1 mb-3 mb-md-0">
 
-                    {{-- ✅ START: CODE CHANGE --}}
-                    @if ($review->cafe)
-                        <div class="mb-2 d-flex align-items-center gap-2">
-                            <i class="bi bi-geo-alt-fill text-danger"></i>
-                            <span class="text-muted">รีวิวสำหรับ:</span>
-                            <a href="{{ route('cafes.show', $review->cafe->id) }}" class="fw-bold text-decoration-none">
-                                {{ $review->cafe->name }}
-                            </a>
+                                {{-- ========================================== --}}
+                                {{-- ✅✅✅ จุดที่แก้ไข อยู่ตรงนี้ ✅✅✅ --}}
+                                {{-- ========================================== --}}
+                                @if ($review->cafe) {{-- ตรวจสอบว่ารีวิวนี้มีความสัมพันธ์กับคาเฟ่ --}}
+                                    <div class="mb-2 d-flex align-items-center gap-2">
+                                        <i class="bi bi-geo-alt-fill text-danger"></i>
+                                        <span class="text-muted">รีวิวสำหรับ:</span>
+                                        {{-- ใช้ $review->cafe (Object) แทน $review->cafe->id --}}
+                                        <a href="{{ route('cafes.show', $review->cafe) }}" class="fw-bold text-decoration-none">
+                                            {{-- แก้ไข: ใช้ cafe_name ตามที่คุณมีในฐานข้อมูล --}}
+                                            {{ $review->cafe->cafe_name }}
+                                        </a>
+                                    </div>
+                                @endif
+                                {{-- ========================================== --}}
+                                
+                                <h5 class="mb-1 fw-bold">{{ $review->title }}</h5>
+                                
+                                <div class="d-flex align-items-center mb-2 star-rating">
+                                    @for ($i = 1; $i <= 5; $i++)
+                                        <i class="bi {{ $i <= $review->rating ? 'bi-star-fill text-warning' : 'bi-star text-muted' }}"></i>
+                                    @endfor
+                                    <span class="ms-2 text-muted fw-light">({{ $review->rating }} เต็ม 5)</span>
+                                </div>
+                                
+                                <p class="mb-0 text-secondary">{{ $review->content }}</p>
+
+                            </div>
+                            
+                            <!-- ส่วนปุ่มและเวลา (ขวา) -->
+                            <div class="flex-shrink-0 ms-md-4 text-start text-md-end">
+                                <small class="text-muted d-block mb-2">{{ $review->created_at->isoFormat('LL') }}</small>
+                                <div class="d-flex gap-2 justify-content-start justify-content-md-end">
+                                    <a href="{{ route('user.reviews.edit', $review) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square me-1"></i> แก้ไข</a>
+                                    <form action="{{ route('user.reviews.destroy', $review) }}" method="POST" onsubmit="return confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรีวิวนี้?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash3 me-1"></i> ลบ</button>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
-                    @endif
-                    {{-- ✅ END: CODE CHANGE --}}
-
-                    <h5 class="mb-1 fw-bold">{{ $review->title }}</h5>
-                    
-                    <div class="d-flex align-items-center mb-2 star-rating">
-                        @for ($i = 1; $i <= 5; $i++)
-                            <i class="bi {{ $i <= $review->rating ? 'bi-star-fill text-warning' : 'bi-star text-muted' }}"></i>
-                        @endfor
-                        <span class="ms-2 text-muted fw-light">({{ $review->rating }} เต็ม 5)</span>
                     </div>
-                    
-                    <p class="mb-0 text-secondary">{{ $review->content }}</p>
-
-                </div>
-                
-                <!-- ส่วนปุ่มและเวลา (ขวา) -->
-                <div class="flex-shrink-0 ms-md-4 text-start text-md-end">
-                    <small class="text-muted d-block mb-2">{{ $review->created_at->isoFormat('LL') }}</small>
-                    <div class="d-flex gap-2 justify-content-start justify-content-md-end">
-                        <a href="{{ route('user.reviews.edit', $review) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square me-1"></i> แก้ไข</a>
-                        <form action="{{ route('user.reviews.destroy', $review) }}" method="POST" onsubmit="return confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรีวิวนี้?');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash3 me-1"></i> ลบ</button>
-                        </form>
-                    </div>
-                </div>
+                @endforeach
             </div>
-        </div>
-    @endforeach
-</div>
         @else
             <!-- แสดงผลเมื่อไม่มีรีวิว -->
             <div class="empty-state-card">

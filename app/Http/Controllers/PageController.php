@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Cafe; // ✅ 1. เพิ่มการ 'use' Cafe Model
 
 class PageController extends Controller
 {
@@ -11,6 +12,7 @@ class PageController extends Controller
      */
     public function showLinePage()
     {
+        // 🎯 หมายเหตุ: ตรวจสอบให้แน่ใจว่ามีไฟล์ view ที่ resources/views/pages/line.blade.php
         $lineOfficialId = '@363tvzhr';
         $lineAddUrl = 'https://line.me/ti/p/' . $lineOfficialId;
 
@@ -25,6 +27,7 @@ class PageController extends Controller
      */
     public function showAdvertisingPackages()
     {
+        // 🎯 หมายเหตุ: ตรวจสอบให้แน่ใจว่ามีไฟล์ view ที่ resources/views/pages/advertising-packages.blade.php
         $contactEmail = 'nongchangsaren@gmail.com';
 
         return view('pages.advertising-packages', [
@@ -37,6 +40,7 @@ class PageController extends Controller
      */
     public function showProblemInfoPage()
     {
+        // 🎯 หมายเหตุ: ตรวจสอบให้แน่ใจว่ามีไฟล์ view ที่ resources/views/pages/report-problem-info.blade.php
         $problemEmail = 'snongchangsaren@gmail.com';
 
         $emailBodyTemplate = "สวัสดีทีมงานน้องช้างสะเร็น" . "%0A%0A" .
@@ -58,6 +62,27 @@ class PageController extends Controller
      */
     public function showAboutPage()
     {
+        // 🎯 หมายเหตุ: ตรวจสอบให้แน่ใจว่ามีไฟล์ view ที่ resources/views/pages/about-us.blade.php
         return view('pages.about-us');
     }
+
+    /**
+     * ✅ 2. รวมฟังก์ชัน showTop10Page เข้ามาอย่างถูกต้อง
+     * แสดงหน้า Top 10 Cafes
+     */
+    public function showTop10Page()
+    {
+        // ดึงข้อมูลคาเฟ่ที่ได้รับการอนุมัติ (status = 'approved')
+        // และเรียงตาม rating จากมากไปน้อย, เอามา 10 อันดับแรก
+        $cafes = Cafe::where('status', 'approved')
+                     ->withAvg('reviews', 'rating') // คำนวณ rating เฉลี่ย
+                     ->orderByDesc('reviews_avg_rating')
+                     ->take(10)
+                     ->get();
+
+        // ส่งข้อมูลไปยัง View
+        return view('Top10', compact('cafes'));
+    }
+
+    // ❌ 3. ลบฟังก์ชันที่ซ้ำซ้อนและวงเล็บปีกกาที่เกินออกไป
 }

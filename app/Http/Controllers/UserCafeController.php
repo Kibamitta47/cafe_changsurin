@@ -4,20 +4,24 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Cafe;
-use App\Models\Review;
+use App\Models\Review; // ตรวจสอบว่าคุณมี Model นี้
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
+use Illuminate\View\View; // ✅ เพิ่ม use statement ที่จำเป็น
 
 class UserCafeController extends Controller
 {
-    // แสดงฟอร์มสำหรับสร้างคาเฟ่ใหม่
-    public function create()
+    /**
+     * แสดงฟอร์มสำหรับสร้างคาเฟ่ใหม่
+     */
+    public function create(): View
     {
        return view('user.cafes.create'); 
     }
 
-    // บันทึกข้อมูลคาเฟ่ที่สร้างใหม่ลงฐานข้อมูล
+    /**
+     * บันทึกข้อมูลคาเฟ่ที่สร้างใหม่ลงฐานข้อมูล
+     */
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -52,7 +56,7 @@ class UserCafeController extends Controller
         ]);
 
         $data['user_id'] = Auth::id();
-        $data['status'] = 'pending';
+        $data['status'] = 'pending'; // ตั้งสถานะเริ่มต้นเป็น 'รอการตรวจสอบ'
 
         $imagePaths = [];
         if ($request->hasFile('images')) {
@@ -62,7 +66,7 @@ class UserCafeController extends Controller
         }
         $data['images'] = $imagePaths;
 
-        // กำหนดค่า array fields ให้แม้จะไม่มีข้อมูล
+        // กำหนดค่า default เป็น array ว่าง เพื่อป้องกัน error หากไม่มีการส่งค่ามา
         $data['payment_methods'] = $request->input('payment_methods', []);
         $data['facilities'] = $request->input('facilities', []);
         $data['other_services'] = $request->input('other_services', []);
@@ -70,30 +74,57 @@ class UserCafeController extends Controller
 
         Cafe::create($data);
 
-        // คำสั่ง Redirect ไปยัง 'user.cafes.my'
         return redirect()->route('user.cafes.my')->with('success', 'ส่งข้อมูลคาเฟ่ให้ผู้ดูแลระบบตรวจสอบแล้ว');
     }
-
-    // แสดงรายการคาเฟ่ของผู้ใช้
-    public function myCafes()
+    
+    /**
+     * แสดงหน้าคาเฟ่ทั้งหมดที่ผู้ใช้คนปัจจุบันเป็นเจ้าของ
+     */
+    public function myCafes(): View
     {
-        $cafes = Auth::user()->cafes()->latest()->paginate(9);
-        return view('user.my-cafes', compact('cafes'));
+        $user = Auth::user();
+
+        $cafes = $user->cafes()        // ดึงคาเฟ่ที่ผู้ใช้คนนี้เป็นเจ้าของ
+            ->withCount('likers')  // นับจำนวนคนที่ไลค์
+            ->latest()             // จัดเรียงจากใหม่ไปเก่า
+            ->paginate(9);         // แบ่งหน้า
+
+        return view('user.cafes.my', compact('cafes'));
     }
 
-    // แสดงฟอร์มแก้ไขคาเฟ่
-    public function edit(Cafe $cafe)
+    /**
+     * แสดงรายการคาเฟ่ที่ผู้ใช้คนปัจจุบันกดถูกใจ
+     */
+    public function myLikedCafes(): View
     {
+        $user = Auth::user();
+
+        // ดึงข้อมูลคาเฟ่ที่ผู้ใช้คนนี้กดถูกใจ ผ่าน relationship 'likedCafes'
+        // และเรียงตามเวลาที่กดไลค์ล่าสุด (pivot_created_at)
+        $likedCafes = $user->likedCafes()->latest('pivot_created_at')->paginate(12);
+
+        return view('user.liked-cafes', compact('likedCafes'));
+    }
+    
+    /**
+     * แสดงฟอร์มแก้ไขคาเฟ่
+     */
+    public function edit(Cafe $cafe): View
+    {
+        // ตรวจสอบสิทธิ์ความเป็นเจ้าของ
         if (Auth::id() !== $cafe->user_id) {
             abort(403, 'Unauthorized action.');
         }
 
-        return view('user.editcafe', compact('cafe'));
+        return view('user.editcafe', compact('cafe')); // ตรวจสอบว่า path view ถูกต้อง
     }
 
-    // อัปเดตข้อมูลคาเฟ่
+    /**
+     * อัปเดตข้อมูลคาเฟ่ในฐานข้อมูล
+     */
     public function update(Request $request, Cafe $cafe)
     {
+        // ตรวจสอบสิทธิ์ความเป็นเจ้าของ
         if (Auth::id() !== $cafe->user_id) {
             abort(403, 'Unauthorized action.');
         }
@@ -117,9 +148,6 @@ class UserCafeController extends Controller
             'payment_methods' => 'nullable|array',
             'facilities' => 'nullable|array',
             'other_services' => 'nullable|array',
-            'facilities.*' => 'string',
-            'payment_methods.*' => 'string',
-            'other_services.*' => 'string',
             'images' => 'nullable|array|max:5',
             'images.*' => 'image|mimes:jpg,jpeg,png|max:2048',
             'existing_images' => 'nullable|array',
@@ -137,7 +165,7 @@ class UserCafeController extends Controller
                 $newImagePaths[] = $image->store('cafes', 'public');
             }
         }
-
+        
         $keptExistingImages = $request->input('existing_images', []);
         $data['images'] = array_merge($keptExistingImages, $newImagePaths);
 
@@ -148,17 +176,20 @@ class UserCafeController extends Controller
 
         $cafe->update($data);
 
-        // คำสั่ง Redirect ไปยัง 'user.cafes.my'
         return redirect()->route('user.cafes.my')->with('success', 'ข้อมูลคาเฟ่ได้รับการอัปเดตแล้ว');
     }
 
-    // ลบคาเฟ่
+    /**
+     * ลบคาเฟ่ออกจากฐานข้อมูล
+     */
     public function destroy(Cafe $cafe)
     {
+        // ตรวจสอบสิทธิ์ความเป็นเจ้าของ
         if (Auth::id() !== $cafe->user_id) {
             abort(403, 'Unauthorized action.');
         }
 
+        // ลบไฟล์รูปภาพที่เกี่ยวข้อง
         if (is_array($cafe->images)) {
             foreach ($cafe->images as $imagePath) {
                 Storage::disk('public')->delete($imagePath);
@@ -170,52 +201,22 @@ class UserCafeController extends Controller
         return redirect()->route('user.cafes.my')->with('success', 'คาเฟ่ถูกลบเรียบร้อยแล้ว');
     }
 
-    // แสดงรายละเอียดคาเฟ่และรีวิว
-    public function show($id)
-    {
-        $cafe = Cafe::findOrFail($id);
-        $reviews = Review::where('cafe_id', $cafe->id)->latest()->get();
-
-        return view('user.cafe-detail', compact('cafe', 'reviews'));
-    }
-
-    // เพิ่มเมธอด myLikedCafes เพื่อแสดงรายการคาเฟ่ที่ผู้ใช้ชื่นชอบ แสดงหน้าคาเฟ่ที่ผู้ใช้ปัจจุบันกดถูกใจ
-    public function myLikedCafes()
-    {
-        // ตรวจสอบว่าผู้ใช้ล็อกอินอยู่หรือไม่
-        if (Auth::check()) {
-            // ดึงข้อมูลผู้ใช้ที่ล็อกอินอยู่
-            $user = Auth::user();
-
-            // ดึงข้อมูลคาเฟ่ที่ผู้ใช้คนนี้กดถูกใจ (ผ่าน relationship)
-            // พร้อมกับแบ่งหน้า (paginate) เพื่อประสิทธิภาพ
-            $likedCafes = $user->likedCafes()->paginate(10);
-
-            // ส่งตัวแปร $likedCafes ไปที่ View ที่ชื่อว่า 'user.liked-cafes.blade.php'
-            // (หากไฟล์ View ของคุณชื่ออื่น ให้แก้ตรงนี้)
-            return view('user.liked-cafes', compact('likedCafes'));
-        }
-        
-        // หากผู้ใช้ไม่ได้ล็อกอินอยู่ จะถูกส่งไปที่หน้า login
-        return redirect()->route('login');
-    }
+    /**
+     * สลับสถานะการกดไลค์ (Like/Unlike) สำหรับคาเฟ่
+     */
     public function toggleLike(Request $request, Cafe $cafe)
-{
-    $user = Auth::user();
-    if (!$user) {
-        return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+    {
+        $user = Auth::user();
+
+        // ใช้ toggle() เพื่อเพิ่มหรือลบข้อมูลในตารางกลาง (cafe_likes) โดยอัตโนมัติ
+        $user->likedCafes()->toggle($cafe->id);
+
+        $isLiked = $user->likedCafes()->where('cafe_id', $cafe->id)->exists();
+
+        return response()->json([
+            'status' => 'success',
+            'is_liked' => $isLiked,
+            'message' => $isLiked ? 'Cafe liked successfully.' : 'Cafe unliked successfully.'
+        ]);
     }
-
-    // ใช้ toggle เพื่อเพิ่มหรือลบข้อมูลในตารางกลางโดยอัตโนมัติ
-    $user->likedCafes()->toggle($cafe->id);
-
-    $isLiked = $user->likedCafes()->where('cafe_id', $cafe->id)->exists();
-
-    return response()->json([
-        'status' => 'success',
-        'is_liked' => $isLiked,
-        'message' => $isLiked ? 'Cafe liked successfully.' : 'Cafe unliked successfully.'
-    ]);
-}
-
 }

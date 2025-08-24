@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Gate; // เพิ่ม Gate สำหรับ Authorization
 
 class UserReviewController extends Controller
 {
@@ -25,59 +26,69 @@ class UserReviewController extends Controller
     /**
      * Show the form for editing the specified review.
      */
-   public function edit(Review $review)
-{
-    if ($review->user_id !== auth()->id()) {
-        abort(403, 'UNAUTHORIZED ACTION.');
-    }
-
-    // โหลดความสัมพันธ์ cafe
-    $review->load('cafe');
-
-    return view('user.reviews.edit', compact('review'));
-}
-
-    /**
-     * Update the specified review in storage.
-     */
-    public function update(Request $request, $id)
+    public function edit(Review $review)
     {
-        $review = Review::findOrFail($id);
-
-        if ($review->user_id !== auth()->id()) {
+        // ใช้ Gate/Policy (วิธีที่แนะนำ) หรือ check ownership โดยตรง
+        if (auth()->id() !== $review->user_id) {
             abort(403, 'UNAUTHORIZED ACTION.');
         }
 
-        $request->validate([
+        // ไม่จำเป็นต้อง load('cafe') เพราะ View น่าจะเรียกใช้ $review->cafe โดยตรง
+        // Eloquent จะ Lazy Load ให้เอง
+        return view('user.reviews.edit', compact('review'));
+    }
+
+    /**
+     * ✅ แก้ไข: ฟังก์ชัน update() ทั้งหมด
+     */
+    public function update(Request $request, Review $review)
+    {
+        // 1. ตรวจสอบสิทธิ์ (Authorization) ก่อนเสมอ
+        if (auth()->id() !== $review->user_id) {
+            abort(403, 'UNAUTHORIZED ACTION.');
+        }
+
+        // 2. ตรวจสอบความถูกต้องของข้อมูล (Validation)
+        $validatedData = $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'rating' => 'required|integer|min:1|max:5',
+            'images' => 'nullable|array|max:5', // จำกัดจำนวนไฟล์ทั้งหมด
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
+        
+        // 3. จัดการรูปภาพ
+        $newImagePaths = $review->images; // เริ่มต้นด้วยรูปภาพเก่า (เนื่องจากเรามี casting เป็น array แล้ว)
 
+        // ถ้ามีการอัปโหลดไฟล์ใหม่เข้ามา
         if ($request->hasFile('images')) {
+            
+            // 3.1 ลบรูปภาพเก่าทั้งหมดออกจาก Storage
+            // การมี Casting 'images' => 'array' ทำให้ $review->images เป็น array เสมอ
             if (!empty($review->images)) {
-                foreach ($review->images as $oldImage) {
-                    Storage::disk('public')->delete($oldImage);
-                }
+                Storage::disk('public')->delete($review->images);
             }
 
-            $paths = [];
+            // 3.2 อัปโหลดรูปภาพใหม่และเก็บ Path
+            $newImagePaths = []; // เริ่มต้น array ใหม่สำหรับเก็บ path รูปใหม่
             foreach ($request->file('images') as $file) {
-                $paths[] = $file->store('reviews', 'public');
+                $newImagePaths[] = $file->store('reviews', 'public');
             }
-        } else {
-            $paths = $review->images ?? [];
         }
+        
+        // 4. เตรียมข้อมูลทั้งหมดสำหรับอัปเดต
+        $reviewDataToUpdate = [
+            'title' => $validatedData['title'],
+            'content' => $validatedData['content'],
+            'rating' => $validatedData['rating'],
+            'images' => $newImagePaths, // อัปเดตคอลัมน์ images ด้วย path ใหม่ (หรือของเดิมถ้าไม่มีการอัปโหลด)
+        ];
 
-        $review->update([
-            'title' => $request->input('title'),
-            'content' => $request->input('content'),
-            'rating' => $request->input('rating'),
-            'images' => $paths,
-        ]);
-
-        return redirect()->back()->with('success', 'แก้ไขรีวิวเรียบร้อยแล้ว');
+        // 5. อัปเดตข้อมูลลงฐานข้อมูล
+        $review->update($reviewDataToUpdate);
+        
+        // 6. ส่งกลับไปหน้า "รีวิวของฉัน" พร้อมข้อความ Success
+        return redirect()->route('user.reviews.my')->with('success', 'แก้ไขรีวิวเรียบร้อยแล้ว');
     }
 
     /**
@@ -85,14 +96,13 @@ class UserReviewController extends Controller
      */
     public function destroy(Review $review)
     {
-        if ($review->user_id !== auth()->id()) {
+        if (auth()->id() !== $review->user_id) {
             abort(403, 'UNAUTHORIZED ACTION.');
         }
 
+        // การมี Casting 'images' => 'array' ทำให้ $review->images เป็น array เสมอ
         if (!empty($review->images)) {
-            foreach ($review->images as $imagePath) {
-                Storage::disk('public')->delete($imagePath);
-            }
+            Storage::disk('public')->delete($review->images);
         }
 
         $review->delete();

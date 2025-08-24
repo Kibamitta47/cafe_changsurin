@@ -57,12 +57,10 @@
     @include('components.2navbar')
 
     <main class="flex-grow w-full max-w-4xl mx-auto p-2 flex" x-data="reviewForm()">
-        <!-- ✨ MODIFIED: เพิ่ม @submit.prevent เพื่อเรียกฟังก์ชัน validateAndSubmit ก่อนส่งฟอร์ม -->
         <form action="{{ route('user.reviews.store') }}" method="POST" enctype="multipart/form-data"
-              @submit.prevent="validateAndSubmit($event)" 
               class="w-full h-full bg-white rounded-xl shadow-lg border border-slate-100 flex overflow-hidden">
             @csrf
-            <input type="hidden" name="cafe_id" value="{{ $cafe->id }}">
+              <input type="hidden" name="cafe_id" value="{{ $cafe->cafe_id }}"> 
             
             <!-- Left Column -->
             <div 
@@ -125,60 +123,50 @@
                     <!-- Title -->
                     <div>
                         <label for="title" class="block text-sm font-semibold text-slate-700 mb-1">หัวข้อรีวิว</label>
-                        <!-- ✨ MODIFIED: เพิ่ม x-model="title" -->
                         <input x-model="title" type="text" class="form-input-elegant w-full" id="title" name="title" placeholder="สรุปสั้นๆ..." required>
                     </div>
 
                     <!-- Content -->
                     <div class="flex flex-col flex-grow">
                         <label for="content" class="block text-sm font-semibold text-slate-700 mb-1">รายละเอียด</label>
-                        <!-- ✨ MODIFIED: เพิ่ม x-model="content" -->
                         <textarea x-model="content" class="form-input-elegant w-full flex-grow text-sm" id="content" name="content" placeholder="เล่าประสบการณ์ของคุณ..." required></textarea>
                     </div>
                 </div>
 
                 <!-- Buttons -->
                 <div class="mt-auto pt-4 flex gap-2">
-                    <button type="submit" class="w-full px-4 py-2 text-sm font-semibold bg-[#6F4E37] text-white rounded-lg hover:bg-[#5a3e2b] transition-all shadow-md">
+                    {{-- ========================================== --}}
+                    {{-- ✅ 2. แก้ไขปุ่ม Submit ✅ --}}
+                    {{-- ========================================== --}}
+                    <button type="submit" 
+                            @click="if (containsBadWords(title) || containsBadWords(content)) { event.preventDefault(); alert('กรุณาอย่าใช้คำไม่สุภาพในการรีวิว'); }"
+                            class="w-full px-4 py-2 text-sm font-semibold bg-[#6F4E37] text-white rounded-lg hover:bg-[#5a3e2b] transition-all shadow-md">
                         ส่งรีวิว
                     </button>
-                    <a href="{{ route('cafes.show', $cafe->id) }}" class="w-full text-center px-4 py-2 text-sm font-semibold bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200">
+                    <a href="{{ route('cafes.show', $cafe) }}" class="w-full text-center px-4 py-2 text-sm font-semibold bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200">
                         ยกเลิก
                     </a>
                 </div>
             </div>
         </form>
     </main>
-
+    
+  {{-- ========================================================== --}}
+  {{-- ✅ 3. แก้ไข JavaScript ทั้งหมด ✅ --}}
+  {{-- ========================================================== --}}
   <script>
     function reviewForm() {
-      // ✨ NEW: กำหนดรายการคำหยาบ (สามารถเพิ่มคำอื่นๆ ได้ตามต้องการ)
       const badWords = ['เหี้ย', 'สัส', 'ควย', 'ไอ้', 'อี', 'ชิบหาย'];
 
       return {
         isDragging: false,
         files: [],
-        // ✨ NEW: สร้างตัวแปรสำหรับเก็บค่าจากฟอร์ม
         title: '',
         content: '',
 
-        // ✨ NEW: ฟังก์ชันสำหรับตรวจสอบคำหยาบ
         containsBadWords(text) {
           if (!text) return false;
-          // ตรวจสอบว่ามีคำใดใน badWords อยู่ใน text หรือไม่
           return badWords.some(word => text.toLowerCase().includes(word));
-        },
-
-        // ✨ NEW: ฟังก์ชันที่จะทำงานเมื่อกดปุ่ม Submit
-        validateAndSubmit(event) {
-          // ตรวจสอบหัวข้อและเนื้อหา
-          if (this.containsBadWords(this.title) || this.containsBadWords(this.content)) {
-            // ถ้าเจอคำหยาบ ให้แจ้งเตือนและหยุดการทำงาน
-            alert('กรุณาอย่าใช้คำไม่สุภาพในการรีวิว');
-          } else {
-            // ถ้าไม่เจอคำหยาบ ให้ส่งฟอร์มตามปกติ
-            event.target.submit();
-          }
         },
 
         handleSelect(event) {
@@ -195,7 +183,8 @@
               const reader = new FileReader();
               reader.onload = (e) => {
                 this.files.push({ file: file, preview: e.target.result });
-                this.updateFileInput();
+                // อัปเดต input ทันทีทุกครั้งที่เพิ่มไฟล์
+                this.updateFileInput(); 
               };
               reader.readAsDataURL(file);
             }
@@ -203,12 +192,21 @@
         },
         removeFile(index) {
           this.files.splice(index, 1);
-          this.updateFileInput();
+          // อัปเดต input ทันทีทุกครั้งที่ลบไฟล์
+          this.updateFileInput(); 
         },
         updateFileInput() {
-          const dataTransfer = new DataTransfer();
-          this.files.forEach(item => dataTransfer.items.add(item.file));
-          this.$refs.fileInput.files = dataTransfer.files;
+          try {
+            const dataTransfer = new DataTransfer();
+            this.files.forEach(item => {
+                if (item.file instanceof File) {
+                    dataTransfer.items.add(item.file);
+                }
+            });
+            this.$refs.fileInput.files = dataTransfer.files;
+          } catch (e) {
+            console.error('Error updating file input:', e);
+          }
         }
       }
     }

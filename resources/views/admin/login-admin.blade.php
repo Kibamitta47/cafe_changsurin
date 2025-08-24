@@ -129,7 +129,7 @@
             <button type="submit">เข้าสู่ระบบ</button>
         </form>
 
-        <p><a href="{{ route('register.admin') }}">เพิ่มบัญชี Admin</a></p>
+        <!--<p><a href="{{ route('register.admin') }}">เพิ่มบัญชี Admin</a></p>-->
     </div>
 </body>
 </html>

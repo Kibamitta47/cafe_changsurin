@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\Cafe;
 use App\Models\AddnewsAdmin;
+use Illuminate\Support\Facades\Hash;
 
 class AdminAuthController extends Controller
 {
@@ -30,7 +31,7 @@ class AdminAuthController extends Controller
         AdminID::create([
             'UserName' => $request->name,
             'Email' => $request->email,
-            'password' => $request->password, // cast hashed จะ hash ให้อัตโนมัติ
+            'password' => Hash::make($request->password), // cast hashed จะ hash ให้อัตโนมัติ
         ]);
 
         return redirect()->route('login.admin')->with('success', 'สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ');
@@ -50,10 +51,7 @@ class AdminAuthController extends Controller
 
         Log::info('Admin login attempt for email: ' . $credentials['email']);
 
-        if (Auth::guard('admin')->attempt([
-            'Email' => $credentials['email'],
-            'password' => $credentials['password'],
-        ], $request->boolean('remember'))) {
+        if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
             
             $request->session()->regenerate();
             Log::info('Admin login successful: ' . $credentials['email']);
@@ -153,7 +151,7 @@ class AdminAuthController extends Controller
         $admin->Email = $request->input('email');
 
         if ($request->filled('password')) {
-            $admin->password = $request->password; // cast hashed hash ให้เอง
+            $admin->password = Hash::make($request->password); // ✅ 4. แก้ไข: Hash รหัสผ่านใหม่ก่อนบันทึก
         }
 
         if ($request->hasFile('profile_image')) {

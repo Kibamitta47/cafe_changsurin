@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use App\Models\AdminID;
 use App\Models\User;
 
+
 class AdminCafeController extends Controller
 {
     public function create()
@@ -112,7 +113,8 @@ class AdminCafeController extends Controller
 
     public function update(Request $request, Cafe $cafe)
     {
-        Log::info('Admin updating cafe ID: ' . $cafe->id);
+        // ใช้ Primary Key ที่ถูกต้องในการ Log
+        Log::info('Admin updating cafe ID: ' . $cafe->cafe_id);
 
         $validatedData = $request->validate([
             'cafe_name' => 'required|string|max:255',
@@ -215,30 +217,22 @@ class AdminCafeController extends Controller
         $query = Cafe::where('lat', $request->lat)->where('lng', $request->lng);
 
         if ($request->filled('cafe_id')) {
-            $query->where('id', '!=', $request->cafe_id);
+            // ✅ แก้ไข: ใช้ชื่อคอลัมน์ Primary Key ที่ถูกต้อง ('cafe_id')
+            $query->where('cafe_id', '!=', $request->cafe_id);
         }
 
         return response()->json(['is_duplicate' => $query->exists()]);
     }
     
-    /**
-     * Display the welcome page.
-     * This is the corrected and final version of the function.
-     */
     public function welcome()
     {
-        // 1. Get approved cafes
-        // 2. Eager load the average rating from the 'reviews' table's 'rating' column.
-        //    Laravel will automatically create a 'reviews_avg_rating' property.
         $cafes = Cafe::where('status', 'approved')
-                     ->withAvg('reviews', 'rating') // <<< This is the essential line
+                     ->withAvg('reviews', 'rating')
                      ->latest()
-                     ->get(); // Use get() to fetch all results for JavaScript filtering
+                     ->get();
 
-        // Get visible news
         $news = AddnewsAdmin::where('is_visible', true)->latest()->get();
 
-        // Get liked cafe IDs for the authenticated user
         $likedCafeIds = [];
         if (Auth::check()) {
             $likedCafeIds = Auth::user()->likedCafes()->pluck('cafe_id')->toArray();
@@ -248,18 +242,18 @@ class AdminCafeController extends Controller
     }
 
     /**
-     * Show the details for a specific cafe.
+     * ✅ แก้ไข: ฟังก์ชัน show() ทั้งหมด
+     * ใช้ Route Model Binding (Cafe $cafe)
      */
-    public function show($id)
+    public function show(Cafe $cafe)
     {
-        // Also add average rating calculation here for the detail page
-        $cafe = Cafe::withAvg('reviews', 'rating')->findOrFail($id); 
+        // โหลดค่าเฉลี่ย rating เข้ามาใน Model ที่มีอยู่แล้ว
+        $cafe->loadAvg('reviews', 'rating'); 
         
         $reviews = $cafe->reviews()->latest()->paginate(5);
         return view('cafes.show', compact('cafe', 'reviews'));
     }
     
- // ✅ ฟังก์ชันสำหรับ "เปิด/ปิด" สถานะแนะนำ (สำหรับ Admin)
     public function toggleRecommend(Request $request, Cafe $cafe)
     {
         $cafe->is_recommended = !$cafe->is_recommended;
@@ -267,19 +261,11 @@ class AdminCafeController extends Controller
         return back()->with('success', 'เปลี่ยนสถานะแนะนำสำเร็จ!');
     }
 
-    // ✅ ฟังก์ชันสำหรับหน้า "เลือกคาเฟ่แนะนำ" (สำหรับ Admin) ที่ถูกต้อง
     public function recommend()
     {
-        // 1. ดึงข้อมูลคาเฟ่ทั้งหมดที่อนุมัติแล้ว พร้อมคำนวณเรตติ้งเฉลี่ย
         $allCafes = Cafe::where('status', 'approved')->withAvg('reviews', 'rating')->get();
-
-        // 2. จัดอันดับคาเฟ่ตามเรตติ้งสูงสุด และเอามา 10 อันดับแรก
         $topRatedCafes = $allCafes->sortByDesc('reviews_avg_rating')->take(10);
-
-        // 3. ค้นหาคาเฟ่เปิดใหม่ และเอามาล่าสุด 5 ร้าน
         $newCafes = $allCafes->where('is_new_opening', true)->sortByDesc('created_at')->take(5);
-
-        // 4. จัดกลุ่มคาเฟ่ตามสไตล์ (แสดงผลสไตล์ละ 5 ร้าน)
         $cafesByStyle = $allCafes->flatMap(function ($cafe) {
             $styles = is_array($cafe->cafe_styles) ? $cafe->cafe_styles : json_decode($cafe->cafe_styles, true) ?? [];
             return collect($styles)->map(function ($style) use ($cafe) {
@@ -289,33 +275,27 @@ class AdminCafeController extends Controller
             return $group->pluck('cafe')->take(5);
         });
 
-        // 5. ส่งตัวแปรทั้งหมดไปที่ View
         return view('admin.recommend', compact('topRatedCafes', 'newCafes', 'cafesByStyle'));
     }
 
-    // ✅ ฟังก์ชันสำหรับหน้า "แสดงคาเฟ่แนะนำ" (สำหรับผู้ใช้ทั่วไป) ที่แก้ไขแล้ว
-// ✅ ฟังก์ชันสำหรับหน้า "แสดงคาเฟ่แนะนำ" (สำหรับผู้ใช้ทั่วไป) ที่แก้ไขแล้ว
-public function showRecommendPage()
-{
-    // 1. ดึงเฉพาะคาเฟ่ที่ Admin เลือกให้เป็น "แนะนำ" ทั้งหมด
-    $recommendedCafes = Cafe::where('status', 'approved')
+    public function showRecommendPage()
+    {
+        $recommendedCafes = Cafe::where('status', 'approved')
                              ->where('is_recommended', true)
                              ->withAvg('reviews', 'rating')
                              ->get();
     
-    // 2. จัดหมวดหมู่ข้อมูลเหมือนเดิม
-    $topRatedCafes = $recommendedCafes->sortByDesc('reviews_avg_rating')->take(10);
-    $newCafes = $recommendedCafes->where('is_new_opening', true)->sortByDesc('created_at')->take(5);
-    $cafesByStyle = $recommendedCafes->flatMap(function ($cafe) {
-        $styles = is_array($cafe->cafe_styles) ? $cafe->cafe_styles : json_decode($cafe->cafe_styles, true) ?? [];
-        return collect($styles)->map(function ($style) use ($cafe) {
-            return ['style' => $style, 'cafe' => $cafe];
+        $topRatedCafes = $recommendedCafes->sortByDesc('reviews_avg_rating')->take(10);
+        $newCafes = $recommendedCafes->where('is_new_opening', true)->sortByDesc('created_at')->take(5);
+        $cafesByStyle = $recommendedCafes->flatMap(function ($cafe) {
+            $styles = is_array($cafe->cafe_styles) ? $cafe->cafe_styles : json_decode($cafe->cafe_styles, true) ?? [];
+            return collect($styles)->map(function ($style) use ($cafe) {
+                return ['style' => $style, 'cafe' => $cafe];
+            });
+        })->groupBy('style')->map(function ($group) {
+            return $group->pluck('cafe')->take(5);
         });
-    })->groupBy('style')->map(function ($group) {
-        return $group->pluck('cafe')->take(5);
-    });
 
-    // 3. ส่งตัวแปรทั้งหมดไปที่ View
-    return view('cafes.recommend', compact('recommendedCafes', 'topRatedCafes', 'newCafes', 'cafesByStyle'));
-}
+        return view('cafes.recommend', compact('recommendedCafes', 'topRatedCafes', 'newCafes', 'cafesByStyle'));
+    }
 }

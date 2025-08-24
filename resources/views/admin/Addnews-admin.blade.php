@@ -179,7 +179,6 @@
                     </h2>
                     <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#newsFormAccordion">
                         <div class="accordion-body p-4">
-                            <!-- Form content is the new decorated version -->
                              <form action="{{ route('admin.news.store') }}" method="POST" enctype="multipart/form-data">
                                 @csrf
                                 <div class="row">
@@ -227,19 +226,14 @@
             </div>
         </section>
 
-        <!-- ส่วนแสดงรายการข่าวสาร (กลับไปใช้รูปแบบเดิม) -->
+        <!-- ส่วนแสดงรายการข่าวสาร -->
         <section id="newsSection">
             <h2 class="h4 mb-3 fw-bold"><i class="fas fa-list-alt me-2"></i> รายการข่าวสารที่เพิ่มแล้ว</h2>
             <div class="card">
                 <div class="card-header"><i class="fas fa-table me-2"></i> รายการข่าวสาร</div>
                 <div class="card-body p-0">
-                    @if(isset($news) && $news->isEmpty())
-                        <div class="no-news">
-                            <i class="fas fa-box-open fa-3x mb-3"></i>
-                            <h5>ยังไม่มีข่าวสารในระบบ</h5>
-                            <p>เริ่มเพิ่มข่าวสารใหม่ได้จากฟอร์มด้านบน</p>
-                        </div>
-                    @else
+                    
+                    @if(isset($news) && $news->count() > 0)
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">
                                 <thead>
@@ -278,7 +272,7 @@
                                                 @endif
                                             </td>
                                             <td class="text-center">
-                                                <form action="{{ route('admin.news.toggle', $item->id) }}" method="POST" class="d-inline">
+                                                <form action="{{ route('admin.news.toggle', $item) }}" method="POST" class="d-inline">
                                                     @csrf
                                                     @method('PATCH')
                                                     <div class="form-check form-switch d-flex justify-content-center">
@@ -287,13 +281,19 @@
                                                 </form>
                                             </td>
                                             <td class="text-center">
-                                                <a href="{{ route('admin.news.edit', $item->id) }}" class="btn btn-warning btn-sm me-1" title="แก้ไข"><i class="fas fa-edit"></i></a>
-                                                <button type="button" class="btn btn-danger btn-sm delete-news-btn" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal" data-news-id="{{ $item->id }}" title="ลบ"><i class="fas fa-trash-alt"></i></button>
+                                                <a href="{{ route('admin.news.edit', $item) }}" class="btn btn-warning btn-sm me-1" title="แก้ไข"><i class="fas fa-edit"></i></a>
+                                                <button type="button" class="btn btn-danger btn-sm delete-news-btn" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal" data-news-id="{{ $item->addnews_admin_id }}" title="ลบ"><i class="fas fa-trash-alt"></i></button>
                                             </td>
                                         </tr>
                                     @endforeach
                                 </tbody>
                             </table>
+                        </div>
+                    @else
+                        <div class="no-news">
+                            <i class="fas fa-box-open fa-3x mb-3"></i>
+                            <h5>ยังไม่มีข่าวสารในระบบ</h5>
+                            <p>เริ่มเพิ่มข่าวสารใหม่ได้จากฟอร์มด้านบน</p>
                         </div>
                     @endif
                 </div>
@@ -326,16 +326,17 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// โค้ด JavaScript ทั้งหมดยังคงเป็นเวอร์ชันล่าสุดที่จัดการไฟล์อัปโหลดและ Modal
 document.addEventListener('DOMContentLoaded', function () {
-    // --- Delete Modal Logic ---
     const deleteModal = document.getElementById('deleteConfirmationModal');
     if (deleteModal) {
         deleteModal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
             const newsId = button.getAttribute('data-news-id');
             const deleteForm = document.getElementById('deleteNewsForm');
-            const actionUrl = `{{ url('admin/news') }}/${newsId}`;
+            
+            let actionUrl = "{{ route('admin.news.delete', ['news' => ':id']) }}";
+            actionUrl = actionUrl.replace(':id', newsId);
+            
             deleteForm.setAttribute('action', actionUrl);
         });
     }
@@ -379,7 +380,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function handleFiles(files) {
         Array.from(files).forEach(file => {
             if (file.type.startsWith('image/')) {
-                // ป้องกันการเพิ่มไฟล์ซ้ำ
                 let isDuplicate = Array.from(fileStore.files).some(f => f.name === file.name && f.size === file.size);
                 if (!isDuplicate) {
                     fileStore.items.add(file);

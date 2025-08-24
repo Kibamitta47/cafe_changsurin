@@ -231,12 +231,11 @@
         <!-- หัวข้อจะเปลี่ยนเป็น "แก้ไขข้อมูลคาเฟ่" โดยอัตโนมัติ -->
         <h2 class="form-title"><i class="fas fa-edit"></i>{{ isset($cafe) ? 'แก้ไขข้อมูลคาเฟ่' : 'เพิ่มข้อมูลคาเฟ่ใหม่' }}</h2>
 
-        <!-- Form action จะชี้ไปที่ route update และใช้ method PUT สำหรับการแก้ไข -->
-        <form action="{{ isset($cafe) ? route('user.cafes.update', $cafe->id) : route('user.cafes.store') }}" method="POST" enctype="multipart/form-data" id="cafeForm">
-            @csrf
-            @if(isset($cafe))
-                @method('PUT')
-            @endif
+        <form action="{{ isset($cafe) ? route('user.cafes.update', $cafe) : route('user.cafes.store') }}" method="POST" enctype="multipart/form-data" class="p-4 rounded" id="cafeForm">
+        @csrf
+        @if(isset($cafe))
+            @method('PUT') {{-- ใช้ PUT method สำหรับการอัปเดต --}}
+        @endif
 
             <div class="row">
                 <!-- ========== Left Column ========== -->

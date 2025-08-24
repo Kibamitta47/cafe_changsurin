@@ -208,8 +208,11 @@
                                 <div class="dropdown">
                                     <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button>
                                     <ul class="dropdown-menu dropdown-menu-end">
-                                        <li><a class="dropdown-item" href="{{ route('user.cafes.edit', $cafe->id) }}"><i class="bi bi-pencil-square me-2"></i>แก้ไข</a></li>
-                                        <li><button class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ $cafe->id }}"><i class="bi bi-trash3-fill me-2"></i>ลบ</button></li>
+                                        {{-- 1. แก้ไขลิงก์ "แก้ไข" --}}
+                                        <li><a class="dropdown-item" href="{{ route('user.cafes.edit', $cafe) }}"><i class="bi bi-pencil-square me-2"></i>แก้ไข</a></li>
+                                        
+                                        {{-- 2. แก้ไขปุ่ม "ลบ" ให้เรียก Modal ที่ถูกต้อง --}}
+                                        <li><button class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ $cafe->cafe_id }}"><i class="bi bi-trash3-fill me-2"></i>ลบ</button></li>
                                     </ul>
                                 </div>
                             </div>
@@ -223,17 +226,22 @@
                                 <span class="badge rounded-pill text-bg-warning status-badge"><i class="bi bi-hourglass-split"></i> รอการอนุมัติ</span>
                             @endif
                         </div>
-                    </div> <!-- ### CORRECTION: Added closing </div> for .card ### -->
+                    </div> 
                 
+                    {{-- ========================================================== --}}
+                    {{-- ✅✅✅ โค้ด Modal ที่ต้องแก้ไขด้วย อยู่ตรงนี้ ✅✅✅ --}}
+                    {{-- ========================================================== --}}
                     <!-- Delete Confirmation Modal -->
-                    <div class="modal fade" id="deleteModal{{ $cafe->id }}" tabindex="-1">
+                    <div class="modal fade" id="deleteModal{{ $cafe->cafe_id }}" tabindex="-1"> {{-- 3. แก้ไข ID ของ Modal --}}
                         <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content">
                                 <div class="modal-header border-0"><h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>ยืนยันการลบ</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                                 <div class="modal-body">คุณแน่ใจหรือไม่ว่าต้องการลบคาเฟ่ "<strong>{{ $cafe->cafe_name }}</strong>"?</div>
                                 <div class="modal-footer border-0">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                                    <form method="POST" action="{{ route('user.cafes.destroy', $cafe->id) }}">
+                                    
+                                    {{-- 4. แก้ไขฟอร์มสำหรับลบ --}}
+                                    <form method="POST" action="{{ route('user.cafes.destroy', $cafe) }}">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-danger">ยืนยันการลบ</button>
@@ -242,7 +250,7 @@
                             </div>
                         </div>
                     </div>
-                </div> <!-- ### CORRECTION: Added closing </div> for .col-lg-4 ### -->
+                </div>
             @empty
                 <div class="col-12">
                      <div class="empty-state-card" id="empty-state">

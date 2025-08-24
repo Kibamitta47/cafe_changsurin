@@ -4,8 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\User;
 use App\Models\AdminID;
 use App\Models\Review;
@@ -14,6 +12,9 @@ class Cafe extends Model
 {
     use HasFactory;
 
+    protected $primaryKey = 'cafe_id';
+    
+    // ... ส่วนของ $fillable และ $casts ไม่ต้องเปลี่ยนแปลง ...
     protected $fillable = [
         'user_id',
         'admin_id',
@@ -58,19 +59,22 @@ class Cafe extends Model
         'credit_card'       => 'boolean',
     ];
 
-    public function user(): BelongsTo
+    public function user()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        //              (Model แม่,  Foreign Key ในตาราง cafes,  Owner Key (PK) ในตาราง users)
+        return $this->belongsTo(User::class, 'user_id',             'user_id');
     }
 
-    public function admin(): BelongsTo
+    public function admin()
     {
-        return $this->belongsTo(AdminID::class, 'admin_id', 'AdminID');
+        // <-- แก้ไขตรงนี้: ระบุ Owner Key (PK ของตารางแม่) ให้ถูกต้อง
+        return $this->belongsTo(AdminID::class, 'admin_id', 'admin_id_pk');
     }
 
-    public function reviews(): HasMany
+    public function reviews()
     {
-        return $this->hasMany(Review::class);
+        // <-- แก้ไขตรงนี้: ระบุ Foreign Key และ Local Key ให้ชัดเจน
+        return $this->hasMany(Review::class, 'cafe_id', 'cafe_id');
     }
 
     public function likers()
@@ -79,14 +83,14 @@ class Cafe extends Model
     }
 
     /**
-     * ตรวจสอบว่าผู้ใช้กดไลก์คาเฟ่นี้หรือไม่
-     *
-     * @param User $user
-     * @return bool
+     * ฟังก์ชันเสริมสำหรับตรวจสอบว่าผู้ใช้ที่ล็อกอินอยู่ได้ไลค์คาเฟ่นี้หรือยัง
+     * (มีประโยชน์สำหรับหน้าอื่นๆ)
      */
-    public function isLikedBy(User $user): bool
+    public function isLikedByCurrentUser(): bool
     {
-        return $this->likers()->where('user_id', $user->getKey())->exists();
+        if (!auth()->check()) {
+            return false;
+        }
+        return $this->likers()->where('user_id', auth()->id())->exists();
     }
-    
 }

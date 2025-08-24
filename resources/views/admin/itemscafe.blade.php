@@ -208,49 +208,46 @@
                                 {{-- ** Start of New Action Buttons ** --}}
                                 <td class="px-6 py-4">
                                     <div class="flex flex-col space-y-2">
-                                        <a href="{{ route('admin.cafe.edit', $cafe->id) }}" class="action-button inline-flex items-center justify-center px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm rounded-lg shadow-md">
+                                         <a href="{{ route('admin.cafe.edit', $cafe) }}" class="action-button inline-flex items-center justify-center px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm rounded-lg shadow-md">
                                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                             แก้ไข
                                         </a>
                                         
-                                        {{-- Hidden form for Delete (to be submitted via JS confirmation) --}}
-                                        <form id="deleteForm-{{ $cafe->id }}" action="{{ route('admin.cafe.destroy', $cafe->id) }}" method="POST" class="w-full hidden">
+                                        {{-- 2. แก้ไขฟอร์ม "ลบ" --}}
+                                        <form id="deleteForm-{{ $cafe->cafe_id }}" action="{{ route('admin.cafe.destroy', $cafe) }}" method="POST" class="w-full hidden">
                                             @csrf
                                             @method('DELETE')
                                         </form>
-                                        <button type="button" onclick="showConfirmModal('คุณแน่ใจหรือไม่ว่าต้องการลบคาเฟ่ {{ $cafe->cafe_name }}? การดำเนินการนี้ไม่สามารถย้อนกลับได้', 'delete', {{ $cafe->id }});" class="action-button inline-flex items-center justify-center w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg shadow-md">
+                                        <button type="button" onclick="showConfirmModal('คุณแน่ใจหรือไม่ว่าต้องการลบคาเฟ่ {{ $cafe->cafe_name }}? การดำเนินการนี้ไม่สามารถย้อนกลับได้', 'delete', {{ $cafe->cafe_id }});" class="action-button inline-flex items-center justify-center w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg shadow-md">
                                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                             ลบ
                                         </button>
                                         
                                         @if($cafe->status === 'pending')
-    {{-- Hidden form for Approve --}}
-    {{-- เปลี่ยน Route Name เป็น 'admin.cafe.update_status' --}}
-    <form id="approveForm-{{ $cafe->id }}" action="{{ route('admin.cafe.update_status', $cafe->id) }}" method="POST" class="w-full hidden">
-        @csrf
-        @method('PUT')
-        <input type="hidden" name="status" value="approved">
-    </form>
-    <button type="button" onclick="showConfirmModal('คุณแน่ใจหรือไม่ว่าต้องการอนุมัติคาเฟ่ {{ $cafe->cafe_name }}?', 'approve', {{ $cafe->id }});" class="action-button inline-flex items-center justify-center w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg shadow-md">
-        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        อนุมัติ
-    </button>
+                                            {{-- 3. แก้ไขฟอร์ม "อนุมัติ" --}}
+                                            <form id="approveForm-{{ $cafe->cafe_id }}" action="{{ route('admin.cafe.update_status', $cafe) }}" method="POST" class="w-full hidden">
+                                                @csrf
+                                                @method('PUT')
+                                                <input type="hidden" name="status" value="approved">
+                                            </form>
+                                            <button type="button" onclick="showConfirmModal('คุณแน่ใจหรือไม่ว่าต้องการอนุมัติคาเฟ่ {{ $cafe->cafe_name }}?', 'approve', {{ $cafe->cafe_id }});" class="action-button inline-flex items-center justify-center w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg shadow-md">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                อนุมัติ
+                                            </button>
 
-    {{-- Hidden form for Reject --}}
-    {{-- เปลี่ยน Route Name เป็น 'admin.cafe.update_status' --}}
-    <form id="rejectForm-{{ $cafe->id }}" action="{{ route('admin.cafe.update_status', $cafe->id) }}" method="POST" class="w-full hidden">
-        @csrf
-        @method('PUT')
-        <input type="hidden" name="status" value="rejected">
-    </form>
-    <button type="button" onclick="showConfirmModal('คุณแน่ใจหรือไม่ว่าต้องการปฏิเสธคาเฟ่ {{ $cafe->cafe_name }}?', 'reject', {{ $cafe->id }});" class="action-button inline-flex items-center justify-center w-full px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white text-sm rounded-lg shadow-md">
-        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        ปฏิเสธ
-    </button>
-@endif
+                                            {{-- 4. แก้ไขฟอร์ม "ปฏิเสธ" --}}
+                                            <form id="rejectForm-{{ $cafe->cafe_id }}" action="{{ route('admin.cafe.update_status', $cafe) }}" method="POST" class="w-full hidden">
+                                                @csrf
+                                                @method('PUT')
+                                                <input type="hidden" name="status" value="rejected">
+                                            </form>
+                                            <button type="button" onclick="showConfirmModal('คุณแน่ใจหรือไม่ว่าต้องการปฏิเสธคาเฟ่ {{ $cafe->cafe_name }}?', 'reject', {{ $cafe->cafe_id }});" class="action-button inline-flex items-center justify-center w-full px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white text-sm rounded-lg shadow-md">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                ปฏิเสธ
+                                            </button>
+                                        @endif
                                     </div>
                                 </td>
-                                {{-- ** End of New Action Buttons ** --}}
                             </tr>
                             @empty
                             <tr>

@@ -180,7 +180,8 @@
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-2xl font-bold flex items-center"><i class="fa-solid fa-star mr-2 text-amber-500"></i>รีวิวจากผู้ใช้</h2>
                         @auth
-                            <a href="{{ route('user.reviews.create', ['cafe_id' => $cafe->id]) }}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-all shadow-md hover:shadow-green-600/30 transform hover:-translate-y-0.5 text-sm">
+                            {{-- ใช้ Primary Key ใหม่ ($cafe->cafe_id) ในการสร้างลิงก์ --}}
+                            <a href="{{ route('user.reviews.create', ['cafe_id' => $cafe->cafe_id]) }}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-all shadow-md hover:shadow-green-600/30 transform hover:-translate-y-0.5 text-sm">
                                 <i class="fa-solid fa-pen-to-square mr-2"></i> เขียนรีวิว
                             </a>
                         @endauth

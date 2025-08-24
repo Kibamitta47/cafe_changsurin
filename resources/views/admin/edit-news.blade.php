@@ -146,7 +146,7 @@
                         <div class="alert alert-danger">{{ session('error') }}</div>
                     @endif
                     
-                    <form action="{{ route('admin.news.update', $news->id) }}" method="POST" enctype="multipart/form-data" id="editNewsForm">
+                     <form action="{{ route('admin.news.update', $news) }}" method="POST" enctype="multipart/form-data" id="editNewsForm">
                         @csrf
                         @method('PUT')
                         

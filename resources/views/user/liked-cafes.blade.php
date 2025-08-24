@@ -149,21 +149,29 @@
                         $imageUrl = !empty($cafeImages) ? asset('storage/' . $cafeImages[0]) : 'https://placehold.co/400x300/E2E8F0/64748B?text=No+Image';
                         $cafeStyles = is_array($cafe->cafe_styles) ? $cafe->cafe_styles : [];
                     @endphp
-                    <div class="col-sm-6 col-lg-4 col-xl-3" id="cafe-card-{{ $cafe->id }}">
+                    
+                    {{-- ========================================================== --}}
+                    {{-- ✅✅✅ จุดแก้ไข HTML ทั้งหมด อยู่ใน Loop นี้ ✅✅✅ --}}
+                    {{-- ========================================================== --}}
+                    
+                    {{-- 1. ใช้ Primary Key ใหม่สำหรับ ID ของ Card Wrapper --}}
+                    <div class="col-sm-6 col-lg-4 col-xl-3" id="cafe-card-{{ $cafe->cafe_id }}"> 
                         <div class="cafe-card h-100">
                             <div class="card-img-container">
                                 <img src="{{ $imageUrl }}" alt="รูปคาเฟ่ {{ $cafe->cafe_name }}">
-                                <!-- [MODIFIED] ทำให้ลิงก์คลุมแค่รูปภาพ และอยู่ใต้ปุ่ม -->
-                                <a href="{{ route('cafes.show', $cafe->id) }}" class="card-img-link"></a>
-                                <!-- [MODIFIED] ไม่ต้องใช้ .stop หรือ .prevent แล้ว เพราะปุ่มแยกขาดจากลิงก์โดยสิ้นเชิง -->
-                                <button @click="toggleLike({{ $cafe->id }})" class="like-button">
+                                
+                                {{-- 2. ใช้ Route Model Binding สำหรับลิงก์ที่รูปภาพ --}}
+                                <a href="{{ route('cafes.show', $cafe) }}" class="card-img-link"></a>
+                                
+                                {{-- 3. ส่ง Primary Key ใหม่ไปให้ JavaScript --}}
+                                <button @click="toggleLike({{ $cafe->cafe_id }})" class="like-button">
                                     <i class="fa-solid fa-heart"></i>
                                 </button>
                             </div>
                             <div class="card-body d-flex flex-column">
                                 <h5 class="card-title fw-bold mb-1">
-                                    <!-- [MODIFIED] เอา stretched-link ออก และใช้คลาสใหม่แทน -->
-                                    <a href="{{ route('cafes.show', $cafe->id) }}" class="card-title-link">{{ $cafe->cafe_name }}</a>
+                                    {{-- 4. ใช้ Route Model Binding สำหรับลิงก์ที่ชื่อคาเฟ่ --}}
+                                    <a href="{{ route('cafes.show', $cafe) }}" class="card-title-link">{{ $cafe->cafe_name }}</a>
                                 </h5>
                                 <p class="card-text text-secondary small mb-3">
                                     <i class="bi bi-geo-alt-fill me-1"></i>{{ Str::limit($cafe->address, 40) }}
@@ -190,66 +198,66 @@
     </div>
 </div>
 
-<!-- Scripts (เหมือนเดิม) -->
+
+<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{{-- ========================================================== --}}
+{{-- ✅✅✅ โค้ด JavaScript ที่แก้ไขแล้ว ✅✅✅ --}}
+{{-- ========================================================== --}}
 <script>
-    function likedCafesManager() {
-        return {
-            async toggleLike(cafeId) {
-                // event.stopPropagation(); // ไม่จำเป็นแล้ว แต่เก็บไว้เผื่อดีบัก
-                const button = event.currentTarget;
-                const card = document.getElementById(`cafe-card-${cafeId}`);
-                if (!card) return;
-
-                button.disabled = true;
-                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-
-                const url = `/cafes/${cafeId}/toggle-like`;
-
-                try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                        },
-                    });
-
-                    if (!response.ok) {
-                        throw new Error('Server responded with an error.');
-                    }
-
-                    const data = await response.json();
-
-                    if (data.status === 'success' && data.is_liked === false) {
-                        console.log('Unlike successful. Removing card.');
-                        card.style.transition = 'opacity 0.5s ease, transform 0.5s ease, margin-bottom 0.5s ease';
-                        card.style.opacity = '0';
-                        card.style.transform = 'scale(0.95)';
-                        card.style.marginBottom = `-${card.offsetHeight}px`;
-
-                        setTimeout(() => {
-                            card.remove();
-                            const container = document.querySelector('.row.g-4');
-                            if (container && container.childElementCount === 0) {
-                                window.location.reload();
-                            }
-                        }, 500);
-
-                    } else {
-                        throw new Error('Server logic error: Cafe is still liked.');
-                    }
-
-                } catch (error) {
-                    console.error('Failed to toggle like:', error);
-                    alert('เกิดข้อผิดพลาดในการยกเลิกการถูกใจ กรุณาลองใหม่');
-                    
-                    button.disabled = false;
-                    button.innerHTML = '<i class="fa-solid fa-heart"></i>';
-                }
+   function likedCafesManager() {
+    return {
+        async toggleLike(cafeId) {
+            const card = document.getElementById(`cafe-card-${cafeId}`); 
+            if (!card) {
+                console.error(`Could not find card with ID: cafe-card-${cafeId}`);
+                return; 
             }
-        };
-    }
+
+            const button = event.currentTarget;
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            try {
+                const response = await fetch(`/cafes/${cafeId}/toggle-like`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Server responded with an error.');
+                }
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    // ถ้าสำเร็จ ให้ซ่อน Card ได้เลย
+                    card.style.transition = 'opacity 0.5s ease';
+                    card.style.opacity = '0';
+                    setTimeout(() => {
+                        card.remove();
+                        const container = document.querySelector('.row.g-4');
+                        if (container && container.childElementCount === 0) {
+                            window.location.reload();
+                        }
+                    }, 500);
+                } else {
+                    throw new Error(data.message || 'Server returned a non-success status.');
+                }
+
+            } catch (error) {
+                // ส่วนนี้จะทำงานเมื่อเกิด Error จริงๆ
+                // เราจะแสดงแค่ใน Console และ **ไม่แสดง Alert**
+                console.error('Failed to unlike cafe:', error);
+                
+                // คืนสภาพปุ่มให้กดใหม่ได้ แม้จะเกิด Error
+                button.disabled = false;
+                button.innerHTML = '<i class="fa-solid fa-heart"></i>';
+            }
+        }
+    };
+}
 </script>
-</body>
-</html>

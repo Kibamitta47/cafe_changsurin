@@ -20,6 +20,75 @@
         .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
         [x-cloak] { display: none !important; }
+
+        /* ===== [ CSS สำหรับ Slider ใหม่ ] ===== */
+        .slider {
+            position: relative;
+            width: 100%;
+            margin: auto;
+            overflow: hidden;
+            border-radius: 1rem; /* 16px */
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .slides {
+            display: flex;
+            transition: transform 0.5s ease-in-out;
+        }
+        .slides a {
+            min-width: 100%;
+            box-sizing: border-box;
+        }
+        .slides img {
+            width: 100%;
+            display: block;
+            aspect-ratio: 2 / 1; /* 16:8 Aspect Ratio */
+            object-fit: cover;
+        }
+        .nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s;
+            z-index: 10;
+        }
+        .nav-btn:hover {
+            background-color: rgba(0,0,0,0.6);
+        }
+        .prev { left: 10px; }
+        .next { right: 10px; }
+        .dots {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            z-index: 10;
+        }
+        .dot {
+            height: 12px;
+            width: 12px;
+            margin: 0 5px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            display: inline-block;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .dot.active, .dot:hover {
+            background-color: white;
+        }
     </style>
 </head>
 
@@ -41,10 +110,9 @@
         x-init="initializeAllData()"
         x-cloak>
 
-        <!-- =====[ โค้ดที่แก้ไข: ปรับเปลี่ยน Grid Layout ทั้งหมด ]===== -->
         <div class="grid grid-cols-12 gap-8 max-w-screen-2xl mx-auto">
 
-            {{-- Left Column - Filters (ปรับให้กว้างขึ้น) --}}
+            {{-- Left Column - Filters --}}
             <aside class="col-span-12 lg:col-span-3 py-12 px-4">
                 <div class="sticky top-24">
                     <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm p-4 space-y-4 border border-slate-200">
@@ -143,8 +211,30 @@
                 </div>
             </aside>
 
-            {{-- Middle Column - Main Content (ปรับสัดส่วน) --}}
+            {{-- Middle Column - Main Content --}}
             <main class="col-span-12 lg:col-span-6 py-12 px-4 space-y-8">
+
+                    <!-- ===== [ Slider ใหม่ ] ===== -->
+                    <div class="slider mb-8">
+                        <div class="slides">
+                          <a href="{{ route('cafes.top10') }}">
+                            <img src="{{ asset('/images/TOP-10.png') }}" alt="10 อันดับคาเฟ่แนะนำ">
+                          </a>
+                          <a href="{{ route('cafes.top10') }}">
+                            {{-- คุณสามารถเปลี่ยนรูปที่ 2 ได้ที่นี่ --}}
+                            <img src="{{ asset('/images/banner2.jpg') }}" alt="คาเฟ่บรรยากาศดี">
+                          </a>
+                          <a href="{{ route('cafes.top10') }}">
+                             {{-- คุณสามารถเปลี่ยนรูปที่ 3 ได้ที่นี่ --}}
+                            <img src="{{ asset('/images/banner3.jpg') }}" alt="กาแฟรสเลิศ">
+                          </a>
+                        </div>
+                        <button class="nav-btn prev">&#10094;</button>
+                        <button class="nav-btn next">&#10095;</button>
+                        <div class="dots"></div>
+                    </div>
+
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6" id="cafesSection">
                         <template x-for="cafe in filteredCafes.slice(0, displayedCafeCount)" :key="cafe.id">
                             <div
@@ -167,7 +257,9 @@
                                         <div x-text="`${activeImageIndex + 1} / ${cafe.imageUrls.length}`" class="absolute bottom-2 right-2 bg-black/50 text-white text-xs font-bold px-2 py-1 rounded-md"></div>
                                     </template>
                                     @auth
-                                    <button @click.prevent="toggleLike(cafe.id)" class="absolute top-2 right-2 w-9 h-9 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/60 transition-colors duration-300 z-10"><i class="fa-heart text-lg transition-all" :class="isLiked(cafe.id) ? 'fa-solid text-pink-500' : 'fa-regular'"></i></button>
+                                     <button @click.prevent="toggleLike(cafe.id)" class="absolute top-2 right-2 w-9 h-9 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/60 transition-colors duration-300 z-10">
+                                        <i class="fa-heart text-lg transition-all" :class="isLiked(cafe.id) ? 'fa-solid text-pink-500' : 'fa-regular'"></i>
+                                    </button>
                                     @endauth
                                     <div x-show="cafe.isNewOpening" class="absolute bottom-2 left-2 bg-fuchsia-500 text-white px-3 py-1 rounded-full text-xs font-semibold tracking-wide shadow-md">✨ เปิดใหม่</div>
                                 </div>
@@ -230,7 +322,7 @@
                     <div x-show="allCafes.length === 0" class="text-center py-16 bg-white rounded-2xl mt-8 col-span-full"><div class="text-gray-400 text-8xl mb-6">☕</div><h3 class="text-2xl font-bold text-gray-500 mb-2">ยังไม่มีคาเฟ่ในระบบ</h3><p class="text-gray-400">กรุณาติดตามคาเฟ่ใหม่ๆ ในภายหลัง</p></div>
             </main>
 
-            {{-- Right Column - News (ย้ายมาไว้สุดท้ายเพื่อให้ชิดขวา) --}}
+            {{-- Right Column - News --}}
             <aside class="col-span-12 lg:col-span-3 py-12 px-4 hidden lg:block">
                  <div class="sticky top-24">
                     <div class="bg-white p-6 rounded-2xl shadow-sm space-y-4">
@@ -260,8 +352,8 @@
     </div>
 
     <div id="cafe-data-source" class="hidden">
-        @if ($cafes && $cafes->count() > 0)
-            @foreach ($cafes as $cafe)
+            @if ($cafes && $cafes->count() > 0)
+                @foreach ($cafes as $cafe)
                 @php
                     $cafeImages = is_array($cafe->images) ? $cafe->images : [];
                     $imageUrls = [];
@@ -284,8 +376,8 @@
                     }
                 @endphp
                 <div class="cafe-item"
-                    data-id="{{ $cafe->id }}"
-                    data-link="{{ route('cafes.show', $cafe->id) }}"
+                     data-id="{{ $cafe->cafe_id }}"
+                     data-link="{{ route('cafes.show', $cafe) }}"
                     data-images="{{ json_encode($imageUrls) }}"
                     data-title="{{ $cafe->cafe_name ?? '' }}"
                     data-address="{{ $cafe->address }}"
@@ -317,9 +409,9 @@
                     $dateString = $item->created_at->translatedFormat('j M Y');
                 @endphp
                 <div class="news-item"
-                     data-id="{{ $item->id }}"
+                     data-id="{{ $item->addnews_admin_id }}"
                      data-title="{{ $item->title }}"
-                     data-link="{{ route('news.show', $item->id) }}"
+                     data-link="{{ route('news.show', $item) }}"
                      data-image="{{ $imageUrl }}"
                      data-date-string="{{ $dateString }}">
                 </div>
@@ -361,6 +453,7 @@
     </footer>
 
     <script>
+    // โค้ด Alpine.js เดิม
     function newsCarousel(config) {
         return {
             activeSlide: 1, totalSlides: config.totalSlides, autoplayInterval: null, autoplay: config.autoplay || false,
@@ -374,7 +467,6 @@
 
     function pageController(config) {
         return {
-            // Properties
             allCafes: [],
             filteredCafes: [],
             allNews: [],
@@ -382,7 +474,7 @@
             displayedCafeCount: 12,
             cafesPerPage: 12,
             searchTerm: '',
-            selectedHour: '', // State สำหรับ Dropdown เวลา
+            selectedHour: '',
             availableFilters: {
                 priceRanges: ['$', '$$', '$$$', '$$$$', '$$$$$'],
                 days: ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'],
@@ -408,15 +500,11 @@
                 this.extractAvailableFilters();
                 this.$watch('searchTerm', () => this.applyFilters());
                 this.$watch('filters', () => this.applyFilters(), { deep: true });
-
-                // Watcher สำหรับแปลงค่าจาก Dropdown ไปเป็น filters.time
                 this.$watch('selectedHour', (newHour) => {
                     this.filters.time = newHour ? `${newHour}:00` : '';
                 });
-
                 this.applyFilters();
             },
-
             loadNewsData() {
                 const newsElements = document.querySelectorAll('#news-data-source .news-item');
                 this.allNews = Array.from(newsElements).map(el => ({ id: parseInt(el.dataset.id), title: el.dataset.title, link: el.dataset.link, image: el.dataset.image, dateString: el.dataset.dateString, }));
@@ -450,38 +538,28 @@
                 this.allCafes.forEach(cafe => { if(cafe.cafeStyles) cafe.cafeStyles.forEach(style => allStyles.add(style)); if(cafe.facilities) cafe.facilities.forEach(facility => allFacilities.add(facility)); if(cafe.paymentMethods) cafe.paymentMethods.forEach(method => allPaymentMethods.add(method)); if(cafe.otherServices) cafe.otherServices.forEach(service => allOtherServices.add(service)); });
                 this.availableFilters.styles = Array.from(allStyles).sort(); this.availableFilters.facilities = Array.from(allFacilities).sort(); this.availableFilters.paymentMethods = Array.from(allPaymentMethods).sort(); this.availableFilters.otherServices = Array.from(allOtherServices).sort();
             },
-
             setRatingFilter(star) {
                 this.filters.rating = (this.filters.rating === star) ? 0 : star;
             },
-
             applyFilters() {
                 this.displayedCafeCount = this.cafesPerPage;
                 const lowerCaseSearchTerm = this.searchTerm.toLowerCase().trim();
-
                 const dayMap = { 'จันทร์': 0, 'อังคาร': 1, 'พุธ': 2, 'พฤหัสบดี': 3, 'ศุกร์': 4, 'เสาร์': 5, 'อาทิตย์': 6 };
-
                 this.filteredCafes = this.allCafes.filter(cafe => {
                     if (this.filters.rating > 0 && cafe.rating < this.filters.rating) return false;
                     if (this.filters.isNewOpening && !cafe.isNewOpening) return false;
-
-                    // กรองด้วย "วันเปิดทำการ"
                     if (this.filters.days.length > 0) {
                         let isCafeOpenOnSelectedDays = false;
-
                         if (cafe.openDay === 'ทุกวัน') {
                             isCafeOpenOnSelectedDays = true;
-                        }
-                        else if (cafe.openDay === 'จันทร์-ศุกร์') {
+                        } else if (cafe.openDay === 'จันทร์-ศุกร์') {
                             const weekdays = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์'];
                             if (this.filters.days.some(day => weekdays.includes(day))) {
                                 isCafeOpenOnSelectedDays = true;
                             }
-                        }
-                        else {
+                        } else {
                             const openDayNum = dayMap[cafe.openDay];
                             const closeDayNum = dayMap[cafe.closeDay];
-
                             if (openDayNum !== undefined && closeDayNum !== undefined) {
                                 if (this.filters.days.some(selectedDay => {
                                     const selectedDayNum = dayMap[selectedDay];
@@ -495,45 +573,37 @@
                                 }
                             }
                         }
-
                         if (!isCafeOpenOnSelectedDays) return false;
                     }
-
-                    // กรองด้วย "เวลา"
                     if (this.filters.time) {
                         if (!cafe.openTime || !cafe.closeTime) return false;
                         const userTime = this.filters.time;
-                        if (cafe.closeTime >= cafe.openTime) { // ไม่ข้ามคืน
+                        if (cafe.closeTime >= cafe.openTime) {
                             if (userTime < cafe.openTime || userTime >= cafe.closeTime) return false;
-                        } else { // ข้ามคืน
+                        } else {
                             if (userTime < cafe.openTime && userTime >= cafe.closeTime) return false;
                         }
                     }
-
                     if (this.filters.priceRanges.length > 0 && !this.filters.priceRanges.includes(cafe.priceRange)) return false;
                     if (this.filters.styles.length > 0 && (!cafe.cafeStyles || !this.filters.styles.some(style => cafe.cafeStyles.includes(style)))) return false;
                     if (this.filters.facilities.length > 0 && (!cafe.facilities || !this.filters.facilities.every(facility => cafe.facilities.includes(facility)))) return false;
                     if (this.filters.paymentMethods.length > 0 && (!cafe.paymentMethods || !this.filters.paymentMethods.some(method => cafe.paymentMethods.includes(method)))) return false;
                     if (this.filters.otherServices.length > 0 && (!cafe.otherServices || !this.filters.otherServices.every(service => cafe.otherServices.includes(service)))) return false;
-
                     if (lowerCaseSearchTerm) {
                         const searchableContent = `${cafe.title} ${cafe.address} ${cafe.placeName} ${cafe.cafeStyles.join(' ')} ${cafe.facilities.join(' ')} ${cafe.otherServices.join(' ')}`.toLowerCase();
                         if (!searchableContent.includes(lowerCaseSearchTerm)) return false;
                     }
-
                     return true;
                 });
-
                 this.filteredNews = this.allNews.filter(newsItem => {
                     if (!lowerCaseSearchTerm) return true;
                     return newsItem.title.toLowerCase().includes(lowerCaseSearchTerm);
                 });
             },
-
             clearFilters() {
                 this.filters.rating = 0;
                 this.filters.time = '';
-                this.selectedHour = ''; // เคลียร์ค่า Dropdown
+                this.selectedHour = '';
                 this.filters.days = [];
                 this.filters.isNewOpening = false;
                 this.filters.priceRanges = [];
@@ -543,13 +613,43 @@
                 this.filters.otherServices = [];
                 this.searchTerm = '';
             },
-
-            isLiked(cafeId) { return this.likedCafeIds.has(cafeId); },
+            isLiked(cafeId) {
+                return this.likedCafeIds.has(cafeId);
+            },
             toggleLike(cafeId) {
-                fetch(`/cafes/${cafeId}/toggle-like`, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'), 'Content-Type': 'application/json', 'Accept': 'application/json', } })
-                .then(response => { if (!response.ok) { throw new Error('Network response was not ok'); } return response.json(); })
-                .then(data => { if (data.is_liked) { this.likedCafeIds.add(cafeId); } else { this.likedCafeIds.delete(cafeId); } })
-                .catch(error => { console.error('There was a problem with the fetch operation:', error); alert('เกิดข้อผิดพลาดในการกดถูกใจ'); });
+                if (!cafeId || isNaN(parseInt(cafeId))) {
+                    console.error('Invalid cafeId passed to toggleLike:', cafeId);
+                    return;
+                }
+                fetch(`/cafes/${cafeId}/toggle-like`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                       console.error('Server responded with an error.');
+                       return Promise.reject('Server error');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success') {
+                        if (data.is_liked) {
+                            this.likedCafeIds.add(cafeId);
+                        } else {
+                            this.likedCafeIds.delete(cafeId);
+                        }
+                    } else {
+                        console.error('Server returned a non-success status.');
+                    }
+                })
+                .catch(error => {
+                    console.error('There was a problem with the like operation:', error);
+                });
             },
             loadMoreCafes() { this.displayedCafeCount += this.cafesPerPage; },
             share(title, url, buttonElement) {
@@ -558,6 +658,75 @@
             }
         };
     }
-</script>
+
+    // โค้ดสำหรับ Slider ใหม่
+    document.addEventListener('DOMContentLoaded', function () {
+        const slider = document.querySelector('.slider');
+        if (!slider) return; // ป้องกัน Error ถ้าไม่มี Slider ในหน้านั้น
+
+        const slides = slider.querySelector('.slides');
+        const slideItems = slider.querySelectorAll('.slides a');
+        const prevBtn = slider.querySelector('.prev');
+        const nextBtn = slider.querySelector('.next');
+        const dotsContainer = slider.querySelector('.dots');
+        let index = 0;
+        let slideInterval;
+
+        // สร้าง dot
+        slideItems.forEach((_, i) => {
+            const dot = document.createElement('div');
+            dot.classList.add('dot');
+            if (i === 0) dot.classList.add('active');
+            dot.addEventListener('click', () => {
+                goToSlide(i);
+                resetInterval();
+            });
+            dotsContainer.appendChild(dot);
+        });
+        const dots = dotsContainer.querySelectorAll('.dot');
+
+        function showSlide(i) {
+            slides.style.transform = `translateX(-${i * 100}%)`;
+            dots.forEach(d => d.classList.remove('active'));
+            dots[i].classList.add('active');
+        }
+
+        function goToSlide(i) {
+            index = i;
+            showSlide(index);
+        }
+
+        function nextSlide() {
+            index = (index + 1) % slideItems.length;
+            showSlide(index);
+        }
+
+        function prevSlide() {
+            index = (index - 1 + slideItems.length) % slideItems.length;
+            showSlide(index);
+        }
+
+        function startInterval() {
+            slideInterval = setInterval(nextSlide, 4000);
+        }
+
+        function resetInterval() {
+            clearInterval(slideInterval);
+            startInterval();
+        }
+
+        nextBtn.addEventListener('click', () => {
+            nextSlide();
+            resetInterval();
+        });
+
+        prevBtn.addEventListener('click', () => {
+            prevSlide();
+            resetInterval();
+        });
+        
+        startInterval(); // เริ่มการเลื่อนอัตโนมัติ
+    });
+    </script>
 </body>
 </html>

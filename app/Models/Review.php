@@ -5,15 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Cafe;
+use App\Models\User;
 
 class Review extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     * เพิ่ม 'images' กลับเข้ามา
-     */
+    protected $primaryKey = 'review_id';
+
     protected $fillable = [
         'cafe_id',
         'user_id',
@@ -21,39 +20,28 @@ class Review extends Model
         'title',
         'content',
         'rating',
-        'images', // <-- เพิ่มกลับเข้ามา
+        'images',
     ];
 
-    /**
-     * The attributes that should be cast.
-     * บอกให้ Laravel แปลงคอลัมน์ 'images' เป็น array โดยอัตโนมัติ
-     */
     protected $casts = [
-         'images' => 'array',
-         'created_at' => 'datetime', // เพิ่มบรรทัดนี้
-        'updated_at' => 'datetime', // และบรรทัดนี้
+        'images' => 'array',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
-    /**
-     * ความสัมพันธ์กับ Cafe (ถูกต้องแล้ว)
+  /**
+     * ความสัมพันธ์: Review หนึ่งอันเป็นของ Cafe หนึ่งร้าน
      */
     public function cafe()
-{
-    return $this->belongsTo(Cafe::class);
-}
-
-
-    /**
-     * ความสัมพันธ์กับ User (ถูกต้องแล้ว)
-     */
-    public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Cafe::class, 'cafe_id', 'cafe_id');
     }
 
-    // **ลบฟังก์ชัน images() ที่เป็น relationship ทิ้งไป** เพราะเราไม่ได้ใช้แล้ว
-    // public function images()
-    // {
-    //     return $this->hasMany(Image::class);
-    // }
+    public function user()
+    {
+        //              (Model แม่,  Foreign Key ในตาราง reviews,  Owner Key (PK) ในตาราง users)
+        return $this->belongsTo(User::class, 'user_id',               'user_id');
+    }
+
+    
 }
