@@ -367,7 +367,7 @@
                 }
                 $openTime = $cafe->open_time ? \Carbon\Carbon::parse($cafe->open_time)->format('H:i') : '';
                 $closeTime = $cafe->close_time ? \Carbon\Carbon::parse($cafe->close_time)->format('H:i') : '';
-                $priceSymbol = str_repeat('฿', $cafe->price_range ?? 1);
+                $priceSymbol = str_repeat('฿', (int)($cafe->price_range ?? 1));
                 $cafeStyles = is_array($cafe->cafe_styles) ? $cafe->cafe_styles : [];
                 $facilities = is_array($cafe->facilities) ? $cafe->facilities : [];
                 $payment_methods = is_array($cafe->payment_methods) ? $cafe->payment_methods : [];
