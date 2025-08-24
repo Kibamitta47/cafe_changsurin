@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate from\Database\Eloquent\Factories\HasFactory;
+// แก้ไข Syntax Error ตรงนี้
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class AddnewsAdmin extends Model
