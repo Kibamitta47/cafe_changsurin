@@ -375,8 +375,7 @@
             @endphp
             <div class="cafe-item"
                  data-id="{{ $cafe->cafe_id }}"
-                 {{-- *** แก้ไขบรรทัดนี้ *** --}}
-                data-link="{{ route('cafes.show', ['cafe' => $cafe->cafe_id]) }}"
+                 data-link="{{ route('cafes.show', $cafe) }}"
                  data-images="{{ json_encode($imageUrls) }}"
                  data-title="{{ $cafe->cafe_name ?? '' }}"
                  data-address="{{ $cafe->address }}"
@@ -410,8 +409,7 @@
             <div class="news-item"
                  data-id="{{ $item->addnews_admin_id }}"
                  data-title="{{ $item->title }}"
-                 {{-- *** แก้ไขบรรทัดนี้ *** --}}
-                 data-link="{{ route('news.show', ['news' => $item->addnews_admin_id]) }}"
+                 data-link="{{ route('news.show', $item) }}"
                  data-image="{{ $imageUrl }}"
                  data-date-string="{{ $dateString }}">
             </div>
