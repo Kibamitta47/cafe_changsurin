@@ -351,54 +351,73 @@
         </div>
     </div>
 
-    <div id="cafe-data-source" class="hidden">
-            @if ($cafes && $cafes->count() > 0)
-                @foreach ($cafes as $cafe)
-                @php
-                    $cafeImages = is_array($cafe->images) ? $cafe->images : [];
-                    $imageUrls = [];
-                    foreach ($cafeImages as $img) { $imageUrls[] = asset('storage/' . $img); }
-                    if (empty($imageUrls)) { $imageUrls[] = asset('images/no-image.png'); }
-                    $openTime = $cafe->open_time ? \Carbon\Carbon::parse($cafe->open_time)->format('H:i') : '';
-                    $closeTime = $cafe->close_time ? \Carbon\Carbon::parse($cafe->close_time)->format('H:i') : '';
-                    $cafeStyles = is_array($cafe->cafe_styles) ? $cafe->cafe_styles : [];
-                    $facilities = is_array($cafe->facilities) ? $cafe->facilities : [];
-                    $payment_methods = is_array($cafe->payment_methods) ? $cafe->payment_methods : [];
-                    $other_services = is_array($cafe->other_services) ? $cafe->other_services : [];
-
-                    $priceSymbol = '';
-                    switch ($cafe->price_range) {
-                        case 'ต่ำกว่า 100':   $priceSymbol = '$';     break;
-                        case '101 - 250':     $priceSymbol = '$$';    break;
-                        case '251 - 500':     $priceSymbol = '$$$';   break;
-                        case '501 - 1,000':   $priceSymbol = '$$$$';  break;
-                        case 'มากกว่า 1,000': $priceSymbol = '$$$$$'; break;
+  <div id="cafe-data-source" class="hidden">
+    @if (isset($cafes) && $cafes->count() > 0)
+        @foreach ($cafes as $cafe)
+            @php
+                // ... ส่วนของ @php ไม่ต้องแก้ไข ...
+                $imageUrls = [];
+                if (is_array($cafe->images)) {
+                    foreach ($cafe->images as $image) {
+                        $imageUrls[] = asset('storage/' . $image);
                     }
-                @endphp
-                <div class="cafe-item"
-                     data-id="{{ $cafe->cafe_id }}"
-                     data-link="{{ route('cafes.show', $cafe) }}"
-                    data-images="{{ json_encode($imageUrls) }}"
-                    data-title="{{ $cafe->cafe_name ?? '' }}"
-                    data-address="{{ $cafe->address }}"
-                    data-place-name="{{ $cafe->place_name }}"
-                    data-rating="{{ $cafe->reviews_avg_rating ?? 0 }}"
-                    data-open-day="{{ $cafe->open_day }}"
-                    data-close-day="{{ $cafe->close_day ?? '' }}"
-                    data-open-time="{{ $openTime }}"
-                    data-close-time="{{ $closeTime }}"
-                    data-phone="{{ $cafe->phone ?? '' }}"
-                    data-price-range="{{ $priceSymbol }}"
-                    data-original-price-range="{{ $cafe->price_range ?? '' }}"
-                    data-is-new-opening="{{ $cafe->is_new_opening ? 'true' : 'false' }}"
-                    data-styles="{{ implode(',', $cafeStyles) }}"
-                    data-facilities="{{ implode(',', $facilities) }}"
-                    data-payment-methods="{{ implode(',', $payment_methods) }}"
-                    data-other-services="{{ implode(',', $other_services) }}">
-                </div>
-            @endforeach
-        @endif
-    </div>
+                }
+                if (empty($imageUrls)) {
+                    $imageUrls[] = asset('images/no-image.png');
+                }
+                $openTime = $cafe->open_time ? \Carbon\Carbon::parse($cafe->open_time)->format('H:i') : '';
+                $closeTime = $cafe->close_time ? \Carbon\Carbon::parse($cafe->close_time)->format('H:i') : '';
+                $priceSymbol = str_repeat('฿', $cafe->price_range ?? 1);
+                $cafeStyles = is_array($cafe->cafe_styles) ? $cafe->cafe_styles : [];
+                $facilities = is_array($cafe->facilities) ? $cafe->facilities : [];
+                $payment_methods = is_array($cafe->payment_methods) ? $cafe->payment_methods : [];
+                $other_services = is_array($cafe->other_services) ? $cafe->other_services : [];
+            @endphp
+            <div class="cafe-item"
+                 data-id="{{ $cafe->cafe_id }}"
+                 {{-- *** แก้ไขบรรทัดนี้ *** --}}
+                 data-link="{{ route('cafes.show', ['cafe' => $cafe->cafe_id]) }}"
+                 data-images="{{ json_encode($imageUrls) }}"
+                 data-title="{{ $cafe->cafe_name ?? '' }}"
+                 data-address="{{ $cafe->address }}"
+                 data-place-name="{{ $cafe->place_name }}"
+                 data-rating="{{ $cafe->reviews_avg_rating ?? 0 }}"
+                 data-open-day="{{ $cafe->open_day }}"
+                 data-close-day="{{ $cafe->close_day ?? '' }}"
+                 data-open-time="{{ $openTime }}"
+                 data-close-time="{{ $closeTime }}"
+                 data-phone="{{ $cafe->phone ?? '' }}"
+                 data-price-range="{{ $priceSymbol }}"
+                 data-original-price-range="{{ $cafe->price_range ?? '' }}"
+                 data-is-new-opening="{{ $cafe->is_new_opening ? 'true' : 'false' }}"
+                 data-styles="{{ implode(',', $cafeStyles) }}"
+                 data-facilities="{{ implode(',', $facilities) }}"
+                 data-payment-methods="{{ implode(',', $payment_methods) }}"
+                 data-other-services="{{ implode(',', $other_services) }}">
+            </div>
+        @endforeach
+    @endif
+</div>
+
+<div id="news-data-source" class="hidden">
+    @if ($news && $news->count() > 0)
+        @foreach ($news as $item)
+            @php
+                $newsImages = is_array($item->images) ? $item->images : [];
+                $imageUrl = !empty($newsImages) ? asset('storage/' . $newsImages[0]) : asset('images/no-image.png');
+                $dateString = $item->created_at->translatedFormat('j M Y');
+            @endphp
+            <div class="news-item"
+                 data-id="{{ $item->addnews_admin_id }}"
+                 data-title="{{ $item->title }}"
+                 {{-- *** แก้ไขบรรทัดนี้ *** --}}
+                 data-link="{{ route('news.show', ['news' => $item->addnews_admin_id]) }}"
+                 data-image="{{ $imageUrl }}"
+                 data-date-string="{{ $dateString }}">
+            </div>
+        @endforeach
+    @endif
+</div>
 
     <div id="news-data-source" class="hidden">
         @if ($news && $news->count() > 0)
@@ -411,7 +430,7 @@
                 <div class="news-item"
                      data-id="{{ $item->addnews_admin_id }}"
                      data-title="{{ $item->title }}"
-                     data-link="{{ route('news.show', $item) }}"
+                     data-link="{{ route('news.show', ['news' => $item->addnews_admin_id]) }}"
                      data-image="{{ $imageUrl }}"
                      data-date-string="{{ $dateString }}">
                 </div>
