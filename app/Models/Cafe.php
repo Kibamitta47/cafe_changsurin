@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate from\Database\Eloquent\Factories\HasFactory;
+// แก้ไข Syntax Error ตรงนี้
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 // ตรวจสอบให้แน่ใจว่าได้ use Model ที่จำเป็นครบถ้วน
 use App\Models\User;
@@ -13,9 +14,8 @@ class Cafe extends Model
 {
     use HasFactory;
 
-    // ลบบรรทัดนี้ทิ้ง หรือคอมเมนต์ออกไป เพราะ PK ของคุณคือ 'id' ซึ่งเป็นค่าเริ่มต้นอยู่แล้ว
-    // protected $primaryKey = 'cafe_id';
-
+    // ไม่ต้องกำหนด $primaryKey เพราะค่าเริ่มต้น 'id' ถูกต้องอยู่แล้วตามฐานข้อมูล
+    
     /**
      * The attributes that are mass assignable.
      */
@@ -54,41 +54,34 @@ class Cafe extends Model
 
     /**
      * Get the reviews for the cafe.
-     * นี่คือส่วนที่แก้ไขให้ถูกต้อง 100%
      */
     public function reviews()
     {
-        // Cafe หนึ่งมีหลาย Review
-        // โดยใช้ Foreign Key 'cafe_id' ในตาราง reviews
-        // มาเชื่อมกับ Local Key (PK) 'id' ของตาราง cafes (ตารางปัจจุบัน)
+        // Foreign Key 'cafe_id' ในตาราง reviews เชื่อมกับ PK 'id' ของตาราง cafes
         return $this->hasMany(Review::class, 'cafe_id', 'id');
     }
 
     /**
      * The users that have liked this cafe.
-     * นี่คือส่วนที่แก้ไขให้ถูกต้อง 100%
      */
     public function likers()
     {
-        // ตารางกลางคือ 'cafe_likes'
-        // Foreign Key ในตารางกลางที่เชื่อมกับ Cafe (ตัวนี้) คือ 'cafe_id'
-        // Foreign Key ในตารางกลางที่เชื่อมกับ User (ตัวอื่น) คือ 'user_id'
-        // แต่ Local Key (PK) ของ Cafe (ตัวนี้) คือ 'id'
-        return $this->belongsToMany(User::class, 'cafe_likes', 'cafe_id', 'user_id')->withTimestamps();
-    }
-    
-    // ... ฟังก์ชันที่เหลือของคุณถูกต้องแล้ว ...
-    public function likedByUsers()
-    {
+        // FK ของ Cafe ในตารางกลางคือ 'cafe_id', PK ของ Cafe (ตัวนี้) คือ 'id'
+        // FK ของ User ในตารางกลางคือ 'user_id', PK ของ User (ตัวอื่น) คือ 'id'
         return $this->belongsToMany(User::class, 'cafe_likes', 'cafe_id', 'user_id');
     }
     
+    /**
+     * Check if the cafe is liked by a specific user.
+     */
     public function isLikedBy(User $user): bool
     {
-        return $this->likers()->where('user_id', $user->getKey())->exists();
+        return $this->likers()->where('user_id', $user->id)->exists();
     }
     
-    // ... ฟังก์ชัน admin() ...
+    /**
+     * Get the admin that owns the cafe.
+     */
     public function admin()
     {
         // สมมติว่า PK ของตาราง admin_id คือ 'AdminID'
