@@ -2,16 +2,32 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate from\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class AddnewsAdmin extends Model
 {
-    use HasFactory;
+    use HasFactory;  
 
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
     protected $table = 'addnews_admins';
+
+    /**
+     * The primary key associated with the table.
+     *
+     * @var string
+     */
     protected $primaryKey = 'addnews_admin_id';
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
     protected $fillable = [
         'title',
         'content',
@@ -22,6 +38,11 @@ class AddnewsAdmin extends Model
         'is_visible',
     ];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
     protected $casts = [
         'images' => 'array',
         'is_visible' => 'boolean',
