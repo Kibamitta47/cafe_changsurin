@@ -10,8 +10,8 @@
   <!-- Header -->
   <header class="cafe-header">
     <div class="cafe-header__inner">
-      <div class="cafe-logo"><a href="#">Cafe Surin</a></div>
-      <span class="cafe-badge">แนะนำ</span>
+      <div class="cafe-logo"><a href="https://nongchangsaren.ddns.net/">น้องช้างสะเร็น</a></div>
+      <span class="cafe-badge">TOP-10 คาเฟ่ในอำเภอเมืองสุรินทร์</span>
     </div>
   </header>
 
@@ -21,7 +21,7 @@
     <section class="cafe-hero">
       <div class="cafe-hero__card">
         <div class="cafe-hero__media">
-          <img src="https://picsum.photos/600/400?coffee" alt="cafe hero">
+          <img src="{{ asset('/images/TOP-10.png') }}" alt="10 อันดับคาเฟ่แนะนำ">
         </div>
         <div class="cafe-hero__body">
           <h2 class="cafe-hero__title">Elephant Café</h2>
