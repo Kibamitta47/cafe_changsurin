@@ -82,15 +82,13 @@ class Cafe extends Model
         return $this->belongsToMany(User::class, 'cafe_likes', 'cafe_id', 'user_id')->withTimestamps();
     }
 
-    /**
-     * ฟังก์ชันเสริมสำหรับตรวจสอบว่าผู้ใช้ที่ล็อกอินอยู่ได้ไลค์คาเฟ่นี้หรือยัง
-     * (มีประโยชน์สำหรับหน้าอื่นๆ)
-     */
-    public function isLikedByCurrentUser(): bool
+    public function likedByUsers()
     {
-        if (!auth()->check()) {
-            return false;
-        }
-        return $this->likers()->where('user_id', auth()->id())->exists();
+        return $this->belongsToMany(User::class, 'cafe_likes', 'cafe_id', 'user_id');
+    }
+
+    public function isLikedBy(User $user): bool
+    {
+        return $this->likers()->where('user_id', $user->getKey())->exists();
     }
 }
