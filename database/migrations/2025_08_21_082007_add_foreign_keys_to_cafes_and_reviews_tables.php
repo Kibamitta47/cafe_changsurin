@@ -11,28 +11,26 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // === แก้ไขตาราง cafes ===
+        // แก้ไขตาราง cafes
         Schema::table('cafes', function (Blueprint $table) {
-            // Foreign Key 'user_id' เชื่อมกับ PK 'id' ของตาราง users (ค่ามาตรฐาน)
+            // เพิ่ม foreign key สำหรับ user_id ไปยังตาราง users
+            // onDelete('cascade') หมายความว่าถ้า user ถูกลบ cafe ของ user นั้นก็จะถูกลบไปด้วย
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             
-            // Foreign Key 'admin_id' เชื่อมกับ PK 'AdminID' ของตาราง admin_id (ตามโค้ดเดิม)
-            // หมายเหตุ: ตรวจสอบให้แน่ใจว่า PK ของตาราง admin_id ชื่อ 'AdminID' จริงๆ
+            // เพิ่ม foreign key สำหรับ admin_id ไปยังตาราง admin_id (สมมติว่าชื่อตารางคือ admin_id)
             $table->foreign('admin_id')->references('AdminID')->on('admin_id')->onDelete('set null');
         });
 
-        // === แก้ไขตาราง reviews ===
+        // แก้ไขตาราง reviews
         Schema::table('reviews', function (Blueprint $table) {
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            // สำคัญ: Foreign Key 'cafe_id' ต้องเชื่อมกับ PK 'cafe_id' ของตาราง cafes
-            $table->foreign('cafe_id')->references('cafe_id')->on('cafes')->onDelete('cascade');
+            $table->foreign('cafe_id')->references('id')->on('cafes')->onDelete('cascade');
         });
 
-        // === แก้ไขตาราง cafe_likes ===
+        // แก้ไขตาราง cafe_likes
         Schema::table('cafe_likes', function (Blueprint $table) {
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            // สำคัญ: Foreign Key 'cafe_id' ต้องเชื่อมกับ PK 'cafe_id' ของตาราง cafes
-            $table->foreign('cafe_id')->references('cafe_id')->on('cafes')->onDelete('cascade');
+            $table->foreign('cafe_id')->references('id')->on('cafes')->onDelete('cascade');
         });
     }
 

@@ -58,10 +58,9 @@ class Cafe extends Model
     public function reviews()
     {
         // Foreign Key 'cafe_id' ในตาราง reviews เชื่อมกับ PK 'id' ของตาราง cafes
-        return $this->hasMany(Review::class, 'cafe_id', 'id');
+        return $this->hasMany(Review::class, 'cafe_id', 'cafe_id');
     }
-
-    /**
+   /**
      * The users that have liked this cafe.
      */
     public function likers()

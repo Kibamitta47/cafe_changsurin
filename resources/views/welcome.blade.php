@@ -375,7 +375,7 @@
             @endphp
             <div class="cafe-item"
                  data-id="{{ $cafe->cafe_id }}"
-                 data-link="{{ route('cafes.show', $cafe) }}"
+                 data-link="{{ route('cafes.show', ['cafe' => $cafe->cafe_id]) }}"
                  data-images="{{ json_encode($imageUrls) }}"
                  data-title="{{ $cafe->cafe_name ?? '' }}"
                  data-address="{{ $cafe->address }}"
@@ -428,7 +428,7 @@
                 <div class="news-item"
                      data-id="{{ $item->addnews_admin_id }}"
                      data-title="{{ $item->title }}"
-                     data-link="{{ route('news.show', ['news' => $item->addnews_admin_id]) }}"
+                     data-link="{{ App\Models\News::find($item->addnews_admin_id) ? route('news.show', \App\Models\News::find($item->addnews_admin_id)) : '#' }}"
                      data-image="{{ $imageUrl }}"
                      data-date-string="{{ $dateString }}">
                 </div>

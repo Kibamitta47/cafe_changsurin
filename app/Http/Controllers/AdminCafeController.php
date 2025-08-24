@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use DB;
 use Illuminate\Http\Request;
 use App\Models\Cafe;
 use App\Models\AddnewsAdmin;
@@ -231,7 +232,9 @@ class AdminCafeController extends Controller
                      ->latest()
                      ->get();
 
-        $news = AddnewsAdmin::where('is_visible', true)->latest()->get();
+        //แก้ด้วยนะ
+        // $news = DB::table('addnews_admins')->where('is_visible', true)->latest()->get();
+        $news = AddnewsAdmin::where('is_visible', true);
 
         $likedCafeIds = [];
         if (Auth::check()) {
