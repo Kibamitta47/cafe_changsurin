@@ -8,13 +8,12 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
-    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
     <style>
         .form-check-label {
-            font-weight: 600; /* ทำให้ข้อความเป็นตัวหนา */
-            color: #333; /* กำหนดให้เป็นสีดำ (หรือสีที่ต้องการ) */
+            font-weight: 600;
+            color: #333;
         }
         :root {
             --primary-blue: #3b82f6;
@@ -29,24 +28,23 @@
         }
 
         body {
-            font-family: 'Inter', sans-serif; /* Fallback to sans-serif if Inter is not loaded */
-            background-color: #f0f2f5; /* Lighter background for the entire page */
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
             color: #333;
-            padding-top: 20px; /* Space from top */
-            padding-bottom: 20px; /* Space from bottom */
-            transition: padding-left 0.3s ease; /* For sidebar transition */
+            padding-top: 20px;
+            padding-bottom: 20px;
+            transition: padding-left 0.3s ease;
         }
 
-        /* Adjust padding when sidebar is open */
         body.sidebar-open {
-            padding-left: 250px; /* Needs to match your sidebar width */
+            padding-left: 250px;
         }
 
         .container.mt-5.mb-5 {
             background-color: var(--white);
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-            padding: 40px; /* More internal spacing */
+            padding: 40px;
         }
 
         h2 {
@@ -60,27 +58,26 @@
         .form-label {
             font-weight: 600;
             color: #555;
-            margin-bottom: 8px; /* Space below labels */
+            margin-bottom: 8px;
         }
 
         .form-control, .form-select, .input-group-text {
-            border-radius: 8px; /* More rounded inputs */
+            border-radius: 8px;
             border-color: #ced4da;
         }
 
         .form-control:focus, .form-select:focus {
-            box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25); /* Primary blue focus */
+            box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
             border-color: var(--primary-blue);
         }
 
-        /* Specific styles for checkbox/radio groups */
         .form-check-inline {
-            margin-right: 1.5rem; /* More space between inline checkboxes */
+            margin-right: 1.5rem;
             margin-bottom: 0.5rem;
         }
 
         .btn-check + .btn {
-            border-radius: 8px; /* Rounded buttons for price range */
+            border-radius: 8px;
             padding: 8px 15px;
             font-size: 0.95rem;
         }
@@ -91,29 +88,25 @@
         .btn-outline-danger { --bs-btn-color: #dc3545; --bs-btn-border-color: #dc3545; --bs-btn-hover-bg: #dc3545; --bs-btn-hover-border-color: #dc3545; }
         .btn-outline-dark { --bs-btn-color: #212529; --bs-btn-border-color: #212529; --bs-btn-hover-bg: #212529; --bs-btn-hover-border-color: #212529; }
 
-
-        /* Map specific styles */
         #map {
-            height: 400px; /* Slightly taller map */
+            height: 400px;
             margin-bottom: 1.5rem;
             border-radius: 8px;
-            border: 1px solid #dee2e6; /* Subtle border for the map */
+            border: 1px solid #dee2e6;
         }
         .leaflet-container {
-            background: #e9ecef; /* Light gray background for map container */
-            border-radius: 8px; /* Match form element rounding */
+            background: #e9ecef;
+            border-radius: 8px;
         }
 
-        /* Custom file input style */
         .form-control[type="file"] {
             padding: 0.75rem 1rem;
         }
 
-        /* Buttons at the bottom */
         .d-flex.justify-content-end.gap-2.mt-3 {
             padding-top: 20px;
             border-top: 1px solid var(--gray-light);
-            margin-top: 30px !important; /* Ensure good spacing */
+            margin-top: 30px !important;
         }
         .btn-primary {
             background-color: var(--primary-blue);
@@ -149,22 +142,19 @@
             transform: translateY(-1px);
         }
 
-        /* Info text for max files */
         .form-text {
             font-size: 0.875em;
             color: #6c757d;
             margin-top: 5px;
         }
 
-        /* Specific adjustments for date/time selectors */
         .col-md-6 label {
             margin-bottom: 8px;
         }
 
-        /* Responsive adjustments */
         @media (max-width: 768px) {
             body.sidebar-open {
-                padding-left: 0; /* No padding on small screens as sidebar overlays */
+                padding-left: 0;
             }
             .container.mt-5.mb-5 {
                 padding: 20px;
@@ -176,7 +166,7 @@
                 margin-bottom: 20px;
             }
             .btn-check + .btn {
-                display: block; /* Stack price range buttons on small screens */
+                display: block;
                 width: 100%;
                 margin-right: 0 !important;
                 margin-bottom: 0.5rem !important;
@@ -198,7 +188,6 @@
 <div class="container mt-5 mb-5">
     <h2 class="mb-4"><i class="bi bi-shop me-2"></i> {{ isset($cafe) ? 'แก้ไขข้อมูลคาเฟ่' : 'เพิ่มข้อมูลคาเฟ่ใหม่' }}</h2>
 
-    {{-- แสดงข้อความ Success --}}
     @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         {{ session('success') }}
@@ -206,7 +195,6 @@
     </div>
     @endif
 
-    {{-- แสดง Validation Errors --}}
     @if ($errors->any())
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         <strong>ข้อผิดพลาด!</strong> กรุณาตรวจสอบข้อมูลที่กรอก:
@@ -219,7 +207,6 @@
     </div>
     @endif
 
-    {{-- แสดง General Error จาก Controller --}}
     @if(session('db_error'))
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         {{ session('db_error') }}
@@ -260,7 +247,6 @@
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
 
-                    {{-- ส่วนสำหรับแสดงรูปภาพที่มีอยู่แล้วเมื่อแก้ไข --}}
                     @if(isset($cafe) && !empty($cafe->images) && is_array($cafe->images))
                         <div class="mt-3">
                             <p class="form-label">รูปภาพที่มีอยู่:</p>
@@ -268,8 +254,6 @@
                                 @foreach($cafe->images as $index => $imagePath)
                                     <div class="position-relative">
                                         <img src="{{ asset('storage/' . $imagePath) }}" alt="Cafe Image" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
-                                        {{-- คุณอาจต้องการปุ่มลบรูปภาพแต่ละรูปที่นี่ --}}
-                                        {{-- <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0" onclick="removeImage('{{ $imagePath }}', this)">X</button> --}}
                                     </div>
                                 @endforeach
                             </div>
@@ -314,7 +298,6 @@
                     @endforeach
                 </div>
 
-                {{-- START: ส่วนที่เพิ่มเข้ามาสำหรับ สไตล์อื่นๆ (ข้อความ) --}}
                 <h5 class="mt-4 mb-3 text-primary">สไตล์อื่นๆ</h5>
                 <div class="mb-3">
                     <label for="other_style" class="form-label">ระบุสไตล์อื่นๆ ที่ไม่มีในรายการ</label>
@@ -325,8 +308,6 @@
                     @enderror
                     <div class="form-text">สามารถระบุสไตล์เพิ่มเติมได้</div>
                 </div>
-                {{-- END: ส่วนที่เพิ่มเข้ามาสำหรับ สไตล์อื่นๆ (ข้อความ) --}}
-
 
                 <h5 class="mt-4 mb-3 text-primary">ข้อมูลติดต่อ</h5>
                 <div class="mb-3">
@@ -448,7 +429,6 @@
                     <i class="bi bi-geo-alt-fill me-2"></i>ตำแหน่งที่เลือกอยู่นอกเขตอำเภอเมืองสุรินทร์ กรุณาเลือกภายในขอบเขต
                 </div>
 
-
                 <h5 class="mt-4 mb-3 text-primary">เวลาทำการ</h5>
                 <div class="row mb-3">
                     <div class="col-md-6 mb-3 mb-md-0">
@@ -482,41 +462,41 @@
                         @enderror
                     </div>
                 </div>
-               <!-- START: โค้ดที่แก้ไขสำหรับเวลาเปิด-ปิด (บังคับ 24-Hour Format) -->
-       <div class="row mb-3">
-        <div class="col-md-6 mb-3 mb-md-0">
-          <label for="open_time" class="form-label">⏰ เวลาเปิด</label>
-          <div class="input-group">
-            <input type="text"
-                   class="form-control @error('open_time') is-invalid @enderror"
-                   id="open_time"
-                   name="open_time"
-                   pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
-                   placeholder="HH:MM (ตัวอย่าง: 09:30)"
-                   value="{{ old('open_time', isset($cafe) && $cafe->open_time ? Carbon\Carbon::parse($cafe->open_time)->format('H:i') : '') }}">
-            <span class="input-group-text">น.</span>
-          </div>
-          @error('open_time')
-            <div class="invalid-feedback">{{ $message }}</div>
-          @enderror
-        </div>
-        <div class="col-md-6">
-          <label for="close_time" class="form-label">⏰ เวลาปิด</label>
-          <div class="input-group">
-            <input type="text"
-                   class="form-control @error('close_time') is-invalid @enderror"
-                   id="close_time"
-                   name="close_time"
-                   pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
-                   placeholder="HH:MM (ตัวอย่าง: 18:00)"
-                   value="{{ old('close_time', isset($cafe) && $cafe->close_time ? Carbon\Carbon::parse($cafe->close_time)->format('H:i') : '') }}">
-            <span class="input-group-text">น.</span>
-          </div>
-          @error('close_time')
-            <div class="invalid-feedback">{{ $message }}</div>
-          @enderror
-        </div>
-      </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <label for="open_time" class="form-label">⏰ เวลาเปิด</label>
+                        <div class="input-group">
+                            <input type="text"
+                                   class="form-control @error('open_time') is-invalid @enderror"
+                                   id="open_time"
+                                   name="open_time"
+                                   pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
+                                   placeholder="HH:MM (ตัวอย่าง: 09:30)"
+                                   value="{{ old('open_time', isset($cafe) && $cafe->open_time ? Carbon\Carbon::parse($cafe->open_time)->format('H:i') : '') }}">
+                            <span class="input-group-text">น.</span>
+                        </div>
+                        @error('open_time')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                    <div class="col-md-6">
+                        <label for="close_time" class="form-label">⏰ เวลาปิด</label>
+                        <div class="input-group">
+                            <input type="text"
+                                   class="form-control @error('close_time') is-invalid @enderror"
+                                   id="close_time"
+                                   name="close_time"
+                                   pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
+                                   placeholder="HH:MM (ตัวอย่าง: 18:00)"
+                                   value="{{ old('close_time', isset($cafe) && $cafe->close_time ? Carbon\Carbon::parse($cafe->close_time)->format('H:i') : '') }}">
+                            <span class="input-group-text">น.</span>
+                        </div>
+                        @error('close_time')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
 
                 <h5 class="mt-4 mb-3 text-primary">วิธีชำระเงิน</h5>
                 <div class="mb-3 d-flex flex-wrap gap-2">
@@ -569,15 +549,16 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 <script>
     // จำกัดอัปโหลดรูปไม่เกิน 5 รูป
     const imageInput = document.getElementById('images');
-    const cafeForm = document.getElementById('cafeForm'); // เปลี่ยนชื่อตัวแปร form เป็น cafeForm เพื่อไม่ให้ซ้ำกับตัวแปร global
+    const cafeForm = document.getElementById('cafeForm');
 
     imageInput.addEventListener('change', () => {
         if (imageInput.files.length > 5) {
             alert('เลือกได้สูงสุด 5 รูปภาพเท่านั้น');
-            imageInput.value = ''; // Clear selected files
+            imageInput.value = '';
         }
     });
 
@@ -586,10 +567,9 @@
             e.preventDefault();
             alert('กรุณาอัปโหลดรูปภาพไม่เกิน 5 รูปเท่านั้น');
             imageInput.focus();
-            return; // หยุดการทำงานถ้ามีข้อผิดพลาด
+            return;
         }
 
-        // ตรวจสอบว่ามี warning แสดงอยู่หรือไม่ก่อน submit
         if (!document.getElementById('duplicateCoordsWarning').classList.contains('d-none') ||
             !document.getElementById('outOfBoundsWarning').classList.contains('d-none')) {
             e.preventDefault();
@@ -606,14 +586,12 @@
     const outOfBoundsWarning = document.getElementById('outOfBoundsWarning');
     const submitBtn = document.getElementById('submitBtn');
 
-    // Bounding box for Amphoe Mueang Surin (roughly)
-    // South-West: [14.75, 103.35]
-    // North-East: [15.00, 103.65]
+    // Bounds & center for Amphoe Mueang Surin
     const mueangSurinBounds = L.latLngBounds([[14.75, 103.35], [15.00, 103.65]]);
-    const mueangSurinCenter = [14.885, 103.490]; // Approximate center
+    const mueangSurinCenter = [14.885, 103.490];
 
-    map.setView(mueangSurinCenter, 12); // ตั้งค่าเริ่มต้นให้แผนที่ไปที่อำเภอเมืองสุรินทร์
-    map.setMaxBounds(mueangSurinBounds); // จำกัดขอบเขตการเลื่อนแผนที่
+    map.setView(mueangSurinCenter, 12);
+    map.setMaxBounds(mueangSurinBounds);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 18,
@@ -624,21 +602,17 @@
 
     // สำหรับหน้าแก้ไข: ถ้ามีค่า lat/lng เดิม ให้แสดง marker บนแผนที่
     if (latInput.value && lngInput.value) {
-        const initialLatLng = [parseFloat(latInput.value), parseFloat(lngInput.value)];
-        // ตรวจสอบว่าพิกัดเริ่มต้นอยู่ในขอบเขตหรือไม่
-        if (mueangSurinBounds.contains(initialLatLng)) {
-            marker = L.marker(initialLatLng).addTo(map);
-            map.setView(initialLatLng, 15); // ซูมไปที่ตำแหน่งเดิม
-            checkCoordinates(initialLatLng[0], initialLatLng[1]); // ตรวจสอบพิกัดซ้ำเมื่อโหลดหน้า
+        const initial = L.latLng(parseFloat(latInput.value), parseFloat(lngInput.value));
+        if (mueangSurinBounds.contains(initial)) {
+            marker = L.marker(initial).addTo(map);
+            map.setView(initial, 15);
+            checkCoordinates(initial.lat, initial.lng);
         } else {
-            // หากพิกัดเดิมอยู่นอกขอบเขต (ไม่ควรเกิดขึ้นถ้า validation ทำงานถูกต้อง)
-            // อาจจะแสดง marker แต่เตือนผู้ใช้
-            marker = L.marker(initialLatLng).addTo(map);
-            map.setView(initialLatLng, 15);
+            marker = L.marker(initial).addTo(map);
+            map.setView(initial, 15);
             displayOutOfBoundsWarning(true);
         }
     } else {
-        // ถ้าไม่มีพิกัดเดิม ให้ตั้งค่าแผนที่ไปที่กลางเมืองสุรินทร์
         map.setView(mueangSurinCenter, 12);
     }
 
@@ -648,23 +622,23 @@
         placeholder: "ค้นหาที่อยู่...",
         collapsed: true,
         suggestMinLength: 3,
-        // กำหนดขอบเขตการค้นหาให้เน้นในพื้นที่สุรินทร์
         geocodingQueryParams: {
             'viewbox': `${mueangSurinBounds.getSouthWest().lng},${mueangSurinBounds.getSouthWest().lat},${mueangSurinBounds.getNorthEast().lng},${mueangSurinBounds.getNorthEast().lat}`,
-            'bounded': 1 // จำกัดผลลัพธ์ให้อยู่ใน viewbox
+            'bounded': 1
         }
     })
     .on('markgeocode', function(e) {
         const bbox = e.geocode.bbox;
         const center = e.geocode.center;
 
-        // ตรวจสอบว่าพิกัดที่ค้นหาได้อยู่ในขอบเขตที่กำหนดหรือไม่
         if (mueangSurinBounds.contains(center)) {
-            if (marker) {
-                map.removeLayer(marker);
-            }
+            if (marker) map.removeLayer(marker);
             marker = L.marker(center).addTo(map);
-            map.fitBounds(bbox.isValid() ? bbox : [center, center]); // ใช้ bbox ถ้าถูกต้อง มิฉะนั้นใช้ center
+            if (bbox && bbox.isValid && typeof bbox.isValid === 'function' && bbox.isValid()) {
+                map.fitBounds(bbox);
+            } else {
+                map.setView(center, 15);
+            }
 
             latInput.value = center.lat.toFixed(6);
             lngInput.value = center.lng.toFixed(6);
@@ -677,10 +651,9 @@
     })
     .addTo(map);
 
-
+    // คลิกบนแผนที่
     map.on('click', function(e) {
         const { lat, lng } = e.latlng;
-
         if (mueangSurinBounds.contains(e.latlng)) {
             if (marker) {
                 marker.setLatLng(e.latlng);
@@ -690,14 +663,14 @@
             latInput.value = lat.toFixed(6);
             lngInput.value = lng.toFixed(6);
             displayOutOfBoundsWarning(false);
-            checkCoordinates(lat, lng); // ตรวจสอบพิกัดซ้ำเมื่อคลิกแผนที่
+            checkCoordinates(lat, lng);
         } else {
             alert('ตำแหน่งที่เลือกอยู่นอกเขตอำเภอเมืองสุรินทร์ กรุณาเลือกภายในขอบเขต');
             displayOutOfBoundsWarning(true);
-            // ไม่ต้องลบ marker เดิม ถ้ามี
         }
     });
 
+    // ปุ่มรีเซ็ตตำแหน่ง
     document.getElementById('resetBtn').addEventListener('click', function() {
         if (marker) {
             map.removeLayer(marker);
@@ -705,12 +678,12 @@
         }
         latInput.value = '';
         lngInput.value = '';
-        displayOutOfBoundsWarning(false); // ซ่อน warning เมื่อรีเซ็ต
-        duplicateCoordsWarning.classList.add('d-none'); // ซ่อน warning พิกัดซ้ำ
-        submitBtn.disabled = false; // เปิดใช้งานปุ่ม submit
+        displayOutOfBoundsWarning(false);
+        duplicateCoordsWarning.classList.add('d-none');
+        submitBtn.disabled = false;
     });
 
-    // Event listeners สำหรับการพิมพ์ค่า Lat/Lng ด้วยตนเอง
+    // พิมพ์ค่าพิกัดเอง
     latInput.addEventListener('input', validateAndCheckCoordinates);
     lngInput.addEventListener('input', validateAndCheckCoordinates);
 
@@ -720,19 +693,16 @@
             submitBtn.disabled = true;
         } else {
             outOfBoundsWarning.classList.add('d-none');
-            // ไม่ได้เปิดใช้งานปุ่มทันที เพราะอาจมี warning อื่นๆ
-            // การเปิดใช้งานปุ่มจะถูกจัดการใน checkCoordinates
         }
     }
 
-    // Function to check for duplicate coordinates
+    // ตรวจสอบพิกัดซ้ำกับฐานข้อมูล
     async function checkCoordinates(lat, lng) {
-        const currentCafeId = "{{ $cafe->cafe_id ?? 'null' }}"; // Get the current cafe ID if in edit mode
+        const currentCafeId = "{{ $cafe->id ?? 'null' }}"; // ใช้ id แทน cafe_id
 
-        // Only check if lat and lng are valid numbers
         if (isNaN(lat) || isNaN(lng)) {
             duplicateCoordsWarning.classList.add('d-none');
-            submitBtn.disabled = true; // Disable if coordinates are invalid
+            submitBtn.disabled = true;
             return;
         }
 
@@ -743,27 +713,25 @@
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
-                body: JSON.stringify({ lat: lat, lng: lng, cafe_id: currentCafeId }) // ส่ง cafe_id ไปด้วย
+                body: JSON.stringify({ lat: lat, lng: lng, cafe_id: currentCafeId })
             });
 
             const data = await response.json();
 
-            if (data.is_duplicate) {
+            const isDup = (typeof data.is_duplicate !== 'undefined') ? data.is_duplicate : (data.exists ?? false);
+
+            if (isDup) {
                 duplicateCoordsWarning.classList.remove('d-none');
-                submitBtn.disabled = true; // Disable submit button if coordinates are duplicate
+                submitBtn.disabled = true;
             } else {
                 duplicateCoordsWarning.classList.add('d-none');
-                // Only enable if no other warnings are active
                 if (outOfBoundsWarning.classList.contains('d-none')) {
-                    submitBtn.disabled = false; // Enable submit button
+                    submitBtn.disabled = false;
                 }
             }
         } catch (error) {
             console.error('Error checking coordinates:', error);
-            // In case of an error, assume no duplicate to allow submission,
-            // but log the error. Or, disable to be safe.
-            // For now, let's just log and not disable unless there's a clear duplicate.
-            duplicateCoordsWarning.classList.add('d-none'); // Hide warning on error
+            duplicateCoordsWarning.classList.add('d-none');
             if (outOfBoundsWarning.classList.contains('d-none')) {
                 submitBtn.disabled = false;
             }
@@ -774,27 +742,32 @@
         const lat = parseFloat(latInput.value);
         const lng = parseFloat(lngInput.value);
 
-        // ตรวจสอบว่าเป็นตัวเลขที่ถูกต้องหรือไม่
         if (isNaN(lat) || isNaN(lng)) {
-            displayOutOfBoundsWarning(false); // ซ่อน warning ถ้าค่าไม่ถูกต้อง
-            duplicateCoordsWarning.classList.add('d-none'); // ซ่อน warning พิกัดซ้ำ
-            submitBtn.disabled = true; // ปิดปุ่ม submit
+            displayOutOfBoundsWarning(false);
+            duplicateCoordsWarning.classList.add('d-none');
+            submitBtn.disabled = true;
             return;
         }
 
         const currentLatLng = L.latLng(lat, lng);
 
-        // ตรวจสอบขอบเขต
         if (!mueangSurinBounds.contains(currentLatLng)) {
             displayOutOfBoundsWarning(true);
-            duplicateCoordsWarning.classList.add('d-none'); // ซ่อน warning พิกัดซ้ำ
-            submitBtn.disabled = true; // ปิดปุ่ม
-            return; // หยุดการทำงาน
+            duplicateCoordsWarning.classList.add('d-none');
+            submitBtn.disabled = true;
+            return;
         } else {
-            displayOutOfBoundsWarning(false); // ซ่อน warning ถ้าอยู่ในขอบเขต
+            displayOutOfBoundsWarning(false);
         }
 
-        // ถ้าอยู่ในขอบเขต ให้ตรวจสอบพิกัดซ้ำ
+        if (marker) {
+            marker.setLatLng(currentLatLng);
+            map.setView(currentLatLng, 15);
+        } else {
+            marker = L.marker(currentLatLng).addTo(map);
+            map.setView(currentLatLng, 15);
+        }
+
         checkCoordinates(lat, lng);
     }
 </script>

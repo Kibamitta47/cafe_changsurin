@@ -27,8 +27,9 @@ Route::get('/', [AdminCafeController::class, 'welcome'])->name('welcome');
 Route::get('/news/{news}', [NewsController::class, 'show'])->name('news.show');
 Route::get('/news', [NewsController::class, 'index'])->name('news.index');
 Route::get('/add-line', [PageController::class, 'showLinePage'])->name('line.add');
-Route::get('/advertising-packages', [PageController::class, 'showAdvertisingPackages'])->name('advertising.packages');
-Route::get('/report-a-problem', [PageController::class, 'showProblemInfoPage'])->name('problem.info');
+
+Route::get('/advertising-packages', [PageController::class, 'showAdvertisingPackages'])
+     ->name('advertising.packages');Route::get('/report-a-problem', [PageController::class, 'showProblemInfoPage'])->name('problem.info');
 Route::get('/about-us', [PageController::class, 'showAboutPage'])->name('about.us');
 Route::get('/top-10-cafes', [PageController::class, 'showTop10Page'])->name('cafes.top10');
 Route::get('/newly-cafes', [PageController::class, 'showNewlyCafesPage'])->name('cafes.newly');
@@ -86,8 +87,13 @@ Route::middleware('auth')->group(function () {
     Route::delete('/cafes/{cafe}', [UserCafeController::class, 'destroy'])->name('user.cafes.destroy');
 
     // Liked Cafes
-    Route::get('/my-liked-cafes', [UserCafeController::class, 'myLikedCafes'])->name('user.cafes.myLiked');
-    
+Route::middleware('auth')->group(function () {
+    Route::post('/cafes/{cafe:cafe_id}/toggle-like', [UserCafeController::class, 'toggleLike'])
+        ->name('cafes.toggle-like');
+
+    Route::get('/my-liked-cafes', [UserCafeController::class, 'myLikedCafes'])
+        ->name('user.cafes.myLiked');
+});    
     // ✅✅✅ THIS IS THE CORRECT LIKE/UNLIKE ROUTE ✅✅✅
     Route::post('/cafes/{cafe:cafe_id}/toggle-like', [UserCafeController::class, 'toggleLike'])->name('cafes.toggle-like');
 

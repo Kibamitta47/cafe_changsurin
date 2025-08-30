@@ -19,4 +19,5 @@ class CafeController extends Controller
 
         return view('user.cafes.my', compact('cafes'));
     }
+    
 }

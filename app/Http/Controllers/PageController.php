@@ -3,44 +3,47 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Cafe; // ✅ 1. เพิ่มการ 'use' Cafe Model
+use App\Models\Cafe; // ✅ ใช้โมเดล Cafe
 
 class PageController extends Controller
 {
     /**
-     * แสดงหน้าสำหรับเพิ่มเพื่อน LINE
+     * แสดงหน้าสำหรับเพิ่มเพื่อน LINE / ติดต่อผ่านไลน์
+     * View: resources/views/pages/line.blade.php
      */
-    public function showLinePage()
+      public function showLinePage()
     {
-        // 🎯 หมายเหตุ: ตรวจสอบให้แน่ใจว่ามีไฟล์ view ที่ resources/views/pages/line.blade.php
         $lineOfficialId = '@363tvzhr';
-        $lineAddUrl = 'https://line.me/ti/p/' . $lineOfficialId;
+        $lineAddUrl     = 'https://line.me/R/ti/p/' . ltrim($lineOfficialId, '@');
 
         return view('pages.line', [
             'lineOfficialId' => $lineOfficialId,
+            'lineAddUrl'     => $lineAddUrl,
+        ]);
+    }
+
+    /**
+     * ✅ หน้าแพ็กเกจโฆษณา (ติดต่อผ่านไลน์เท่านั้น)
+     */
+    public function showAdvertisingPackages()
+    {
+        // ตั้งค่า LINE Official ที่ต้องการให้ติดต่อ
+        $lineOfficialId = '@363tvzhr';
+        $lineAddUrl     = 'https://line.me/R/ti/p/' . ltrim($lineOfficialId, '@');
+
+        // ส่งไปให้ view ใช้
+        return view('pages.advertising-packages', [
+            'lineId'     => $lineOfficialId,
             'lineAddUrl' => $lineAddUrl,
         ]);
     }
 
     /**
-     * แสดงหน้ารายละเอียดและราคาแพ็กเกจโฆษณา
-     */
-    public function showAdvertisingPackages()
-    {
-        // 🎯 หมายเหตุ: ตรวจสอบให้แน่ใจว่ามีไฟล์ view ที่ resources/views/pages/advertising-packages.blade.php
-        $contactEmail = 'nongchangsaren@gmail.com';
-
-        return view('pages.advertising-packages', [
-            'contactEmail' => $contactEmail
-        ]);
-    }
-
-    /**
-     * แสดงหน้าการรายงานปัญหา
+     * แสดงหน้าการรายงานปัญหา (หากยังต้องใช้อีเมลสำหรับแจ้งปัญหา)
+     * View: resources/views/pages/report-problem-info.blade.php
      */
     public function showProblemInfoPage()
     {
-        // 🎯 หมายเหตุ: ตรวจสอบให้แน่ใจว่ามีไฟล์ view ที่ resources/views/pages/report-problem-info.blade.php
         $problemEmail = 'snongchangsaren@gmail.com';
 
         $emailBodyTemplate = "สวัสดีทีมงานน้องช้างสะเร็น" . "%0A%0A" .
@@ -52,56 +55,55 @@ class PageController extends Controller
                              "ขอบคุณครับ/ค่ะ";
 
         return view('pages.report-problem-info', [
-            'problemEmail' => $problemEmail,
-            'emailBodyTemplate' => $emailBodyTemplate,
+            'problemEmail'       => $problemEmail,
+            'emailBodyTemplate'  => $emailBodyTemplate,
         ]);
     }
 
     /**
      * แสดงหน้าเกี่ยวกับเรา
+     * View: resources/views/pages/about-us.blade.php
      */
     public function showAboutPage()
     {
-        // 🎯 หมายเหตุ: ตรวจสอบให้แน่ใจว่ามีไฟล์ view ที่ resources/views/pages/about-us.blade.php
         return view('pages.about-us');
     }
 
     /**
-     * ✅ 2. รวมฟังก์ชัน showTop10Page เข้ามาอย่างถูกต้อง
-     * แสดงหน้า Top 10 Cafes
+     * แสดงหน้า Top 10 Cafes (เรียงตามเรตติ้งเฉลี่ย)
+     * View: resources/views/Top10.blade.php
      */
     public function showTop10Page()
     {
-        // ดึงข้อมูลคาเฟ่ที่ได้รับการอนุมัติ (status = 'approved')
-        // และเรียงตาม rating จากมากไปน้อย, เอามา 10 อันดับแรก
         $cafes = Cafe::where('status', 'approved')
-                     ->withAvg('reviews', 'rating') // คำนวณ rating เฉลี่ย
-                     ->orderByDesc('reviews_avg_rating')
-                     ->take(10)
-                     ->get();
+            ->withAvg('reviews', 'rating')          // จะได้ฟิลด์ reviews_avg_rating
+            ->orderByDesc('reviews_avg_rating')
+            ->take(10)
+            ->get();
 
-        // ส่งข้อมูลไปยัง View
         return view('Top10', compact('cafes'));
     }
 
-public function showNewlyCafesPage()
-{
-    // ดึงข้อมูลคาเฟ่ที่ได้รับการอนุมัติ (status = 'approved')
-    // และเรียงตาม created_at จากใหม่ไปเก่า, เอามา 10 อันดับแรก
-    $cafes = Cafe::where('status', 'approved')
-                 ->orderByDesc('created_at')
-                 ->take(10)
-                 ->get();
+    /**
+     * แสดงคาเฟ่ที่เพิ่มใหม่ (ล่าสุด 10 รายการ)
+     * View: resources/views/NewlyCafes.blade.php
+     */
+    public function showNewlyCafesPage()
+    {
+        $cafes = Cafe::where('status', 'approved')
+            ->orderByDesc('created_at')
+            ->take(10)
+            ->get();
 
-    // ส่งข้อมูลไปยัง View NewlyCafes.blade.php
-    return view('NewlyCafes', compact('cafes'));
-}
+        return view('NewlyCafes', compact('cafes'));
+    }
+
     /**
      * แสดงหน้า FAQ
+     * View: resources/views/pages/faq.blade.php
      */
     public function showFAQPage()
     {
-        // 🎯 หมายเหตุ: ตรวจสอบให้แน่ใจว่ามีไฟล์ view ที่ resources/views/pages/faq.blade.php
         return view('pages.faq');
     }
 }

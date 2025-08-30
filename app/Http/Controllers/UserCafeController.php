@@ -1,28 +1,21 @@
 <?php
-
+// app/Http/Controllers/UserCafeController.php
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Cafe;
-use App\Models\Review; // ตรวจสอบว่าคุณมี Model นี้
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Illuminate\Http\JsonResponse;
 
 class UserCafeController extends Controller
 {
-    /**
-     * แสดงฟอร์มสำหรับสร้างคาเฟ่ใหม่
-     */
     public function create(): View
     {
-       return view('user.cafes.create'); 
+        return view('user.cafes.create');
     }
 
-    /**
-     * บันทึกข้อมูลคาเฟ่ที่สร้างใหม่ลงฐานข้อมูล
-     */
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -66,70 +59,42 @@ class UserCafeController extends Controller
             }
         }
         $data['images'] = $imagePaths;
-
         $data['payment_methods'] = $request->input('payment_methods', []);
-        $data['facilities'] = $request->input('facilities', []);
-        $data['other_services'] = $request->input('other_services', []);
-        $data['cafe_styles'] = $request->input('cafe_styles', []);
+        $data['facilities']      = $request->input('facilities', []);
+        $data['other_services']  = $request->input('other_services', []);
+        $data['cafe_styles']     = $request->input('cafe_styles', []);
 
         Cafe::create($data);
 
         return redirect()->route('user.cafes.my')->with('success', 'ส่งข้อมูลคาเฟ่ให้ผู้ดูแลระบบตรวจสอบแล้ว');
     }
-    
-    /**
-     * แสดงหน้าคาเฟ่ทั้งหมดที่ผู้ใช้คนปัจจุบันเป็นเจ้าของ
-     */
+
     public function myCafes(): View
     {
-        $user = Auth::user();
-
-        $cafes = $user->cafes()
-            ->withCount('likers')
-            ->latest()
-            ->paginate(9);
-
+        $cafes = Auth::user()->cafes()->withCount('likers')->latest()->paginate(9);
         return view('user.cafes.my', compact('cafes'));
     }
 
-    /**
-     * ✅✅✅ CORRECTED FUNCTION ✅✅✅
-     * แสดงรายการคาเฟ่ที่ผู้ใช้คนปัจจุบันกดถูกใจ
-     */
     public function myLikedCafes(): View
     {
-        $user = Auth::user();
-
-        // Using latest() without arguments will correctly order by the 'created_at'
-        // timestamp on the pivot table, because we added withTimestamps() to the relationship.
-        $likedCafes = $user->likedCafes()->latest()->paginate(12);
+        $likedCafes = Auth::user()->likedCafes()
+            ->orderBy('cafe_likes.created_at', 'desc')
+            ->paginate(12);
 
         return view('user.liked-cafes', compact('likedCafes'));
     }
-    
-    /**
-     * แสดงฟอร์มแก้ไขคาเฟ่
-     */
+
     public function edit(Cafe $cafe): View
     {
-        if (Auth::id() !== $cafe->user_id) {
-            abort(403, 'Unauthorized action.');
-        }
-
+        abort_if(Auth::id() !== $cafe->user_id, 403);
         return view('user.editcafe', compact('cafe'));
     }
 
-    /**
-     * อัปเดตข้อมูลคาเฟ่ในฐานข้อมูล
-     */
     public function update(Request $request, Cafe $cafe)
     {
-        if (Auth::id() !== $cafe->user_id) {
-            abort(403, 'Unauthorized action.');
-        }
+        abort_if(Auth::id() !== $cafe->user_id, 403);
 
         $data = $request->validate([
-            // Validation rules...
             'cafe_name' => 'required|string|max:255',
             'price_range' => 'nullable|string|max:255',
             'place_name' => 'required|string|max:255',
@@ -165,28 +130,21 @@ class UserCafeController extends Controller
                 $newImagePaths[] = $image->store('cafes', 'public');
             }
         }
-        
-        $keptExistingImages = $request->input('existing_images', []);
-        $data['images'] = array_merge($keptExistingImages, $newImagePaths);
 
+        $data['images'] = array_merge($request->input('existing_images', []), $newImagePaths);
         $data['payment_methods'] = $request->input('payment_methods', []);
-        $data['facilities'] = $request->input('facilities', []);
-        $data['other_services'] = $request->input('other_services', []);
-        $data['cafe_styles'] = $request->input('cafe_styles', []);
+        $data['facilities']      = $request->input('facilities', []);
+        $data['other_services']  = $request->input('other_services', []);
+        $data['cafe_styles']     = $request->input('cafe_styles', []);
 
         $cafe->update($data);
 
-        return redirect()->route('user.cafes.my')->with('success', 'ข้อมูลคาเฟ่ได้รับการอัปเดตแล้ว');
+        return redirect()->route('user.cafes.my')->with('success', 'ข้อมูลคาเฟ่อัปเดตแล้ว');
     }
 
-    /**
-     * ลบคาเฟ่ออกจากฐานข้อมูล
-     */
     public function destroy(Cafe $cafe)
     {
-        if (Auth::id() !== $cafe->user_id) {
-            abort(403, 'Unauthorized action.');
-        }
+        abort_if(Auth::id() !== $cafe->user_id, 403);
 
         if (is_array($cafe->images)) {
             foreach ($cafe->images as $imagePath) {
@@ -195,29 +153,20 @@ class UserCafeController extends Controller
         }
 
         $cafe->delete();
-
-        return redirect()->route('user.cafes.my')->with('success', 'คาเฟ่ถูกลบเรียบร้อยแล้ว');
+        return redirect()->route('user.cafes.my')->with('success', 'ลบคาเฟ่เรียบร้อย');
     }
 
-    /**
-     * ✅✅✅ FINAL AND CORRECT toggleLike FUNCTION ✅✅✅
-     * Toggles the like status of a cafe for the authenticated user.
-     */
     public function toggleLike(Request $request, Cafe $cafe): JsonResponse
     {
         $user = Auth::user();
 
-        // The toggle method handles attaching or detaching the relationship
-        // in the pivot table (cafe_likes) automatically.
+        // ป้องกันซ้ำด้วย unique index (ดู migration ด้านล่าง)
         $user->likedCafes()->toggle($cafe->cafe_id);
 
-        // After toggling, we check the current status to send back to the frontend.
-        $isLiked = $user->likedCafes()->where('cafe_id', $cafe->cafe_id)->exists();
+        $isLiked = $user->likedCafes()
+            ->where('cafe_likes.cafe_id', $cafe->cafe_id)
+            ->exists();
 
-        // Return a clean, simple JSON response.
-        return response()->json([
-            'status' => 'success',
-            'is_liked' => $isLiked,
-        ]);
+        return response()->json(['status' => 'success','is_liked' => $isLiked]);
     }
 }

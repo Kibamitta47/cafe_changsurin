@@ -216,25 +216,30 @@ class AdminCafeController extends Controller
         return response()->json(['is_duplicate' => $query->exists()]);
     }
     
-    public function welcome(): View
-    {
-        $cafes = Cafe::where('status', 'approved')
-                     ->withAvg('reviews', 'rating')
-                     ->latest()
-                     ->get();
+   public function welcome(): View
+{
+    $cafes = Cafe::where('status', 'approved')
+                 ->withAvg('reviews', 'rating')
+                 ->latest()
+                 ->get();
 
-        $likedCafeIds = [];
-        if (Auth::check() && Auth::user()->relationLoaded('likedCafes')) {
-            $likedCafeIds = Auth::user()->likedCafes()->pluck('cafe_id')->toArray();
-        }
-
-        $news = AddnewsAdmin::where('is_visible', true)
-                            ->latest()
-                            ->take(5)
-                            ->get();
-
-        return view('welcome', compact('cafes', 'news', 'likedCafeIds'));
+    $likedCafeIds = [];
+    if (Auth::check()) {
+        $likedCafeIds = Auth::user()
+            ->likedCafes()
+            ->pluck('cafes.cafe_id')   // ระบุชัดเจนว่า pluck จากตาราง cafes
+            ->map(fn($id) => (int) $id) // 👉 แปลงให้เป็น int
+            ->toArray();
     }
+
+    $news = AddnewsAdmin::where('is_visible', true)
+                        ->latest()
+                        ->take(5)
+                        ->get();
+
+    return view('welcome', compact('cafes', 'news', 'likedCafeIds'));
+}
+
 
     public function show(Cafe $cafe): View
     {
