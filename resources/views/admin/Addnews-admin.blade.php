@@ -216,7 +216,7 @@
                                     </div>
                                 </div>
                                 <div class="text-end mt-3">
-                                    <a href="{{ route('home.admin') }}" class="btn btn-secondary"><i class="fas fa-times me-1"></i> ยกเลิก</a>
+                                    <a href="{{ route('admin.home') }}" class="btn btn-secondary"><i class="fas fa-times me-1"></i> ยกเลิก</a>
                                     <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> บันทึกข้อมูล</button>
                                 </div>
                             </form>

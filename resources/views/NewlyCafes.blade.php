@@ -105,63 +105,17 @@
       @include('components.2navbar')
   @endauth
 
-  <h1 class="title">✨ <span>10 คาเฟ่แนะนำ</span> ที่ต้องไปลอง</h1>
+  <h1 class="title">✨ <span>พิกัดคาเฟ่เปิดใหม่</span> ที่ต้องไปลอง</h1>
   <p class="update-time">อัปเดตล่าสุด: {{ now()->format('d/m/Y H:i') }} น.</p>
 
   <div class="swiper mySwiper">
     <div class="swiper-wrapper">
       <div class="swiper-slide">
-        <img src="{{ asset('/images/TOP-10.png') }}" alt="10 อันดับคาเฟ่แนะนำ" >
-      </div>
-      <div class="swiper-slide">
-        <a href="http://127.0.0.1:8000/cafes/3">
-          <img src="{{ asset('/images/Top10_/1.png') }}" alt="ธนสาร แกลเลอรี่">
-        </a>
-      </div>
-      <div class="swiper-slide">
-        <a href="http://127.0.0.1:8000/cafes/2">
-          <img src="{{ asset('/images/Top10_/2.png') }}" alt="Little Elephant patisserie & special coffee Bar">
-        </a>
-      </div>
-      <div class="swiper-slide">
-        <a href="http://127.0.0.1:8000/cafes/1">
-          <img src="{{ asset('/images/Top10_/3.png') }}" alt="Follow the sun.home cafe">
-        </a>
-      </div>
-      <div class="swiper-slide">
-        <a href="http://127.0.0.1:8000/cafes/11">
-          <img src="{{ asset('/images/Top10_/4.png') }}" alt="คาเฟ่อันดับ 4">
-        </a>
-      </div>
-       <div class="swiper-slide">
-        <a href="http://127.0.0.1:8000/cafes/14">
-          <img src="{{ asset('/images/Top10_/5.png') }}" alt="คาเฟ่อันดับ 5">
-        </a>
-      </div>
-      <div class="swiper-slide">
-        <a href="http://127.0.0.1:8000/cafes/9">
-          <img src="{{ asset('/images/Top10_/6.png') }}" alt="คาเฟ่อันดับ 6">
-        </a>
-      </div>
-      <div class="swiper-slide">
-        <a href="http://127.0.0.1:8000/cafes/15">
-          <img src="{{ asset('/images/Top10_/7.png') }}" alt="คาเฟ่อันดับ 7 ">
-        </a>
-      </div>
-      <div class="swiper-slide">
-        <a href="http://127.0.0.1:8000/cafes/12">
-          <img src="{{ asset('/images/Top10_/8.png') }}" alt="คาเฟ่อันดับ 8">
-        </a>
-      </div>
-      <div class="swiper-slide">
-        <a href="http://127.0.0.1:8000/cafes/4">
-          <img src="{{ asset('/images/Top10_/9.png') }}" alt="ดัมมะชาติ Eatery & Coffee by Jaokao Vol.3">
-        </a>
+        <img src="{{ asset('/images/คาเฟ่เปิดใหม่.png') }}" alt="คาเฟ่เปิดใหม่" >
       </div>
        <div class="swiper-slide">
         <a href="http://127.0.0.1:8000/cafes/5">
-          <img src="{{ asset('/images/Top10_/10.png') }}" alt="Journe’y Roastery & Special Coffee
-">
+          <img src="{{ asset('/images/Top10_/10.png') }}" alt="คาเฟ่อันดับ 10">
         </a>
       </div>
     </div>

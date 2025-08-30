@@ -23,66 +23,27 @@
         .navbar { box-shadow: var(--shadow); background-color: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
         .gradient-text { background: linear-gradient(45deg, var(--bs-primary), #EF4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         .page-header .icon { font-size: 2.5rem; line-height: 1; }
-        .cafe-card { border: 1px solid #E5E7EB; border-radius: var(--bs-border-radius-lg); box-shadow: var(--shadow); transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.5s ease; display: flex; flex-direction: column; }
+        .cafe-card { border: 1px solid #E5E7EB; border-radius: var(--bs-border-radius-lg); box-shadow: var(--shadow); transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.5s ease, height 0.5s ease; display: flex; flex-direction: column; }
         .cafe-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
         .card-img-container { position: relative; height: 200px; overflow: hidden; border-top-left-radius: var(--bs-border-radius-lg); border-top-right-radius: var(--bs-border-radius-lg); }
         .card-img-container img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
         .cafe-card:hover .card-img-container img { transform: scale(1.05); }
-        .like-button {
-            position: absolute;
-            top: 0.75rem;
-            right: 0.75rem;
-            width: 40px;
-            height: 40px;
-            background-color: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(4px);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            border: none;
-            transition: background-color 0.2s ease;
-            z-index: 10; /* [MODIFIED] เพิ่ม z-index เพื่อให้แน่ใจว่าปุ่มอยู่ชั้นบนสุด */
-        }
+        .like-button { position: absolute; top: 0.75rem; right: 0.75rem; width: 40px; height: 40px; background-color: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: none; transition: background-color 0.2s ease; z-index: 10; }
         .like-button:hover { background-color: rgba(0, 0, 0, 0.6); }
         .like-button i { font-size: 1.25rem; transition: all 0.2s ease; }
         .like-button .fa-solid { color: var(--bs-primary); }
         .tag { font-size: 0.75rem; font-weight: 500; padding: 0.25rem 0.75rem; border-radius: 50px; }
         .empty-state { background-color: white; border-radius: var(--bs-border-radius-lg); padding: 4rem 2rem; text-align: center; border: 1px solid #E5E7EB; }
         .empty-state .icon { font-size: 4rem; color: #D1D5DB; }
-        /* [MODIFIED] เพิ่มสไตล์สำหรับลิงก์ที่คลุมรูปภาพ */
-        .card-img-link {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 1; /* ทำให้ลิงก์อยู่ใต้ปุ่มหัวใจ */
-        }
-        .card-title-link {
-            text-decoration: none;
-            color: var(--bs-dark);
-            position: relative;
-            z-index: 1; /* แยก z-index กับปุ่ม */
-        }
-        .card-title-link:hover {
-            color: var(--bs-primary);
-        }
-        .card-title-link::after {
-             content: '';
-             position: absolute;
-             left: 0;
-             right: 0;
-             top: 0;
-             bottom: 0;
-        }
-
+        .card-img-link { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; }
+        .card-title-link { text-decoration: none; color: var(--bs-dark); position: relative; z-index: 1; }
+        .card-title-link:hover { color: var(--bs-primary); }
+        .card-title-link::after { content: ''; position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
     </style>
 </head>
 <body>
 
-<!-- Header (เหมือนเดิม) -->
+<!-- Header (Navbar) -->
 <nav class="navbar navbar-expand-lg fixed-top">
     <div class="container">
         <a class="navbar-brand fw-bold fs-4" href="{{ route('welcome') }}" style="background: linear-gradient(45deg, #0ea5e9, #6366f1);-webkit-background-clip: text;-webkit-text-fill-color: transparent;background-clip: text;">น้องช้างสะเร็น</a>
@@ -150,27 +111,17 @@
                         $cafeStyles = is_array($cafe->cafe_styles) ? $cafe->cafe_styles : [];
                     @endphp
                     
-                    {{-- ========================================================== --}}
-                    {{-- ✅✅✅ จุดแก้ไข HTML ทั้งหมด อยู่ใน Loop นี้ ✅✅✅ --}}
-                    {{-- ========================================================== --}}
-                    
-                    {{-- 1. ใช้ Primary Key ใหม่สำหรับ ID ของ Card Wrapper --}}
-                    <div class="col-sm-6 col-lg-4 col-xl-3" id="cafe-card-{{ $cafe->cafe_id }}"> 
+                    <div class="col-sm-6 col-lg-4 col-xl-3" id="cafe-card-{{ $cafe->cafe_id }}" x-ref="card{{ $cafe->cafe_id }}"> 
                         <div class="cafe-card h-100">
                             <div class="card-img-container">
                                 <img src="{{ $imageUrl }}" alt="รูปคาเฟ่ {{ $cafe->cafe_name }}">
-                                
-                                {{-- 2. ใช้ Route Model Binding สำหรับลิงก์ที่รูปภาพ --}}
                                 <a href="{{ route('cafes.show', $cafe) }}" class="card-img-link"></a>
-                                
-                                {{-- 3. ส่ง Primary Key ใหม่ไปให้ JavaScript --}}
                                 <button @click="toggleLike({{ $cafe->cafe_id }})" class="like-button">
                                     <i class="fa-solid fa-heart"></i>
                                 </button>
                             </div>
                             <div class="card-body d-flex flex-column">
                                 <h5 class="card-title fw-bold mb-1">
-                                    {{-- 4. ใช้ Route Model Binding สำหรับลิงก์ที่ชื่อคาเฟ่ --}}
                                     <a href="{{ route('cafes.show', $cafe) }}" class="card-title-link">{{ $cafe->cafe_name }}</a>
                                 </h5>
                                 <p class="card-text text-secondary small mb-3">
@@ -202,19 +153,21 @@
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 {{-- ========================================================== --}}
-{{-- ✅✅✅ โค้ด JavaScript ที่แก้ไขแล้ว ✅✅✅ --}}
+{{-- ✅✅✅ START: FINAL JAVASCRIPT CODE ✅✅✅ --}}
 {{-- ========================================================== --}}
 <script>
-   function likedCafesManager() {
+function likedCafesManager() {
     return {
         async toggleLike(cafeId) {
-            const card = document.getElementById(`cafe-card-${cafeId}`); 
+            // Find the card element using Alpine's $refs system for reliability
+            const card = this.$refs[`card${cafeId}`];
             if (!card) {
-                console.error(`Could not find card with ID: cafe-card-${cafeId}`);
-                return; 
+                console.error(`Card element for cafe ID ${cafeId} not found.`);
+                return;
             }
 
             const button = event.currentTarget;
+            if (button.disabled) return;
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
@@ -223,37 +176,40 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                     },
                 });
 
                 if (!response.ok) {
-                    throw new Error('Server responded with an error.');
+                    throw new Error(`Server responded with status: ${response.status}`);
                 }
 
                 const data = await response.json();
 
-                if (data.status === 'success') {
-                    // ถ้าสำเร็จ ให้ซ่อน Card ได้เลย
-                    card.style.transition = 'opacity 0.5s ease';
+                // We only proceed if the server confirms the cafe is now "unliked".
+                if (data.status === 'success' && data.is_liked === false) {
+                    // Apply transition and remove the card from the DOM
+                    card.style.transition = 'opacity 0.3s ease, transform 0.3s ease, margin-top 0.3s ease';
                     card.style.opacity = '0';
+                    card.style.transform = 'scale(0.95)';
+                    
                     setTimeout(() => {
                         card.remove();
-                        const container = document.querySelector('.row.g-4');
-                        if (container && container.childElementCount === 0) {
+                        // After removing, check if the container is empty.
+                        const container = document.querySelector('#liked-cafes-container .row');
+                        if (container && container.children.length === 0) {
+                            // If it's the last card, reload the page to show the "empty state" message.
                             window.location.reload();
                         }
-                    }, 500);
+                    }, 300); // Wait for the transition to finish
                 } else {
-                    throw new Error(data.message || 'Server returned a non-success status.');
+                    // If something went wrong, revert the button to its original state.
+                    throw new Error('Failed to unlike. Server response: ' + JSON.stringify(data));
                 }
 
             } catch (error) {
-                // ส่วนนี้จะทำงานเมื่อเกิด Error จริงๆ
-                // เราจะแสดงแค่ใน Console และ **ไม่แสดง Alert**
-                console.error('Failed to unlike cafe:', error);
-                
-                // คืนสภาพปุ่มให้กดใหม่ได้ แม้จะเกิด Error
+                console.error('Failed to process unlike action:', error);
                 button.disabled = false;
                 button.innerHTML = '<i class="fa-solid fa-heart"></i>';
             }
@@ -261,3 +217,9 @@
     };
 }
 </script>
+{{-- ========================================================== --}}
+{{-- ✅✅✅ END: FINAL JAVASCRIPT CODE ✅✅✅ --}}
+{{-- ========================================================== --}}
+
+</body>
+</html>

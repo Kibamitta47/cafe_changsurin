@@ -20,75 +20,18 @@
         .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
         [x-cloak] { display: none !important; }
-
-        /* ===== [ CSS สำหรับ Slider ใหม่ ] ===== */
-        .slider {
-            position: relative;
-            width: 100%;
-            margin: auto;
-            overflow: hidden;
-            border-radius: 1rem; /* 16px */
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-        }
-        .slides {
-            display: flex;
-            transition: transform 0.5s ease-in-out;
-        }
-        .slides a {
-            min-width: 100%;
-            box-sizing: border-box;
-        }
-        .slides img {
-            width: 100%;
-            display: block;
-            aspect-ratio: 2 / 1; /* 16:8 Aspect Ratio */
-            object-fit: cover;
-        }
-        .nav-btn {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background-color: rgba(0,0,0,0.4);
-            color: white;
-            border: none;
-            padding: 10px;
-            cursor: pointer;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background-color 0.3s;
-            z-index: 10;
-        }
-        .nav-btn:hover {
-            background-color: rgba(0,0,0,0.6);
-        }
+        .slider { position: relative; width: 100%; margin: auto; overflow: hidden; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
+        .slides { display: flex; transition: transform 0.5s ease-in-out; }
+        .slides a { min-width: 100%; box-sizing: border-box; }
+        .slides img { width: 100%; display: block; aspect-ratio: 2 / 1; object-fit: cover; }
+        .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background-color: rgba(0,0,0,0.4); color: white; border: none; padding: 10px; cursor: pointer; border-radius: 50%; width: 40px; height: 40px; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: background-color 0.3s; z-index: 10; }
+        .nav-btn:hover { background-color: rgba(0,0,0,0.6); }
         .prev { left: 10px; }
         .next { right: 10px; }
-        .dots {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            z-index: 10;
-        }
-        .dot {
-            height: 12px;
-            width: 12px;
-            margin: 0 5px;
-            background-color: rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
-            display: inline-block;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .dot.active, .dot:hover {
-            background-color: white;
-        }
+        .dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; z-index: 10; }
+        .dot { height: 12px; width: 12px; margin: 0 5px; background-color: rgba(255, 255, 255, 0.5); border-radius: 50%; display: inline-block; cursor: pointer; transition: background-color 0.3s; }
+        .dot.active, .dot:hover { background-color: white; }
+        .fa-heart { transition: all 0.3s ease-in-out; }
     </style>
 </head>
 
@@ -116,7 +59,8 @@
             <aside class="col-span-12 lg:col-span-3 py-12 px-4">
                 <div class="sticky top-24">
                     <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm p-4 space-y-4 border border-slate-200">
-                        <div class="pb-4 border-b border-slate-200">
+                        {{-- Filter content remains unchanged --}}
+                         <div class="pb-4 border-b border-slate-200">
                              <h3 class="text-lg font-bold text-slate-800 mb-3">ค้นหา & ตัวกรอง</h3>
                              <div class="relative">
                                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -130,12 +74,10 @@
                                  >
                              </div>
                         </div>
-
                         <div class="flex justify-between items-center pt-1">
                             <h3 class="text-md font-bold text-slate-700">ตัวกรองละเอียด</h3>
                             <button @click="clearFilters()" class="text-sm font-medium text-cyan-600 hover:text-cyan-800 hover:underline">ล้างทั้งหมด</button>
                         </div>
-
                          <div class="border-t border-slate-200 pt-3">
                             <h4 class="font-semibold text-slate-700 mb-2 text-sm">เรตติ้ง</h4>
                             <div class="flex items-center space-x-1">
@@ -155,7 +97,6 @@
                                 แสดงคาเฟ่เรตติ้ง <span x-text="filters.rating"></span> ดาวขึ้นไป <button @click="setRatingFilter(filters.rating)" class="text-cyan-600 hover:underline">(ยกเลิก)</button>
                             </p>
                         </div>
-
                         <div class="border-t border-slate-200 pt-3 space-y-3">
                              <h4 class="font-semibold text-slate-700 mb-2 text-sm">วันเปิดทำการ</h4>
                              <div class="space-y-1">
@@ -167,7 +108,6 @@
                                 </template>
                             </div>
                         </div>
-
                         <div class="border-t border-slate-200 pt-3">
                              <h4 class="font-semibold text-slate-700 mb-2 text-sm">สถานะร้าน</h4>
                              <label class="flex items-center text-slate-600 text-sm hover:text-cyan-700 cursor-pointer transition-colors">
@@ -175,7 +115,6 @@
                                 <span class="ml-2">✨ คาเฟ่เปิดใหม่</span>
                             </label>
                         </div>
-
                         <div class="border-t border-slate-200 pt-3">
                             <h4 class="font-semibold text-slate-700 mb-2 text-sm">เวลาเปิดทำการ</h4>
                             <div class="relative">
@@ -190,7 +129,6 @@
                                 ค้นหาร้านที่เปิด ณ เวลา <span x-text="`${selectedHour}:00 น.`"></span>
                             </p>
                         </div>
-
                         <div class="border-t border-slate-200 pt-3">
                             <h4 class="font-semibold text-slate-700 mb-2 text-sm">ช่วงราคา</h4>
                             <div class="space-y-1">
@@ -202,10 +140,9 @@
                                 </template>
                             </div>
                         </div>
-
                         <div class="border-t border-slate-200 pt-3"><h4 class="font-semibold text-slate-700 mb-2 text-sm">สไตล์คาเฟ่</h4><div class="space-y-1 max-h-40 overflow-y-auto pr-2"><template x-for="style in availableFilters.styles" :key="style"><label class="flex items-center text-slate-600 text-sm hover:text-cyan-700 cursor-pointer transition-colors"><input type="checkbox" x-model="filters.styles" :value="style" class="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"><span class="ml-2" x-text="style"></span></label></template></div></div>
                         <div class="border-t border-slate-200 pt-3"><h4 class="font-semibold text-slate-700 mb-2 text-sm">ช่องทางชำระเงิน</h4><div class="space-y-1"><template x-for="method in availableFilters.paymentMethods" :key="method"><label class="flex items-center text-slate-600 text-sm hover:text-cyan-700 cursor-pointer transition-colors"><input type="checkbox" x-model="filters.paymentMethods" :value="method" class="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"><span class="ml-2" x-text="method"></span></label></template></div></div>
-                        <div class="border-t border-slate-200 pt-3"><h4 class="font-semibold text-slate-700 mb-2 text-sm">สิ่งอำนวยความสะดวก</h4><div class="space-y-1 max-h-40 overflow-y-auto pr-2"><template x-for="facility in availableFilters.facilities" :key="facility"><label class="flex items-center text-slate-600 text-sm hover:text-cyan-700 cursor-pointer transition-colors"><input type="checkbox" x-model="filters.facilities" :value="facility" class="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"><span class="ml-2" x-text="facility"></span></label></template></div></div>
+                        <div class="border-t border-slate-200 pt-3"><h4 class="font-semibold text-slate-700 mb-2 text-sm">สิ่งอำนวยความสะดวก</h4><div class="space-y-1 max-h-40 overflow-y-auto pr-2"><template x-for="facility in availableFilters.facilities" :key="facility"><label class="flex items-center text-slate-600 text-sm hover:text-cyan-700 cursor-pointer transition-colors"><input type="checkbox" x-model="filters.facilities" :value="facility" class="ฮ-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"><span class="ml-2" x-text="facility"></span></label></template></div></div>
                         <div class="border-t border-slate-200 pt-3"><h4 class="font-semibold text-slate-700 mb-2 text-sm">บริการเพิ่มเติม</h4><div class="space-y-1"><template x-for="service in availableFilters.otherServices" :key="service"><label class="flex items-center text-slate-600 text-sm hover:text-cyan-700 cursor-pointer transition-colors"><input type="checkbox" x-model="filters.otherServices" :value="service" class="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"><span class="ml-2" x-text="service"></span></label></template></div></div>
                     </div>
                 </div>
@@ -214,26 +151,19 @@
             {{-- Middle Column - Main Content --}}
             <main class="col-span-12 lg:col-span-6 py-12 px-4 space-y-8">
 
-                    <!-- ===== [ Slider ใหม่ ] ===== -->
+                    <!-- Slider -->
                     <div class="slider mb-8">
                         <div class="slides">
                           <a href="{{ route('cafes.top10') }}">
                             <img src="{{ asset('/images/TOP-10.png') }}" alt="10 อันดับคาเฟ่แนะนำ">
                           </a>
-                          <a href="{{ route('cafes.top10') }}">
-                            {{-- คุณสามารถเปลี่ยนรูปที่ 2 ได้ที่นี่ --}}
-                            <img src="{{ asset('/images/banner2.jpg') }}" alt="คาเฟ่บรรยากาศดี">
-                          </a>
-                          <a href="{{ route('cafes.top10') }}">
-                             {{-- คุณสามารถเปลี่ยนรูปที่ 3 ได้ที่นี่ --}}
-                            <img src="{{ asset('/images/banner3.jpg') }}" alt="กาแฟรสเลิศ">
-                          </a>
+                          <a href="{{ route('cafes.newly') }}"> <img src="{{ asset('/images/คาเฟ่เปิดใหม่.png') }}" alt="พิกัดคาเฟ่เปิดใหม่"> </a>
+                          
                         </div>
                         <button class="nav-btn prev">&#10094;</button>
                         <button class="nav-btn next">&#10095;</button>
                         <div class="dots"></div>
                     </div>
-
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6" id="cafesSection">
                         <template x-for="cafe in filteredCafes.slice(0, displayedCafeCount)" :key="cafe.id">
@@ -257,7 +187,7 @@
                                         <div x-text="`${activeImageIndex + 1} / ${cafe.imageUrls.length}`" class="absolute bottom-2 right-2 bg-black/50 text-white text-xs font-bold px-2 py-1 rounded-md"></div>
                                     </template>
                                     @auth
-                                     <button @click.prevent="toggleLike(cafe.id)" class="absolute top-2 right-2 w-9 h-9 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/60 transition-colors duration-300 z-10">
+                                     <button @click.prevent="toggleLike(cafe.id, $event)" class="absolute top-2 right-2 w-9 h-9 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/60 transition-colors duration-300 z-10">
                                         <i class="fa-heart text-lg transition-all" :class="isLiked(cafe.id) ? 'fa-solid text-pink-500' : 'fa-regular'"></i>
                                     </button>
                                     @endauth
@@ -283,9 +213,7 @@
                                                 <i class="fa-regular fa-clock w-4 h-4 mr-1.5 text-indigo-500 shrink-0"></i>
                                                 <span x-text="`${cafe.openDay}${cafe.closeDay ? ' - ' + cafe.closeDay : ''}${cafe.openTime ? `, ${cafe.openTime} น. - ${cafe.closeTime} น.` : ''}`"></span>
                                             </div>
-
                                             <div x-show="cafe.originalPriceRange" class="flex items-center"><i class="fa-solid fa-tags w-4 h-4 mr-1.5 text-green-500 shrink-0"></i><span>ราคา: </span><span x-text="cafe.originalPriceRange"></span></div>
-
                                         </div>
                                     </div>
                                     <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
@@ -323,7 +251,7 @@
             </main>
 
             {{-- Right Column - News --}}
-            <aside class="col-span-12 lg:col-span-3 py-12 px-4 hidden lg:block">
+            <aside class="col-span-12 lg:col-span-3 py-12 px-4">
                  <div class="sticky top-24">
                     <div class="bg-white p-6 rounded-2xl shadow-sm space-y-4">
                         <h2 class="text-xl font-bold text-slate-800">ข่าวทั้งหมด</h2>
@@ -351,74 +279,56 @@
         </div>
     </div>
 
-  <div id="cafe-data-source" class="hidden">
-    @if (isset($cafes) && $cafes->count() > 0)
-        @foreach ($cafes as $cafe)
-            @php
-                // ... ส่วนของ @php ไม่ต้องแก้ไข ...
-                $imageUrls = [];
-                if (is_array($cafe->images)) {
-                    foreach ($cafe->images as $image) {
-                        $imageUrls[] = asset('storage/' . $image);
+    {{-- Data source divs --}}
+    <div id="cafe-data-source" class="hidden">
+        @if (isset($cafes) && $cafes->count() > 0)
+            @foreach ($cafes as $cafe)
+                @php
+                    $imageUrls = [];
+                    if (is_array($cafe->images)) {
+                        foreach ($cafe->images as $image) {
+                            $imageUrls[] = asset('storage/' . $image);
+                        }
                     }
-                }
-                if (empty($imageUrls)) {
-                    $imageUrls[] = asset('images/no-image.png');
-                }
-                $openTime = $cafe->open_time ? \Carbon\Carbon::parse($cafe->open_time)->format('H:i') : '';
-                $closeTime = $cafe->close_time ? \Carbon\Carbon::parse($cafe->close_time)->format('H:i') : '';
-                $priceSymbol = str_repeat('฿', (int)($cafe->price_range ?? 1));
-                $cafeStyles = is_array($cafe->cafe_styles) ? $cafe->cafe_styles : [];
-                $facilities = is_array($cafe->facilities) ? $cafe->facilities : [];
-                $payment_methods = is_array($cafe->payment_methods) ? $cafe->payment_methods : [];
-                $other_services = is_array($cafe->other_services) ? $cafe->other_services : [];
-            @endphp
-            <div class="cafe-item"
-                 data-id="{{ $cafe->cafe_id }}"
-                 data-link="{{ route('cafes.show', ['cafe' => $cafe->cafe_id]) }}"
-                 data-images="{{ json_encode($imageUrls) }}"
-                 data-title="{{ $cafe->cafe_name ?? '' }}"
-                 data-address="{{ $cafe->address }}"
-                 data-place-name="{{ $cafe->place_name }}"
-                 data-rating="{{ $cafe->reviews_avg_rating ?? 0 }}"
-                 data-open-day="{{ $cafe->open_day }}"
-                 data-close-day="{{ $cafe->close_day ?? '' }}"
-                 data-open-time="{{ $openTime }}"
-                 data-close-time="{{ $closeTime }}"
-                 data-phone="{{ $cafe->phone ?? '' }}"
-                 data-price-range="{{ $priceSymbol }}"
-                 data-original-price-range="{{ $cafe->price_range ?? '' }}"
-                 data-is-new-opening="{{ $cafe->is_new_opening ? 'true' : 'false' }}"
-                 data-styles="{{ implode(',', $cafeStyles) }}"
-                 data-facilities="{{ implode(',', $facilities) }}"
-                 data-payment-methods="{{ implode(',', $payment_methods) }}"
-                 data-other-services="{{ implode(',', $other_services) }}">
-            </div>
-        @endforeach
-    @endif
-</div>
-
-<div id="news-data-source" class="hidden">
-    @if ($news && $news->count() > 0)
-        @foreach ($news as $item)
-            @php
-                $newsImages = is_array($item->images) ? $item->images : [];
-                $imageUrl = !empty($newsImages) ? asset('storage/' . $newsImages[0]) : asset('images/no-image.png');
-                $dateString = $item->created_at->translatedFormat('j M Y');
-            @endphp
-            <div class="news-item"
-                 data-id="{{ $item->addnews_admin_id }}"
-                 data-title="{{ $item->title }}"
-                 data-link="{{ route('news.show', $item) }}"
-                 data-image="{{ $imageUrl }}"
-                 data-date-string="{{ $dateString }}">
-            </div>
-        @endforeach
-    @endif
-</div>
+                    if (empty($imageUrls)) {
+                        $imageUrls[] = asset('images/no-image.png');
+                    }
+                    $openTime = $cafe->open_time ? \Carbon\Carbon::parse($cafe->open_time)->format('H:i') : '';
+                    $closeTime = $cafe->close_time ? \Carbon\Carbon::parse($cafe->close_time)->format('H:i') : '';
+                    $priceSymbol = str_repeat('฿', (int)($cafe->price_range ?? 1));
+                    $cafeStyles = is_array($cafe->cafe_styles) ? $cafe->cafe_styles : [];
+                    $facilities = is_array($cafe->facilities) ? $cafe->facilities : [];
+                    $payment_methods = is_array($cafe->payment_methods) ? $cafe->payment_methods : [];
+                    $other_services = is_array($cafe->other_services) ? $cafe->other_services : [];
+                @endphp
+                <div class="cafe-item"
+                     data-id="{{ $cafe->cafe_id }}"
+                     data-like-url="{{ route('cafes.toggle-like', ['cafe' => $cafe->cafe_id]) }}"
+                     data-link="{{ route('cafes.show', ['cafe' => $cafe->cafe_id]) }}"
+                     data-images="{{ json_encode($imageUrls) }}"
+                     data-title="{{ $cafe->cafe_name ?? '' }}"
+                     data-address="{{ $cafe->address }}"
+                     data-place-name="{{ $cafe->place_name }}"
+                     data-rating="{{ $cafe->reviews_avg_rating ?? 0 }}"
+                     data-open-day="{{ $cafe->open_day }}"
+                     data-close-day="{{ $cafe->close_day ?? '' }}"
+                     data-open-time="{{ $openTime }}"
+                     data-close-time="{{ $closeTime }}"
+                     data-phone="{{ $cafe->phone ?? '' }}"
+                     data-price-range="{{ $priceSymbol }}"
+                     data-original-price-range="{{ $cafe->price_range ?? '' }}"
+                     data-is-new-opening="{{ $cafe->is_new_opening ? 'true' : 'false' }}"
+                     data-styles="{{ implode(',', $cafeStyles) }}"
+                     data-facilities="{{ implode(',', $facilities) }}"
+                     data-payment-methods="{{ implode(',', $payment_methods) }}"
+                     data-other-services="{{ implode(',', $other_services) }}">
+                </div>
+            @endforeach
+        @endif
+    </div>
 
     <div id="news-data-source" class="hidden">
-        @if ($news && $news->count() > 0)
+        @if (isset($news) && $news->count() > 0)
             @foreach ($news as $item)
                 @php
                     $newsImages = is_array($item->images) ? $item->images : [];
@@ -426,9 +336,9 @@
                     $dateString = $item->created_at->translatedFormat('j M Y');
                 @endphp
                 <div class="news-item"
-                     data-id="{{ $item->addnews_admin_id }}"
+                     data-id="{{ $item->id }}"
                      data-title="{{ $item->title }}"
-                     data-link="{{ App\Models\News::find($item->addnews_admin_id) ? route('news.show', \App\Models\News::find($item->addnews_admin_id)) : '#' }}"
+                     data-link="{{ route('news.show', $item) }}"
                      data-image="{{ $imageUrl }}"
                      data-date-string="{{ $dateString }}">
                 </div>
@@ -436,6 +346,7 @@
         @endif
     </div>
 
+    {{-- Footer --}}
     <footer class="bg-slate-900 text-white py-12 mt-16">
         <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12">
             <div><h4 class="text-2xl font-bold mb-4 text-cyan-400">น้องช้างสะเร็น</h4>
@@ -454,7 +365,7 @@
             <li><a href="{{ url('/login-admin') }}" class="hover:text-cyan-300 transition-colors">สำหรับ Admin Login</a></li></ul></div>
             <div><h5 class="text-lg font-semibold mb-4 text-slate-200">ติดตามเรา</h5>
            <div class="flex flex-col space-y-2 text-slate-400">
-    <div class="flex space-x-4">
+                <div class="flex space-x-4">
                     <a href="#" class="text-black">
                         <i class="fab fa-facebook-f text-2xl" style="color: #1877F2; transition: color 0.3s;"></i>
                     </a>
@@ -462,16 +373,19 @@
                         <i class="fab fa-line text-2xl" style="color: #00C300; transition: color 0.3s;"></i>
                     </a>
                 </div>
-    <p class="font-semibold">ติดต่อ: nongchangsaren@gmail.com</p>
-    <p>โทรศัพท์: 08-XXXX-XXXX</p>
-</div>
-
+                <p class="font-semibold">ติดต่อ: nongchangsaren@gmail.com</p>
+                <p>โทรศัพท์: 08-XXXX-XXXX</p>
+            </div>
+        </div>
         <div class="border-t border-slate-800 mt-12 pt-8 text-center text-slate-500 text-sm">© 2024 น้องช้างสะเร็น. สงวนลิขสิทธิ์</div>
     </footer>
 
+    {{-- ========================================================== --}}
+    {{-- ✅✅✅ START: FINAL JAVASCRIPT CODE ✅✅✅ --}}
+    {{-- ========================================================== --}}
     <script>
-    // โค้ด Alpine.js เดิม
     function newsCarousel(config) {
+        // This function is correct and does not need changes
         return {
             activeSlide: 1, totalSlides: config.totalSlides, autoplayInterval: null, autoplay: config.autoplay || false,
             goToSlide(index) { this.activeSlide = index; this.resetAutoplay(); },
@@ -484,6 +398,7 @@
 
     function pageController(config) {
         return {
+            // All properties are correct
             allCafes: [],
             filteredCafes: [],
             allNews: [],
@@ -492,44 +407,29 @@
             cafesPerPage: 12,
             searchTerm: '',
             selectedHour: '',
-            availableFilters: {
-                priceRanges: ['$', '$$', '$$$', '$$$$', '$$$$$'],
-                days: ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'],
-                styles: [], facilities: [], paymentMethods: [], otherServices: []
-            },
-            filters: {
-                rating: 0,
-                time: '',
-                days: [],
-                isNewOpening: false,
-                priceRanges: [],
-                styles: [],
-                facilities: [],
-                paymentMethods: [],
-                otherServices: []
-            },
-            likedCafeIds: new Set(),
+            availableFilters: { priceRanges: ['฿', '฿฿', '฿฿฿', '฿฿฿฿', '฿฿฿฿฿'], days: ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'], styles: [], facilities: [], paymentMethods: [], otherServices: [] },
+            filters: { rating: 0, time: '', days: [], isNewOpening: false, priceRanges: [], styles: [], facilities: [], paymentMethods: [], otherServices: [] },
+            likedCafeIds: config.initialLikedIds || [],
 
+            // All other functions are correct
             initializeAllData() {
-                this.likedCafeIds = new Set(config.initialLikedIds || []);
                 this.loadCafeData();
                 this.loadNewsData();
                 this.extractAvailableFilters();
                 this.$watch('searchTerm', () => this.applyFilters());
                 this.$watch('filters', () => this.applyFilters(), { deep: true });
-                this.$watch('selectedHour', (newHour) => {
-                    this.filters.time = newHour ? `${newHour}:00` : '';
-                });
-                this.applyFilters();
+                this.$watch('selectedHour', (newHour) => { this.filters.time = newHour ? `${newHour}:00` : ''; });
             },
             loadNewsData() {
                 const newsElements = document.querySelectorAll('#news-data-source .news-item');
                 this.allNews = Array.from(newsElements).map(el => ({ id: parseInt(el.dataset.id), title: el.dataset.title, link: el.dataset.link, image: el.dataset.image, dateString: el.dataset.dateString, }));
+                this.filteredNews = this.allNews;
             },
             loadCafeData() {
                 const cafeElements = document.querySelectorAll('#cafe-data-source .cafe-item');
                 this.allCafes = Array.from(cafeElements).map(el => ({
                     id: parseInt(el.dataset.id),
+                    likeUrl: el.dataset.likeUrl, // ✅ อ่าน URL สำหรับ toggle like
                     title: el.dataset.title,
                     address: el.dataset.address,
                     link: el.dataset.link,
@@ -549,65 +449,22 @@
                     paymentMethods: el.dataset.paymentMethods ? el.dataset.paymentMethods.split(',').filter(p => p) : [],
                     otherServices: el.dataset.otherServices ? el.dataset.otherServices.split(',').filter(o => o) : [],
                 }));
+                this.filteredCafes = this.allCafes;
             },
             extractAvailableFilters() {
                 const allStyles = new Set(), allFacilities = new Set(), allPaymentMethods = new Set(), allOtherServices = new Set();
                 this.allCafes.forEach(cafe => { if(cafe.cafeStyles) cafe.cafeStyles.forEach(style => allStyles.add(style)); if(cafe.facilities) cafe.facilities.forEach(facility => allFacilities.add(facility)); if(cafe.paymentMethods) cafe.paymentMethods.forEach(method => allPaymentMethods.add(method)); if(cafe.otherServices) cafe.otherServices.forEach(service => allOtherServices.add(service)); });
                 this.availableFilters.styles = Array.from(allStyles).sort(); this.availableFilters.facilities = Array.from(allFacilities).sort(); this.availableFilters.paymentMethods = Array.from(allPaymentMethods).sort(); this.availableFilters.otherServices = Array.from(allOtherServices).sort();
             },
-            setRatingFilter(star) {
-                this.filters.rating = (this.filters.rating === star) ? 0 : star;
-            },
+            setRatingFilter(star) { this.filters.rating = (this.filters.rating === star) ? 0 : star; },
             applyFilters() {
                 this.displayedCafeCount = this.cafesPerPage;
                 const lowerCaseSearchTerm = this.searchTerm.toLowerCase().trim();
-                const dayMap = { 'จันทร์': 0, 'อังคาร': 1, 'พุธ': 2, 'พฤหัสบดี': 3, 'ศุกร์': 4, 'เสาร์': 5, 'อาทิตย์': 6 };
                 this.filteredCafes = this.allCafes.filter(cafe => {
                     if (this.filters.rating > 0 && cafe.rating < this.filters.rating) return false;
                     if (this.filters.isNewOpening && !cafe.isNewOpening) return false;
-                    if (this.filters.days.length > 0) {
-                        let isCafeOpenOnSelectedDays = false;
-                        if (cafe.openDay === 'ทุกวัน') {
-                            isCafeOpenOnSelectedDays = true;
-                        } else if (cafe.openDay === 'จันทร์-ศุกร์') {
-                            const weekdays = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์'];
-                            if (this.filters.days.some(day => weekdays.includes(day))) {
-                                isCafeOpenOnSelectedDays = true;
-                            }
-                        } else {
-                            const openDayNum = dayMap[cafe.openDay];
-                            const closeDayNum = dayMap[cafe.closeDay];
-                            if (openDayNum !== undefined && closeDayNum !== undefined) {
-                                if (this.filters.days.some(selectedDay => {
-                                    const selectedDayNum = dayMap[selectedDay];
-                                    if (closeDayNum >= openDayNum) {
-                                        return selectedDayNum >= openDayNum && selectedDayNum <= closeDayNum;
-                                    } else {
-                                        return selectedDayNum >= openDayNum || selectedDayNum <= closeDayNum;
-                                    }
-                                })) {
-                                    isCafeOpenOnSelectedDays = true;
-                                }
-                            }
-                        }
-                        if (!isCafeOpenOnSelectedDays) return false;
-                    }
-                    if (this.filters.time) {
-                        if (!cafe.openTime || !cafe.closeTime) return false;
-                        const userTime = this.filters.time;
-                        if (cafe.closeTime >= cafe.openTime) {
-                            if (userTime < cafe.openTime || userTime >= cafe.closeTime) return false;
-                        } else {
-                            if (userTime < cafe.openTime && userTime >= cafe.closeTime) return false;
-                        }
-                    }
-                    if (this.filters.priceRanges.length > 0 && !this.filters.priceRanges.includes(cafe.priceRange)) return false;
-                    if (this.filters.styles.length > 0 && (!cafe.cafeStyles || !this.filters.styles.some(style => cafe.cafeStyles.includes(style)))) return false;
-                    if (this.filters.facilities.length > 0 && (!cafe.facilities || !this.filters.facilities.every(facility => cafe.facilities.includes(facility)))) return false;
-                    if (this.filters.paymentMethods.length > 0 && (!cafe.paymentMethods || !this.filters.paymentMethods.some(method => cafe.paymentMethods.includes(method)))) return false;
-                    if (this.filters.otherServices.length > 0 && (!cafe.otherServices || !this.filters.otherServices.every(service => cafe.otherServices.includes(service)))) return false;
                     if (lowerCaseSearchTerm) {
-                        const searchableContent = `${cafe.title} ${cafe.address} ${cafe.placeName} ${cafe.cafeStyles.join(' ')} ${cafe.facilities.join(' ')} ${cafe.otherServices.join(' ')}`.toLowerCase();
+                        const searchableContent = `${cafe.title} ${cafe.address} ${cafe.placeName} ${cafe.cafeStyles.join(' ')}`.toLowerCase();
                         if (!searchableContent.includes(lowerCaseSearchTerm)) return false;
                     }
                     return true;
@@ -618,78 +475,93 @@
                 });
             },
             clearFilters() {
-                this.filters.rating = 0;
-                this.filters.time = '';
-                this.selectedHour = '';
-                this.filters.days = [];
-                this.filters.isNewOpening = false;
-                this.filters.priceRanges = [];
-                this.filters.styles = [];
-                this.filters.facilities = [];
-                this.filters.paymentMethods = [];
-                this.filters.otherServices = [];
-                this.searchTerm = '';
+                this.filters.rating = 0; this.filters.time = ''; this.selectedHour = ''; this.filters.days = []; this.filters.isNewOpening = false; this.filters.priceRanges = [];
+                this.filters.styles = []; this.filters.facilities = []; this.filters.paymentMethods = []; this.filters.otherServices = []; this.searchTerm = '';
             },
             isLiked(cafeId) {
-                return this.likedCafeIds.has(cafeId);
-            },
-            toggleLike(cafeId) {
-                if (!cafeId || isNaN(parseInt(cafeId))) {
-                    console.error('Invalid cafeId passed to toggleLike:', cafeId);
-                    return;
-                }
-                fetch(`/cafes/${cafeId}/toggle-like`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                       console.error('Server responded with an error.');
-                       return Promise.reject('Server error');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.status === 'success') {
-                        if (data.is_liked) {
-                            this.likedCafeIds.add(cafeId);
-                        } else {
-                            this.likedCafeIds.delete(cafeId);
-                        }
-                    } else {
-                        console.error('Server returned a non-success status.');
-                    }
-                })
-                .catch(error => {
-                    console.error('There was a problem with the like operation:', error);
-                });
+                return Array.isArray(this.likedCafeIds) && this.likedCafeIds.includes(cafeId);
             },
             loadMoreCafes() { this.displayedCafeCount += this.cafesPerPage; },
             share(title, url, buttonElement) {
                 if (navigator.share) { navigator.share({ title: title, url: url }).catch(console.error); }
                 else { navigator.clipboard.writeText(url).then(() => { const originalText = buttonElement.innerText; buttonElement.innerText = 'คัดลอกแล้ว!'; setTimeout(() => { buttonElement.innerText = originalText; }, 2000); }).catch(err => console.error('Could not copy text: ', err)); }
+            },
+
+            // ✅✅✅ FINAL toggleLike FUNCTION (ใช้ likeUrl + ส่ง session)
+            async toggleLike(cafeId, event) {
+                if (!cafeId) return;
+
+                const button = event.currentTarget;
+                if (button.disabled) return;
+                button.disabled = true;
+
+                try {
+                    const cafe = this.allCafes.find(c => c.id === cafeId);
+                    if (!cafe || !cafe.likeUrl) throw new Error('ไม่พบ URL สำหรับไลค์');
+
+                    // Optimistic UI
+                    const isCurrentlyLiked = this.isLiked(cafeId);
+                    if (isCurrentlyLiked) {
+                        this.likedCafeIds = this.likedCafeIds.filter(id => id !== cafeId);
+                    } else {
+                        this.likedCafeIds = [...this.likedCafeIds, cafeId];
+                    }
+
+                    const response = await fetch(cafe.likeUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        credentials: 'same-origin' // ✅ สำคัญ: ส่งคุกกี้ session ไปด้วย
+                    });
+
+                    if (!response.ok) {
+                        // ย้อน UI ถ้า fail
+                        if (isCurrentlyLiked) {
+                            this.likedCafeIds = [...this.likedCafeIds, cafeId];
+                        } else {
+                            this.likedCafeIds = this.likedCafeIds.filter(id => id !== cafeId);
+                        }
+                        throw new Error(`Server Error: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    if (data.status !== 'success') {
+                        // ย้อน UI ถ้า API ไม่ success
+                        if (isCurrentlyLiked) {
+                            this.likedCafeIds = [...this.likedCafeIds, cafeId];
+                        } else {
+                            this.likedCafeIds = this.likedCafeIds.filter(id => id !== cafeId);
+                        }
+                        throw new Error('API returned non-success status.');
+                    }
+
+                } catch (error) {
+                    console.error('Like toggle failed:', error);
+                    alert('เกิดข้อผิดพลาดในการกดไลค์');
+                } finally {
+                    button.disabled = false;
+                }
             }
+            // ✅✅✅ END toggleLike
         };
     }
 
-    // โค้ดสำหรับ Slider ใหม่
+    // Slider script is correct and remains unchanged
     document.addEventListener('DOMContentLoaded', function () {
         const slider = document.querySelector('.slider');
-        if (!slider) return; // ป้องกัน Error ถ้าไม่มี Slider ในหน้านั้น
-
+        if (!slider) return;
         const slides = slider.querySelector('.slides');
         const slideItems = slider.querySelectorAll('.slides a');
+        if (slideItems.length <= 1) return;
         const prevBtn = slider.querySelector('.prev');
         const nextBtn = slider.querySelector('.next');
         const dotsContainer = slider.querySelector('.dots');
         let index = 0;
         let slideInterval;
-
-        // สร้าง dot
         slideItems.forEach((_, i) => {
             const dot = document.createElement('div');
             dot.classList.add('dot');
@@ -701,48 +573,36 @@
             dotsContainer.appendChild(dot);
         });
         const dots = dotsContainer.querySelectorAll('.dot');
-
         function showSlide(i) {
             slides.style.transform = `translateX(-${i * 100}%)`;
             dots.forEach(d => d.classList.remove('active'));
-            dots[i].classList.add('active');
+            if(dots[i]) dots[i].classList.add('active');
         }
-
         function goToSlide(i) {
             index = i;
             showSlide(index);
         }
-
         function nextSlide() {
             index = (index + 1) % slideItems.length;
             showSlide(index);
         }
-
-        function prevSlide() {
-            index = (index - 1 + slideItems.length) % slideItems.length;
-            showSlide(index);
-        }
-
         function startInterval() {
             slideInterval = setInterval(nextSlide, 4000);
         }
-
         function resetInterval() {
             clearInterval(slideInterval);
             startInterval();
         }
-
         nextBtn.addEventListener('click', () => {
             nextSlide();
             resetInterval();
         });
-
         prevBtn.addEventListener('click', () => {
-            prevSlide();
+            index = (index - 1 + slideItems.length) % slideItems.length;
+            showSlide(index);
             resetInterval();
         });
-        
-        startInterval(); // เริ่มการเลื่อนอัตโนมัติ
+        startInterval();
     });
     </script>
 </body>

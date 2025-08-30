@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Contracts\Auth\MustVerifyEmail;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -39,22 +39,21 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
-     /**
-     * ความสัมพันธ์: User หนึ่งคนสามารถมีได้หลาย Cafe (เป็นเจ้าของ)
+    
+
+    public function likedCafes()
+{
+    return $this->belongsToMany(Cafe::class, 'cafe_likes', 'user_id', 'cafe_id')
+                ->withTimestamps(); // ✅✅✅ เพิ่มบรรทัดนี้เข้าไป
+}
+
+    /**
+     * ความสัมพันธ์เพื่อดึงคาเฟ่ที่ User คนนี้เป็นเจ้าของ
      */
-     public function cafes()
+    public function cafes()
     {
-        //              (Model ลูก,  Foreign Key ในตาราง cafes,  Local Key (PK) ในตาราง users)
-        return $this->hasMany(Cafe::class, 'user_id',             'user_id');
+        return $this->hasMany(Cafe::class, 'user_id');
     }
-
-   public function likedCafes()
-    {
-        return $this->belongsToMany(Cafe::class, 'cafe_likes', 'user_id', 'cafe_id')
-                    ->select('cafes.*') // ป้องกันปัญหา "Ambiguous Column" เมื่อมีการ join ตาราง
-                    ->withTimestamps(); // ดึงข้อมูล created_at, updated_at จากตาราง pivot มาด้วย
-    }
-
     /**
      * ความสัมพันธ์: User หนึ่งคนสามารถเขียนได้หลาย Review
      */

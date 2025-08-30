@@ -16,8 +16,8 @@ class RouteServiceProvider extends ServiceProvider
      * Typically, users are redirected here after authentication.
      *
      * @var string
-     */
-    public const HOME = '/dashboard';
+     */public const HOME = '/home-admin'; // ลองเปลี่ยนเป็นหน้าของ Admin ชั่วคราว
+
 
     /**
      * Define your route model bindings, pattern filters, and other route configuration.

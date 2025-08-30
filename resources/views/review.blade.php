@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale-1" />
     <title>เขียนรีวิว: {{ $cafe->cafe_name }}</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -15,7 +15,6 @@
         body {
             font-family: 'Kanit', sans-serif;
             background-color: #F9F7F5;
-            overflow: hidden;
         }
         .font-serif {
             font-family: 'Playfair Display', serif;
@@ -52,34 +51,36 @@
         .star-rating label:hover { transform: scale(1.05); }
     </style>
 </head>
-<body class="h-screen flex flex-col">
+<body class="min-h-screen flex flex-col">
   
     @include('components.2navbar')
 
-    <main class="flex-grow w-full max-w-4xl mx-auto p-2 flex" x-data="reviewForm()">
+    <main class="flex-grow w-full max-w-4xl mx-auto p-4 flex" x-data="reviewForm()">
         <form action="{{ route('user.reviews.store') }}" method="POST" enctype="multipart/form-data"
-              class="w-full h-full bg-white rounded-xl shadow-lg border border-slate-100 flex overflow-hidden">
+              class="w-full h-full bg-white rounded-xl shadow-lg border border-slate-100 flex flex-col md:flex-row overflow-hidden">
             @csrf
               <input type="hidden" name="cafe_id" value="{{ $cafe->cafe_id }}"> 
             
-            <!-- Left Column -->
+            <!-- Left Column: Image Upload -->
             <div 
-                class="w-1/2 p-4 bg-slate-50 border-r border-slate-200 flex flex-col"
+                class="w-full md:w-1/2 p-4 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 flex flex-col"
                 @dragover.prevent="isDragging = true" 
                 @dragleave.prevent="isDragging = false" 
                 @drop.prevent="handleDrop($event)">
                 
+                {{-- Hidden file input that will be controlled by JavaScript --}}
+                <input @change="handleSelect($event)" id="images" name="images[]" type="file" class="hidden" multiple accept="image/*" x-ref="fileInput">
+
                 <template x-if="files.length === 0">
-                    <div class="flex-grow flex items-center justify-center border-2 border-dashed rounded-lg transition-colors"
+                    <div class="flex-grow flex items-center justify-center border-2 border-dashed rounded-lg transition-colors min-h-[200px]"
                          :class="isDragging ? 'border-cyan-500 bg-cyan-50' : 'border-slate-300'">
-                        <div class="text-center text-slate-500 text-sm">
+                        <div class="text-center text-slate-500 text-sm p-4">
                             <i class="fa-solid fa-images text-3xl"></i>
                             <p class="mt-2 font-semibold">ลากรูปภาพของคุณมาวางที่นี่</p>
                             <p class="text-xs mt-1">หรือ</p>
-                            <label for="images" class="mt-2 inline-block px-3 py-1.5 bg-white border border-slate-300 rounded-md text-xs font-semibold cursor-pointer hover:bg-slate-100">
+                            <button @click.prevent="$refs.fileInput.click()" type="button" class="mt-2 inline-block px-3 py-1.5 bg-white border border-slate-300 rounded-md text-xs font-semibold cursor-pointer hover:bg-slate-100">
                                 เลือกไฟล์
-                            </label>
-                            <input @change="handleSelect($event)" id="images" name="images[]" type="file" class="hidden" multiple accept="image/*" x-ref="fileInput">
+                            </button>
                         </div>
                     </div>
                 </template>
@@ -98,10 +99,13 @@
                          </div>
                     </div>
                 </template>
+                 <div class="mt-2 text-center">
+                    <button @click.prevent="$refs.fileInput.click()" type="button" class="text-xs text-cyan-600 hover:underline">เพิ่มหรือเปลี่ยนรูปภาพ</button>
+                </div>
             </div>
 
-            <!-- Right Column -->
-            <div class="w-1/2 p-4 flex flex-col">
+            <!-- Right Column: Review Details -->
+            <div class="w-full md:w-1/2 p-4 flex flex-col">
                 <header class="mb-4">
                     <p class="text-slate-500 text-sm">เขียนรีวิวสำหรับ</p>
                     <h1 class="font-serif text-2xl font-bold text-[#6F4E37]">{{ $cafe->cafe_name }}</h1>
@@ -127,7 +131,7 @@
                     </div>
 
                     <!-- Content -->
-                    <div class="flex flex-col flex-grow">
+                    <div class="flex flex-col flex-grow min-h-[100px]">
                         <label for="content" class="block text-sm font-semibold text-slate-700 mb-1">รายละเอียด</label>
                         <textarea x-model="content" class="form-input-elegant w-full flex-grow text-sm" id="content" name="content" placeholder="เล่าประสบการณ์ของคุณ..." required></textarea>
                     </div>
@@ -135,9 +139,6 @@
 
                 <!-- Buttons -->
                 <div class="mt-auto pt-4 flex gap-2">
-                    {{-- ========================================== --}}
-                    {{-- ✅ 2. แก้ไขปุ่ม Submit ✅ --}}
-                    {{-- ========================================== --}}
                     <button type="submit" 
                             @click="if (containsBadWords(title) || containsBadWords(content)) { event.preventDefault(); alert('กรุณาอย่าใช้คำไม่สุภาพในการรีวิว'); }"
                             class="w-full px-4 py-2 text-sm font-semibold bg-[#6F4E37] text-white rounded-lg hover:bg-[#5a3e2b] transition-all shadow-md">
@@ -152,7 +153,7 @@
     </main>
     
   {{-- ========================================================== --}}
-  {{-- ✅ 3. แก้ไข JavaScript ทั้งหมด ✅ --}}
+  {{-- ✅✅✅ START: FINAL JAVASCRIPT CODE ✅✅✅ --}}
   {{-- ========================================================== --}}
   <script>
     function reviewForm() {
@@ -160,7 +161,7 @@
 
       return {
         isDragging: false,
-        files: [],
+        files: [], // This will only hold objects for preview purposes { file: FileObject, preview: 'dataURL' }
         title: '',
         content: '',
 
@@ -177,36 +178,37 @@
           this.addFiles(event.dataTransfer.files);
         },
         addFiles(fileList) {
+          // This method now ONLY updates the preview array.
+          // The actual file input holds the truth.
           const newFiles = Array.from(fileList);
+          this.files = []; // Clear previous previews
           newFiles.forEach(file => {
             if (file.type.startsWith('image/')) {
               const reader = new FileReader();
               reader.onload = (e) => {
                 this.files.push({ file: file, preview: e.target.result });
-                // อัปเดต input ทันทีทุกครั้งที่เพิ่มไฟล์
-                this.updateFileInput(); 
               };
               reader.readAsDataURL(file);
             }
           });
         },
         removeFile(index) {
-          this.files.splice(index, 1);
-          // อัปเดต input ทันทีทุกครั้งที่ลบไฟล์
-          this.updateFileInput(); 
-        },
-        updateFileInput() {
-          try {
-            const dataTransfer = new DataTransfer();
-            this.files.forEach(item => {
-                if (item.file instanceof File) {
-                    dataTransfer.items.add(item.file);
-                }
-            });
-            this.$refs.fileInput.files = dataTransfer.files;
-          } catch (e) {
-            console.error('Error updating file input:', e);
+          // This is the key change. We now modify the actual file input's file list.
+          const dt = new DataTransfer();
+          const currentFiles = Array.from(this.$refs.fileInput.files);
+          
+          // Add all files except the one at the specified index to the DataTransfer object
+          for (let i = 0; i < currentFiles.length; i++) {
+            if (i !== index) {
+              dt.items.add(currentFiles[i]);
+            }
           }
+          
+          // Update the file input with the new file list
+          this.$refs.fileInput.files = dt.files;
+          
+          // Trigger the 'change' event on the input to re-run handleSelect and update previews
+          this.$refs.fileInput.dispatchEvent(new Event('change', { bubbles: true }));
         }
       }
     }

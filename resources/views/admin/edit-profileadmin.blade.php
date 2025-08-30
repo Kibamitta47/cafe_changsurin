@@ -548,6 +548,7 @@
                 <div class="card-body">
                     <form action="{{ route('admin.update.profile') }}" method="POST" enctype="multipart/form-data">
                         @csrf
+                         @method('PUT')
                         {{-- Laravel automatically handles PUT/PATCH for forms if you use @method('PUT') or @method('PATCH') --}}
                         {{-- In this case, your route is POST, so @method is not strictly needed unless you change the route to PUT/PATCH --}}
                         {{-- If your route was Route::put('/edit-profile', ...), you'd add @method('PUT') here --}}
@@ -585,7 +586,7 @@
                         </div>
 
                         <div class="text-center mt-4">
-                            <a href="{{ route('home.admin') }}" class="btn btn-secondary me-2"> {{-- Changed to correct named route 'home.admin' --}}
+                            <a href="{{ route('admin.home') }}" class="btn btn-secondary me-2"> {{-- Changed to correct named route 'home.admin' --}}
                                 <i class="fas fa-times me-2"></i> ยกเลิก
                             </a>
                             <button type="submit" class="btn btn-primary">

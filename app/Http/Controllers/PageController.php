@@ -84,5 +84,24 @@ class PageController extends Controller
         return view('Top10', compact('cafes'));
     }
 
-    // ❌ 3. ลบฟังก์ชันที่ซ้ำซ้อนและวงเล็บปีกกาที่เกินออกไป
+public function showNewlyCafesPage()
+{
+    // ดึงข้อมูลคาเฟ่ที่ได้รับการอนุมัติ (status = 'approved')
+    // และเรียงตาม created_at จากใหม่ไปเก่า, เอามา 10 อันดับแรก
+    $cafes = Cafe::where('status', 'approved')
+                 ->orderByDesc('created_at')
+                 ->take(10)
+                 ->get();
+
+    // ส่งข้อมูลไปยัง View NewlyCafes.blade.php
+    return view('NewlyCafes', compact('cafes'));
+}
+    /**
+     * แสดงหน้า FAQ
+     */
+    public function showFAQPage()
+    {
+        // 🎯 หมายเหตุ: ตรวจสอบให้แน่ใจว่ามีไฟล์ view ที่ resources/views/pages/faq.blade.php
+        return view('pages.faq');
+    }
 }

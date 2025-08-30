@@ -15,23 +15,29 @@ class RedirectIfAuthenticated
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, string ...$guards): Response
-{
-    $guards = empty($guards) ? [null] : $guards;
+    public function handle(Request $request, Closure $next, ...$guards): Response
+    {
+        // กำหนด guard เริ่มต้น ถ้าไม่ได้ระบุมา
+        $guards = empty($guards) ? [null] : $guards;
 
-    foreach ($guards as $guard) {
-        if (Auth::guard($guard)->check()) {
-            // ถ้าเป็น admin ให้ redirect ไป /home-admin
-            if ($guard === 'admin') {
-                return redirect()->route('home.admin');
-            }
-            // ถ้าเป็น user ให้ redirect ไป /welcome
-            else {
-                return redirect()->route('welcome');
+        foreach ($guards as $guard) {
+            // ตรวจสอบว่า guard นี้มีการล็อกอินอยู่หรือไม่
+            if (Auth::guard($guard)->check()) {
+
+                // =============================================================
+                // [หัวใจของการแก้ไข]
+                // ถ้าเป็น guard 'admin' ที่ล็อกอินอยู่ ให้ส่งไปที่ 'home.admin'
+                // =============================================================
+                if ($guard === 'admin') {
+                    return redirect()->route('home.admin');
+                }
+                
+                // สำหรับ guard อื่นๆ (ซึ่งก็คือ 'web' หรือ User)
+                // ให้ส่งไปที่หน้า HOME ปกติ (ซึ่งคือ /dashboard)
+                return redirect(RouteServiceProvider::HOME);
             }
         }
-    }
 
-    return $next($request);
-}
+        return $next($request);
+    }
 }

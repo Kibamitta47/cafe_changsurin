@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* Global Styles & Variables (Light Tone) */
+        /* CSS ของคุณถูกต้องดีแล้ว ไม่ต้องแก้ไข */
         :root {
             --primary-light: #4a90e2; /* A nice light blue */
             --secondary-light: #6dd5ed; /* Lighter blue/cyan */
@@ -23,232 +23,35 @@
             --shadow-light-strong: 0 8px 25px rgba(0, 0, 0, 0.15); /* Stronger shadow on hover */
             --transition-smooth: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Kanit', sans-serif;
-            background: var(--background-light);
-            color: var(--text-dark);
-            transition: var(--transition-smooth);
-            overflow-x: hidden;
-        }
-
-        /* Top Bar (Header) */
-        .top-bar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(8px);
-            z-index: 999;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 30px;
-            box-shadow: var(--shadow-light-mild);
-            transition: var(--transition-smooth);
-        }
-
-        body.sidebar-open .top-bar {
-            left: 320px;
-            width: calc(100% - 320px);
-        }
-        
-        .top-bar-title {
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--text-dark);
-        }
-
-        /* Sidebar Toggle Button */
-        .sidebar-toggle {
-            position: fixed;
-            top: 20px;
-            right: 30px;
-            z-index: 1010;
-            background: var(--primary-light);
-            color: var(--sidebar-light-bg);
-            border: none;
-            padding: 12px 18px;
-            border-radius: 8px;
-            font-size: 15px;
-            cursor: pointer;
-            box-shadow: var(--shadow-light-mild);
-            transition: var(--transition-smooth);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transform-origin: center;
-        }
-
-        .sidebar-toggle:hover {
-            background: var(--secondary-light);
-            transform: scale(1.05) translateY(-2px);
-            box-shadow: var(--shadow-light-strong);
-        }
-
-        .sidebar-toggle .icon {
-            font-size: 18px;
-            transition: transform 0.3s ease;
-        }
-
-        .sidebar-toggle.active .icon {
-            transform: rotate(90deg);
-        }
-
-        /* Admin Sidebar */
-        .admin-sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 320px;
-            height: 100vh;
-            background: var(--sidebar-light-bg);
-            border-right: 1px solid var(--border-light-color);
-            box-shadow: var(--shadow-light-strong);
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            z-index: 1000;
-            transform: translateX(-100%);
-            transition: var(--transition-smooth);
-            overflow-y: auto;
-        }
-
-        .admin-sidebar.show {
-            transform: translateX(0);
-        }
-
-        body.sidebar-open {
-            padding-left: 320px;
-        }
-
-        /* Sidebar Header */
-        .sidebar-header {
-            background: var(--primary-light);
-            padding: 30px 25px;
-            color: var(--text-primary);
-        }
-
-        .profile-info {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .profile-info img {
-            width: 65px;
-            height: 65px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid rgba(255, 255, 255, 0.5);
-        }
-
-        .profile-details span {
-            display: block;
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 5px;
-        }
-
-        .profile-status {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.9);
-            background: rgba(0, 0, 0, 0.1);
-            padding: 4px 12px;
-            border-radius: 20px;
-            display: inline-block;
-        }
-
-        /* Menu Container */
-        .menu-container {
-            flex-grow: 1;
-            padding: 25px 0;
-        }
-
-        .menu-list {
-            padding: 0 15px;
-        }
-
-        .menu-item {
-            margin-bottom: 8px;
-        }
-        
-        .menu-item a,
-        .menu-item button {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 18px 20px;
-            font-size: 16px;
-            color: var(--text-secondary-dark);
-            text-decoration: none;
-            border: none;
-            width: 100%;
-            text-align: left;
-            font-weight: 500;
-            cursor: pointer;
-            border-radius: 15px;
-            transition: var(--transition-smooth);
-        }
-
-        .menu-item a .icon,
-        .menu-item button .icon {
-            font-size: 20px;
-            width: 25px;
-            text-align: center;
-            color: var(--primary-light);
-        }
-
-        .menu-item:hover a,
-        .menu-item:hover button {
-            color: var(--text-dark);
-            background: #f0f0f0;
-            transform: translateX(10px);
-        }
-
-        .menu-item.active a {
-            color: var(--primary-light);
-            background: #e6f0fa;
-        }
-        
-        /* Logout Button */
-        .menu-item.logout button {
-            color: #d9534f;
-        }
-
-        .menu-item.logout:hover button {
-            color: var(--sidebar-light-bg);
-            background: #d9534f;
-        }
-
-        /* Main Content */
-        .main-content {
-            padding: 100px 30px 30px;
-            transition: var(--transition-smooth);
-        }
-
-        body.sidebar-open .main-content {
-            padding-left: calc(320px + 30px);
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .admin-sidebar { width: 280px; }
-            body.sidebar-open { padding-left: 0; }
-            .main-content, body.sidebar-open .main-content { padding: 100px 20px 20px; }
-            .sidebar-toggle { top: 15px; right: 15px; padding: 10px 14px; font-size: 14px; }
-            .top-bar { padding: 10px 20px; }
-            .top-bar-title { font-size: 20px; }
-            body.sidebar-open .top-bar { left: 0; width: 100%; }
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Kanit', sans-serif; background: var(--background-light); color: var(--text-dark); transition: var(--transition-smooth); overflow-x: hidden; }
+        .top-bar { position: fixed; top: 0; left: 0; width: 100%; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); z-index: 999; display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; box-shadow: var(--shadow-light-mild); transition: var(--transition-smooth); }
+        body.sidebar-open .top-bar { left: 320px; width: calc(100% - 320px); }
+        .top-bar-title { font-size: 24px; font-weight: 600; color: var(--text-dark); }
+        .sidebar-toggle { position: fixed; top: 20px; right: 30px; z-index: 1010; background: var(--primary-light); color: var(--sidebar-light-bg); border: none; padding: 12px 18px; border-radius: 8px; font-size: 15px; cursor: pointer; box-shadow: var(--shadow-light-mild); transition: var(--transition-smooth); display: flex; align-items: center; gap: 8px; transform-origin: center; }
+        .sidebar-toggle:hover { background: var(--secondary-light); transform: scale(1.05) translateY(-2px); box-shadow: var(--shadow-light-strong); }
+        .sidebar-toggle .icon { font-size: 18px; transition: transform 0.3s ease; }
+        .sidebar-toggle.active .icon { transform: rotate(90deg); }
+        .admin-sidebar { position: fixed; top: 0; left: 0; width: 320px; height: 100vh; background: var(--sidebar-light-bg); border-right: 1px solid var(--border-light-color); box-shadow: var(--shadow-light-strong); padding: 0; display: flex; flex-direction: column; z-index: 1000; transform: translateX(-100%); transition: var(--transition-smooth); overflow-y: auto; }
+        .admin-sidebar.show { transform: translateX(0); }
+        body.sidebar-open { padding-left: 320px; }
+        .sidebar-header { background: var(--primary-light); padding: 30px 25px; color: var(--text-primary); }
+        .profile-info { display: flex; align-items: center; gap: 20px; }
+        .profile-info img { width: 65px; height: 65px; border-radius: 50%; object-fit: cover; border: 3px solid rgba(255, 255, 255, 0.5); }
+        .profile-details span { display: block; font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 5px; }
+        .profile-status { font-size: 12px; color: rgba(255, 255, 255, 0.9); background: rgba(0, 0, 0, 0.1); padding: 4px 12px; border-radius: 20px; display: inline-block; }
+        .menu-container { flex-grow: 1; padding: 25px 0; }
+        .menu-list { padding: 0 15px; }
+        .menu-item { margin-bottom: 8px; }
+        .menu-item a, .menu-item button { display: flex; align-items: center; gap: 15px; padding: 18px 20px; font-size: 16px; color: var(--text-secondary-dark); text-decoration: none; border: none; width: 100%; text-align: left; font-weight: 500; cursor: pointer; border-radius: 15px; transition: var(--transition-smooth); }
+        .menu-item a .icon, .menu-item button .icon { font-size: 20px; width: 25px; text-align: center; color: var(--primary-light); }
+        .menu-item:hover a, .menu-item:hover button { color: var(--text-dark); background: #f0f0f0; transform: translateX(10px); }
+        .menu-item.active a { color: var(--primary-light); background: #e6f0fa; }
+        .menu-item.logout button { color: #d9534f; }
+        .menu-item.logout:hover button { color: var(--sidebar-light-bg); background: #d9534f; }
+        .main-content { padding: 100px 30px 30px; transition: var(--transition-smooth); }
+        body.sidebar-open .main-content { padding-left: calc(320px + 30px); }
+        @media (max-width: 768px) { .admin-sidebar { width: 280px; } body.sidebar-open { padding-left: 0; } .main-content, body.sidebar-open .main-content { padding: 100px 20px 20px; } .sidebar-toggle { top: 15px; right: 15px; padding: 10px 14px; font-size: 14px; } .top-bar { padding: 10px 20px; } .top-bar-title { font-size: 20px; } body.sidebar-open .top-bar { left: 0; width: 100%; } }
     </style>
 </head>
 <body>
@@ -282,17 +85,20 @@
 
         <div class="menu-container">
             <div class="menu-list">
-                <div class="menu-item @if(request()->routeIs('home.admin')) active @endif">
-                    <a href="{{ route('home.admin') }}"><i class="fas fa-home icon"></i> หน้าแรก</a>
+                <!-- FIX 1: แก้ไขเงื่อนไข active state จาก 'home.admin' เป็น 'admin.home' -->
+                <div class="menu-item @if(request()->routeIs('admin.home' )) active @endif">
+                    <a href="{{ route('admin.home') }}"><i class="fas fa-tachometer-alt icon"></i> Dashboard</a>
                 </div>
                 <div class="menu-item @if(request()->routeIs('admin.cafe.create')) active @endif">
                     <a href="{{ route('admin.cafe.create') }}"><i class="fas fa-plus-circle icon"></i> เพิ่มคาเฟ่ใหม่</a>
                 </div>
+                <!-- การใช้ url() ในที่นี้ยังทำงานได้ แต่แนะนำให้ใช้ route() ถ้ามีชื่อ Route กำหนดไว้ -->
                 <div class="menu-item @if(request()->is('admin/news*')) active @endif"> 
-                    <a href="{{ url('admin/news') }}"><i class="fas fa-newspaper icon"></i> โปรโมชั่น/ข่าวสาร</a>
+                    <a href="{{ route('admin.news.add') }}"><i class="fas fa-newspaper icon"></i> โปรโมชั่น/ข่าวสาร</a>
                 </div>
-                <div class="menu-item @if(request()->is('edit-profile*')) active @endif">
-                    <a href="{{ url('/edit-profile') }}"><i class="fas fa-user-edit icon"></i> แก้ไขข้อมูลส่วนตัว</a>
+                <!-- FIX 2: แก้ไขเงื่อนไข active state และลิงก์ของหน้าแก้ไขโปรไฟล์ -->
+                <div class="menu-item @if(request()->routeIs('admin.profile.edit')) active @endif">
+                    <a href="{{ route('admin.profile.edit') }}"><i class="fas fa-user-edit icon"></i> แก้ไขข้อมูลส่วนตัว</a>
                 </div>
                 <div class="menu-item @if(request()->routeIs('admin.cafe.index')) active @endif">
                     <a href="{{ route('admin.cafe.index') }}"><i class="fas fa-list icon"></i> รายการคาเฟ่</a>
@@ -303,7 +109,8 @@
             </div>
         </div>
 
-        <form action="{{ url('/logout-admin') }}" method="POST">
+        <!-- FIX 3: แก้ไข action ของฟอร์ม logout ให้ใช้ named route ที่ถูกต้อง -->
+        <form action="{{ route('admin.logout') }}" method="POST">
             @csrf
             <div class="menu-item logout">
                 <button type="submit"><i class="fas fa-sign-out-alt icon"></i> ออกจากระบบ</button>
@@ -318,7 +125,7 @@
         
         <div class="top-bar">
             <h1 class="top-bar-title">ยินดีต้อนรับ, {{ $userName }}</h1>
-        </div
+        </div>
 
     </div>
 

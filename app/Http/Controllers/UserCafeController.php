@@ -7,7 +7,8 @@ use App\Models\Cafe;
 use App\Models\Review; // ตรวจสอบว่าคุณมี Model นี้
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\View\View; // ✅ เพิ่ม use statement ที่จำเป็น
+use Illuminate\View\View;
+use Illuminate\Http\JsonResponse;
 
 class UserCafeController extends Controller
 {
@@ -56,7 +57,7 @@ class UserCafeController extends Controller
         ]);
 
         $data['user_id'] = Auth::id();
-        $data['status'] = 'pending'; // ตั้งสถานะเริ่มต้นเป็น 'รอการตรวจสอบ'
+        $data['status'] = 'pending';
 
         $imagePaths = [];
         if ($request->hasFile('images')) {
@@ -66,7 +67,6 @@ class UserCafeController extends Controller
         }
         $data['images'] = $imagePaths;
 
-        // กำหนดค่า default เป็น array ว่าง เพื่อป้องกัน error หากไม่มีการส่งค่ามา
         $data['payment_methods'] = $request->input('payment_methods', []);
         $data['facilities'] = $request->input('facilities', []);
         $data['other_services'] = $request->input('other_services', []);
@@ -84,24 +84,25 @@ class UserCafeController extends Controller
     {
         $user = Auth::user();
 
-        $cafes = $user->cafes()        // ดึงคาเฟ่ที่ผู้ใช้คนนี้เป็นเจ้าของ
-            ->withCount('likers')  // นับจำนวนคนที่ไลค์
-            ->latest()             // จัดเรียงจากใหม่ไปเก่า
-            ->paginate(9);         // แบ่งหน้า
+        $cafes = $user->cafes()
+            ->withCount('likers')
+            ->latest()
+            ->paginate(9);
 
         return view('user.cafes.my', compact('cafes'));
     }
 
     /**
+     * ✅✅✅ CORRECTED FUNCTION ✅✅✅
      * แสดงรายการคาเฟ่ที่ผู้ใช้คนปัจจุบันกดถูกใจ
      */
     public function myLikedCafes(): View
     {
         $user = Auth::user();
 
-        // ดึงข้อมูลคาเฟ่ที่ผู้ใช้คนนี้กดถูกใจ ผ่าน relationship 'likedCafes'
-        // และเรียงตามเวลาที่กดไลค์ล่าสุด (pivot_created_at)
-        $likedCafes = $user->likedCafes()->latest('pivot_created_at')->paginate(12);
+        // Using latest() without arguments will correctly order by the 'created_at'
+        // timestamp on the pivot table, because we added withTimestamps() to the relationship.
+        $likedCafes = $user->likedCafes()->latest()->paginate(12);
 
         return view('user.liked-cafes', compact('likedCafes'));
     }
@@ -111,12 +112,11 @@ class UserCafeController extends Controller
      */
     public function edit(Cafe $cafe): View
     {
-        // ตรวจสอบสิทธิ์ความเป็นเจ้าของ
         if (Auth::id() !== $cafe->user_id) {
             abort(403, 'Unauthorized action.');
         }
 
-        return view('user.editcafe', compact('cafe')); // ตรวจสอบว่า path view ถูกต้อง
+        return view('user.editcafe', compact('cafe'));
     }
 
     /**
@@ -124,12 +124,12 @@ class UserCafeController extends Controller
      */
     public function update(Request $request, Cafe $cafe)
     {
-        // ตรวจสอบสิทธิ์ความเป็นเจ้าของ
         if (Auth::id() !== $cafe->user_id) {
             abort(403, 'Unauthorized action.');
         }
 
         $data = $request->validate([
+            // Validation rules...
             'cafe_name' => 'required|string|max:255',
             'price_range' => 'nullable|string|max:255',
             'place_name' => 'required|string|max:255',
@@ -184,12 +184,10 @@ class UserCafeController extends Controller
      */
     public function destroy(Cafe $cafe)
     {
-        // ตรวจสอบสิทธิ์ความเป็นเจ้าของ
         if (Auth::id() !== $cafe->user_id) {
             abort(403, 'Unauthorized action.');
         }
 
-        // ลบไฟล์รูปภาพที่เกี่ยวข้อง
         if (is_array($cafe->images)) {
             foreach ($cafe->images as $imagePath) {
                 Storage::disk('public')->delete($imagePath);
@@ -202,21 +200,24 @@ class UserCafeController extends Controller
     }
 
     /**
-     * สลับสถานะการกดไลค์ (Like/Unlike) สำหรับคาเฟ่
+     * ✅✅✅ FINAL AND CORRECT toggleLike FUNCTION ✅✅✅
+     * Toggles the like status of a cafe for the authenticated user.
      */
-    public function toggleLike(Request $request, Cafe $cafe)
+    public function toggleLike(Request $request, Cafe $cafe): JsonResponse
     {
         $user = Auth::user();
 
-        // ใช้ toggle() เพื่อเพิ่มหรือลบข้อมูลในตารางกลาง (cafe_likes) โดยอัตโนมัติ
-        $user->likedCafes()->toggle($cafe->id);
+        // The toggle method handles attaching or detaching the relationship
+        // in the pivot table (cafe_likes) automatically.
+        $user->likedCafes()->toggle($cafe->cafe_id);
 
-        $isLiked = $user->likedCafes()->where('cafe_id', $cafe->id)->exists();
+        // After toggling, we check the current status to send back to the frontend.
+        $isLiked = $user->likedCafes()->where('cafe_id', $cafe->cafe_id)->exists();
 
+        // Return a clean, simple JSON response.
         return response()->json([
             'status' => 'success',
             'is_liked' => $isLiked,
-            'message' => $isLiked ? 'Cafe liked successfully.' : 'Cafe unliked successfully.'
         ]);
     }
 }

@@ -11,11 +11,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Models\AdminID;
 use App\Models\User;
-
+use Illuminate\Support\Collection;
+use Illuminate\View\View;
 
 class AdminCafeController extends Controller
 {
-    public function create()
+    public function create(): View
     {
         return view('admin.increase-admin');
     }
@@ -56,18 +57,13 @@ class AdminCafeController extends Controller
         
         if ($authenticatedUser instanceof AdminID) {
             $cafe->admin_id = $authenticatedUserId;
-            $cafe->user_id = null; 
         } elseif ($authenticatedUser instanceof User) {
             $cafe->user_id = $authenticatedUserId;
-            $cafe->admin_id = null; 
         } else {
-            $cafe->user_id = null;
-            $cafe->admin_id = null;
             Log::warning('Cafe created by unidentifiable user type.');
         }
         
         $cafe->status = 'approved'; 
-
         $cafe->is_new_opening = $request->has('is_new_opening');
         $cafe->payment_methods = $request->input('payment_methods', []);
         $cafe->facilities = $request->input('facilities', []);
@@ -95,10 +91,9 @@ class AdminCafeController extends Controller
         }
     }
 
-    public function index()
+    public function index(): View
     {
         $cafes = Cafe::with(['user', 'admin'])->orderBy('created_at', 'desc')->paginate(10); 
-        
         $approvedCount = Cafe::where('status', 'approved')->count();
         $pendingCount = Cafe::where('status', 'pending')->count();
         $rejectedCount = Cafe::where('status', 'rejected')->count();
@@ -107,14 +102,13 @@ class AdminCafeController extends Controller
         return view('admin.itemscafe', compact('cafes', 'approvedCount', 'pendingCount', 'rejectedCount', 'totalCount'));
     }
 
-    public function edit(Cafe $cafe)
+    public function edit(Cafe $cafe): View
     {
         return view('admin.edit-cafe', compact('cafe'));
     }
 
     public function update(Request $request, Cafe $cafe)
     {
-        // ใช้ Primary Key ที่ถูกต้องในการ Log
         Log::info('Admin updating cafe ID: ' . $cafe->cafe_id);
 
         $validatedData = $request->validate([
@@ -145,7 +139,6 @@ class AdminCafeController extends Controller
         ]);
 
         $cafe->fill($validatedData);
-
         $cafe->is_new_opening = $request->has('is_new_opening');
         $cafe->payment_methods = $request->input('payment_methods', []);
         $cafe->facilities = $request->input('facilities', []);
@@ -184,7 +177,6 @@ class AdminCafeController extends Controller
                     Storage::disk('public')->delete($imagePath);
                 }
             }
-
             $cafe->delete();
             return redirect()->route('admin.cafe.index')->with('success', 'ลบข้อมูลคาเฟ่เรียบร้อยแล้ว!');
         } catch (\Exception $e) {
@@ -218,87 +210,87 @@ class AdminCafeController extends Controller
         $query = Cafe::where('lat', $request->lat)->where('lng', $request->lng);
 
         if ($request->filled('cafe_id')) {
-            // ✅ แก้ไข: ใช้ชื่อคอลัมน์ Primary Key ที่ถูกต้อง ('cafe_id')
             $query->where('cafe_id', '!=', $request->cafe_id);
         }
 
         return response()->json(['is_duplicate' => $query->exists()]);
     }
     
-    public function welcome()
+    public function welcome(): View
     {
         $cafes = Cafe::where('status', 'approved')
                      ->withAvg('reviews', 'rating')
                      ->latest()
                      ->get();
 
-        //แก้ด้วยนะ
-        // $news = DB::table('addnews_admins')->where('is_visible', true)->latest()->get();
-        $news = AddnewsAdmin::where('is_visible', true);
-
         $likedCafeIds = [];
-        if (Auth::check()) {
+        if (Auth::check() && Auth::user()->relationLoaded('likedCafes')) {
             $likedCafeIds = Auth::user()->likedCafes()->pluck('cafe_id')->toArray();
         }
+
+        $news = AddnewsAdmin::where('is_visible', true)
+                            ->latest()
+                            ->take(5)
+                            ->get();
 
         return view('welcome', compact('cafes', 'news', 'likedCafeIds'));
     }
 
-    /**
-     * ✅ แก้ไข: ฟังก์ชัน show() ทั้งหมด
-     * ใช้ Route Model Binding (Cafe $cafe)
-     */
-    public function show(Cafe $cafe)
+    public function show(Cafe $cafe): View
     {
-        // โหลดค่าเฉลี่ย rating เข้ามาใน Model ที่มีอยู่แล้ว
         $cafe->loadAvg('reviews', 'rating'); 
-        
         $reviews = $cafe->reviews()->latest()->paginate(5);
         return view('cafes.show', compact('cafe', 'reviews'));
     }
     
-    public function toggleRecommend(Request $request, Cafe $cafe)
-    {
-        $cafe->is_recommended = !$cafe->is_recommended;
-        $cafe->save();
-        return back()->with('success', 'เปลี่ยนสถานะแนะนำสำเร็จ!');
-    }
+   
 
-    public function recommend()
+    public function recommend(): View
     {
         $allCafes = Cafe::where('status', 'approved')->withAvg('reviews', 'rating')->get();
-        $topRatedCafes = $allCafes->sortByDesc('reviews_avg_rating')->take(10);
-        $newCafes = $allCafes->where('is_new_opening', true)->sortByDesc('created_at')->take(5);
-        $cafesByStyle = $allCafes->flatMap(function ($cafe) {
-            $styles = is_array($cafe->cafe_styles) ? $cafe->cafe_styles : json_decode($cafe->cafe_styles, true) ?? [];
-            return collect($styles)->map(function ($style) use ($cafe) {
-                return ['style' => $style, 'cafe' => $cafe];
-            });
-        })->groupBy('style')->map(function ($group) {
-            return $group->pluck('cafe')->take(5);
-        });
 
-        return view('admin.recommend', compact('topRatedCafes', 'newCafes', 'cafesByStyle'));
+        return view('admin.recommend', [
+            'topRatedCafes'   => $this->getTopRated($allCafes),
+            'newCafes'        => $this->getNewCafes($allCafes),
+            'cafesByStyle'    => $this->groupByStyle($allCafes),
+            'cafesByPrice'    => $this->groupByPrice($allCafes),
+            'cafesByFacility' => $this->groupByFacility($allCafes),
+        ]);
     }
 
-    public function showRecommendPage()
-    {
-        $recommendedCafes = Cafe::where('status', 'approved')
-                             ->where('is_recommended', true)
-                             ->withAvg('reviews', 'rating')
-                             ->get();
     
-        $topRatedCafes = $recommendedCafes->sortByDesc('reviews_avg_rating')->take(10);
-        $newCafes = $recommendedCafes->where('is_new_opening', true)->sortByDesc('created_at')->take(5);
-        $cafesByStyle = $recommendedCafes->flatMap(function ($cafe) {
-            $styles = is_array($cafe->cafe_styles) ? $cafe->cafe_styles : json_decode($cafe->cafe_styles, true) ?? [];
-            return collect($styles)->map(function ($style) use ($cafe) {
-                return ['style' => $style, 'cafe' => $cafe];
-            });
-        })->groupBy('style')->map(function ($group) {
-            return $group->pluck('cafe')->take(5);
-        });
 
-        return view('cafes.recommend', compact('recommendedCafes', 'topRatedCafes', 'newCafes', 'cafesByStyle'));
+    /* ================= Helper Methods ================= */
+    private function getTopRated(Collection $cafes): Collection
+    {
+        return $cafes->sortByDesc('reviews_avg_rating')->take(10);
     }
+
+    private function getNewCafes(Collection $cafes): Collection
+    {
+        return $cafes->where('is_new_opening', true)->sortByDesc('created_at')->take(5);
+    }
+
+    private function groupByStyle(Collection $cafes): Collection
+    {
+        return $cafes->flatMap(function ($cafe) {
+            $styles = is_array($cafe->cafe_styles) ? $cafe->cafe_styles : json_decode($cafe->cafe_styles, true) ?? [];
+            return collect($styles)->map(fn($style) => ['style' => $style, 'cafe' => $cafe]);
+        })->groupBy('style')->map(fn($group) => $group->pluck('cafe')->take(5));
+    }
+
+    private function groupByPrice(Collection $cafes): Collection
+    {
+        return $cafes->groupBy('price_range')->map(fn($group) => $group->take(5));
+    }
+
+    private function groupByFacility(Collection $cafes): Collection
+    {
+        return $cafes->flatMap(function ($cafe) {
+            $facilities = is_array($cafe->facilities) ? $cafe->facilities : json_decode($cafe->facilities, true) ?? [];
+            return collect($facilities)->map(fn($f) => ['facility' => $f, 'cafe' => $cafe]);
+        })->groupBy('facility')->map(fn($group) => $group->take(5));
+    }
+
+    
 }

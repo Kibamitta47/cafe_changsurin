@@ -31,7 +31,7 @@ class AdminAuthController extends Controller
         AdminID::create([
             'UserName' => $request->name,
             'Email' => $request->email,
-            'password' => Hash::make($request->password), // cast hashed จะ hash ให้อัตโนมัติ
+            'password' => Hash::make($request->password),
         ]);
 
         return redirect()->route('login.admin')->with('success', 'สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ');
@@ -49,17 +49,14 @@ class AdminAuthController extends Controller
             'password' => 'required',
         ]);
 
-        Log::info('Admin login attempt for email: ' . $credentials['email']);
-
         if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
             
             $request->session()->regenerate();
-            Log::info('Admin login successful: ' . $credentials['email']);
-            
-            return redirect()->intended(route('home.admin'))->with('success', 'เข้าสู่ระบบสำเร็จ');
+
+            // กลับมาใช้ Redirect ปกติ
+            return redirect()->route('admin.home')->with('success', 'เข้าสู่ระบบสำเร็จ');
         }
 
-        Log::warning('Admin login failed for: ' . $credentials['email']);
         return back()->withErrors([
             'email' => 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
         ])->onlyInput('email');
@@ -81,14 +78,12 @@ class AdminAuthController extends Controller
 
     public function home()
     {
-        // --- 1. ดึงข้อมูลสำหรับ Stat Cards ---
+        // ... (โค้ดในฟังก์ชัน home ของคุณถูกต้องแล้ว ไม่ต้องแก้ไข) ...
         $totalUsers = User::count();
         $totalCafes = Cafe::count();
         $pendingCafes = Cafe::where('status', 'pending')->count();
         $totalNews = AddnewsAdmin::count();
         
-        // --- 2. ดึงข้อมูลสำหรับกราฟ (โค้ดเดิม) ---
-        // (โค้ดดึงข้อมูล userRegistrationData, cafeStatusData, topCafes ทั้งหมดเหมือนเดิม)
         $userRegistrationData = User::select(DB::raw('DATE(created_at) as registration_date'), DB::raw('count(*) as user_count'))->where('created_at', '>=', now()->subDays(15))->groupBy('registration_date')->orderBy('registration_date', 'asc')->get()->keyBy('registration_date');
         $chartLabels = [];
         $chartData = [];
@@ -108,17 +103,12 @@ class AdminAuthController extends Controller
         $topCafes = Cafe::where('status', 'approved')->withAvg('reviews', 'rating')->orderBy('reviews_avg_rating', 'desc')->take(10)->get();
         $topCafeLabels = $topCafes->pluck('cafe_name');
         $topCafeData = $topCafes->pluck('reviews_avg_rating');
-
         
-        // --- 3. ส่งข้อมูลทั้งหมดไปยัง View ---
         return view('admin.home', [
-            // ข้อมูลใหม่สำหรับ Stat Cards
             'totalUsers' => $totalUsers,
             'totalCafes' => $totalCafes,
             'pendingCafes' => $pendingCafes,
             'totalNews' => $totalNews,
-
-            // ข้อมูลเดิมสำหรับกราฟ
             'chartLabels' => $chartLabels,
             'chartData' => $chartData,
             'cafeStatusLabels' => $cafeStatusLabels,
@@ -151,7 +141,7 @@ class AdminAuthController extends Controller
         $admin->Email = $request->input('email');
 
         if ($request->filled('password')) {
-            $admin->password = Hash::make($request->password); // ✅ 4. แก้ไข: Hash รหัสผ่านใหม่ก่อนบันทึก
+            $admin->password = Hash::make($request->password);
         }
 
         if ($request->hasFile('profile_image')) {
