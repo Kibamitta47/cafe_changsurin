@@ -1,5 +1,5 @@
 <?php
-// app/Models/Cafe.php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,14 +10,9 @@ class Cafe extends Model
     use HasFactory;
 
     protected $table = 'cafes';
-    protected $primaryKey = 'cafe_id';
-    public $incrementing = true;       // <-- ใช้ auto-increment
+    protected $primaryKey = 'cafe_id';   // << สำคัญที่สุด
+    public $incrementing = true;
     protected $keyType = 'int';
-
-    public function getRouteKeyName()
-    {
-        return 'cafe_id';
-    }
 
     protected $fillable = [
         'user_id','admin_id','cafe_name','place_name','address','lat','lng',
@@ -34,34 +29,41 @@ class Cafe extends Model
         'other_services'  => 'array',
         'cafe_styles'     => 'array',
         'images'          => 'array',
+        // ถ้าใน DB เป็น TIME ให้ใช้เป็น 'string' หรือเก็บเป็น datetime จริง ๆ
+        'open_time'    => 'datetime:H:i',
+        'close_time'   => 'datetime:H:i',
         'parking'         => 'boolean',
         'credit_card'     => 'boolean',
     ];
 
     public function user()
     {
+        // FK ใน cafes = user_id, PK ใน users = user_id
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 
     public function reviews()
     {
+        // FK ใน reviews = cafe_id, PK ใน cafes = cafe_id
         return $this->hasMany(Review::class, 'cafe_id', 'cafe_id');
     }
 
     public function likers()
-{
-    return $this->belongsToMany(
-        User::class,
-        'cafe_likes',  // pivot
-        'cafe_id',     // FK ของ cafe บน pivot
-        'user_id',     // FK ของ user บน pivot
-        'cafe_id',     // PK ของ cafes
-        'user_id'      // PK ของ users
-    )->withTimestamps()->withPivot('cafe_like_id');
-}
+    {
+        // pivot: cafe_likes(cafe_id, user_id)
+        return $this->belongsToMany(
+            User::class,
+            'cafe_likes',
+            'cafe_id',   // FK ของฝั่ง Cafe ใน pivot
+            'user_id',   // FK ของฝั่ง User ใน pivot
+            'cafe_id',   // local key ของตาราง cafes
+            'user_id'    // local key ของตาราง users
+        )->withTimestamps()->withPivot('cafe_like_id');
+    }
 
     public function admin()
     {
+        // ถ้าในตาราง admin ใช้ PK = admin_id
         return $this->belongsTo(AdminID::class, 'admin_id', 'admin_id');
     }
 }
