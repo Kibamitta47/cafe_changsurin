@@ -18,12 +18,19 @@ class User extends Authenticatable
 
     protected $casts = ['email_verified_at' => 'datetime','password' => 'hashed'];
 
-    public function likedCafes()
-    {
-        return $this->belongsToMany(Cafe::class, 'cafe_likes', 'user_id', 'cafe_id')
-            ->withTimestamps()
-            ->withPivot('cafe_like_id');
-    }
+    
+   public function likedCafes()
+{
+    return $this->belongsToMany(
+        Cafe::class,   // โมเดลที่เกี่ยวข้อง
+        'cafe_likes',  // ชื่อ pivot table
+        'user_id',     // FK ของฝั่ง User ใน pivot
+        'cafe_id',     // FK ของฝั่ง Cafe ใน pivot
+        'user_id',     // PK ของตาราง users
+        'cafe_id'      // PK ของตาราง cafes
+    )->withTimestamps()
+     ->withPivot('cafe_like_id');
+}
 
     public function cafes()
     {

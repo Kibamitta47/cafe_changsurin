@@ -15,7 +15,6 @@
       align-items: center;
       height: 100vh;
     }
-
     .login-box {
       background: #ffffff;
       padding: 2.5rem;
@@ -25,19 +24,16 @@
       width: 100%;
       max-width: 400px;
     }
-
     .login-box img {
       width: 100px;
       margin-bottom: 1rem;
     }
-
     .login-box h1 {
       font-size: 1.8rem;
       margin-bottom: 1.2rem;
       font-weight: 700;
       color: #3c3c3c;
     }
-
     .btn-line {
       background-color: #06C755;
       color: white;
@@ -47,21 +43,17 @@
       font-size: 1.1rem;
       transition: 0.3s;
     }
-
     .btn-line:hover {
       background-color: #04a344;
     }
-
     .footer-link {
       margin-top: 1.5rem;
       font-size: 0.95rem;
     }
-
     .footer-link a {
       color: #0d6efd;
       text-decoration: none;
     }
-
     .footer-link a:hover {
       text-decoration: underline;
     }
@@ -79,7 +71,7 @@
       </div>
     @endif
 
-    <a href="{{ route('line.login') }}" class="btn btn-line w-100">
+    <a href="#" id="line-login-btn" class="btn btn-line w-100">
       <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-chat-left-dots me-2" viewBox="0 0 16 16">
         <path d="M14 1a1 1 0 0 1 1 1v11.586l-2.707-2.707A1 1 0 0 0 11 11H3a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h11zm-4 6.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
       </svg>
@@ -90,6 +82,30 @@
       ยังไม่มีบัญชี? <a href="{{ route('register') }}">ลงทะเบียน</a>
     </div>
   </div>
+
+ <script>
+  document.getElementById("line-login-btn").addEventListener("click", function(e) {
+    e.preventDefault();
+
+    const webLoginUrl = "{{ route('line.login') }}"; // เว็บ OAuth ของคุณ
+    const liffUrl = "https://liff.line.me/2007859458-0kknRNQO"; // ใช้ LIFF ID จริงจากรูป
+
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      // เปิดผ่าน LIFF (จะดีดเข้าแอป LINE อัตโนมัติ)
+      window.location.href = liffUrl;
+
+      // เผื่อเปิดแอปไม่ติด → ตกไปใช้เว็บ OAuth
+      setTimeout(function() {
+        window.location.href = webLoginUrl;
+      }, 1200);
+    } else {
+      // Desktop → ใช้เว็บ OAuth
+      window.location.href = webLoginUrl;
+    }
+  });
+</script>
 
 </body>
 </html>

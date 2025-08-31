@@ -9,6 +9,7 @@ class Cafe extends Model
 {
     use HasFactory;
 
+    protected $table = 'cafes';
     protected $primaryKey = 'cafe_id';
     public $incrementing = true;       // <-- ใช้ auto-increment
     protected $keyType = 'int';
@@ -48,11 +49,16 @@ class Cafe extends Model
     }
 
     public function likers()
-    {
-        return $this->belongsToMany(User::class, 'cafe_likes', 'cafe_id', 'user_id')
-            ->withTimestamps()
-            ->withPivot('cafe_like_id');
-    }
+{
+    return $this->belongsToMany(
+        User::class,
+        'cafe_likes',  // pivot
+        'cafe_id',     // FK ของ cafe บน pivot
+        'user_id',     // FK ของ user บน pivot
+        'cafe_id',     // PK ของ cafes
+        'user_id'      // PK ของ users
+    )->withTimestamps()->withPivot('cafe_like_id');
+}
 
     public function admin()
     {
