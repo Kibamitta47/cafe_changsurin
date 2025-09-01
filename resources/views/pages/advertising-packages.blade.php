@@ -35,6 +35,7 @@
     $lineUrlFinal = $lineUrl
       ?? ($lineAddUrl ?? (isset($lineId) ? ('https://line.me/R/ti/p/' . ltrim($lineId, '@')) : '#'));
     $lineLabel = isset($lineId) ? ('@' . ltrim($lineId, '@')) : 'LINE Official';
+    $lineOfficialId = $lineOfficialId ?? '@nongchangsurin';
   @endphp
 
   <div class="relative">
@@ -52,22 +53,54 @@
         <p class="mt-4 text-lg sm:text-xl text-slate-300">
           เลือกแพ็กเกจที่เหมาะกับคุณ — ร้านเปิดใหม่ ร้านอาหาร คาเฟ่ หรืออีเว้นท์ เราช่วยให้คนรู้จักมากขึ้น!
         </p>
-
-        <div class="mt-8 flex flex-col items-center gap-3">
-          <a href="{{ $lineUrlFinal }}" target="_blank" rel="noopener"
-             class="flex w-full max-w-md items-center justify-center gap-3 rounded-xl bg-[#06C755] px-6 py-3 text-white font-extrabold text-lg shadow-lg shadow-green-500/40 hover:bg-[#05a646] transition-all duration-300 transform hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-green-400">
-            <i class="fa-brands fa-line fa-lg"></i>
-            <span>ติดต่อผ่านไลน์</span>
-          </a>
-          <p class="text-sm text-slate-400">ไลน์ทางการ: <span class="font-semibold text-white">{{ $lineLabel }}</span></p>
-        </div>
       </header>
 
-      
+      <!-- เนื้อหา/ติดต่อ -->
+      <section class="mt-10">
+        <div class="flex flex-col md:flex-row gap-10 items-start md:items-center">
 
-      
-        <p class="mt-3 text-xs text-slate-500">ตอบกลับภายใน 24 ชั่วโมง</p>
-    
+          <!-- ปุ่มติดขอบล่าง (เฉพาะมือถือ) -->
+          <div class="fixed bottom-0 inset-x-0 sm:hidden bg-white/95 backdrop-blur border-t border-slate-200 p-3 z-40">
+            <div class="max-w-xl mx-auto px-2">
+              <a href="{{ $lineUrlFinal }}" target="_blank" rel="noopener"
+                 class="flex w-full items-center justify-center gap-2 rounded-xl bg-[#06C755] px-4 py-3 text-white font-extrabold shadow-lg hover:bg-[#05a646] transition"
+                 aria-label="ติดต่อผ่าน LINE">
+                <i class="fab fa-line text-lg"></i>
+                <span>ติดต่อผ่านไลน์</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- กล่อง QR / สำหรับผู้ใช้คอมพิวเตอร์ -->
+          <div class="flex-1 text-center mx-auto">
+            <h3 class="font-semibold text-slate-200 mb-6 text-lg">สำหรับผู้ใช้คอมพิวเตอร์</h3>
+            <div class="flex justify-center mb-6">
+              <img src="{{ asset('/images/logoline.png') }}"
+                   alt="LINE QR Code - {{ $lineOfficialId }}"
+                   class="w-52 h-52 rounded-2xl shadow-2xl border-8 border-white" />
+            </div>
+            <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+              ใช้มือถือสแกน QR Code เพื่อเพิ่มเพื่อน<br />
+              หรือค้นหา ID: <strong class="text-white">{{ $lineOfficialId }}</strong>
+            </p>
+
+            <div class="mt-6">
+              <a href="{{ $lineUrlFinal }}" target="_blank" rel="noopener"
+                 class="inline-flex items-center gap-2 rounded-xl bg-[#06C755] px-5 py-3 text-white font-extrabold shadow-lg hover:bg-[#05a646] transition">
+                <i class="fab fa-line"></i> แชทกับแอดมินทางไลน์
+              </a>
+            </div>
+
+            <p class="mt-4 text-sm text-slate-400">
+              ไลน์ทางการ: <span class="font-semibold text-white">{{ $lineLabel }}</span>
+            </p>
+            <p class="mt-2 text-xs text-slate-500">ตอบกลับภายใน 24 ชั่วโมง</p>
+          </div>
+
+        </div>
+      </section>
+    </div> <!-- /container -->
+  </div> <!-- /relative -->
 
 </body>
 </html>
