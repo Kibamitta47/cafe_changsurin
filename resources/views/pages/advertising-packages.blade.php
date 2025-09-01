@@ -51,7 +51,7 @@
           โปรโมทธุรกิจของคุณให้ปังในสุรินทร์
         </h1>
         <p class="mt-4 text-lg sm:text-xl text-slate-300">
-          เลือกแพ็กเกจที่เหมาะกับคุณ — ร้านเปิดใหม่ ร้านอาหาร คาเฟ่ หรืออีเว้นท์ เราช่วยให้คนรู้จักมากขึ้น!
+          ร้านเปิดใหม่ ร้านอาหาร คาเฟ่ หรืออีเว้นท์ เราช่วยให้คนรู้จักมากขึ้น!
         </p>
       </header>
 
@@ -66,7 +66,7 @@
                  class="flex w-full items-center justify-center gap-2 rounded-xl bg-[#06C755] px-4 py-3 text-white font-extrabold shadow-lg hover:bg-[#05a646] transition"
                  aria-label="ติดต่อผ่าน LINE">
                 <i class="fab fa-line text-lg"></i>
-                <span>ติดต่อผ่านไลน์</span>
+                <span>แชทกับแอดมินทางไลน์</span>
               </a>
             </div>
           </div>
@@ -84,12 +84,7 @@
               หรือค้นหา ID: <strong class="text-white">{{ $lineOfficialId }}</strong>
             </p>
 
-            <div class="mt-6">
-              <a href="{{ $lineUrlFinal }}" target="_blank" rel="noopener"
-                 class="inline-flex items-center gap-2 rounded-xl bg-[#06C755] px-5 py-3 text-white font-extrabold shadow-lg hover:bg-[#05a646] transition">
-                <i class="fab fa-line"></i> แชทกับแอดมินทางไลน์
-              </a>
-            </div>
+
 
             <p class="mt-4 text-sm text-slate-400">
               ไลน์ทางการ: <span class="font-semibold text-white">{{ $lineLabel }}</span>
