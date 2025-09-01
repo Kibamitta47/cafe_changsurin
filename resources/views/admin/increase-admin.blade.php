@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{{ isset($cafe) ? 'แก้ไขข้อมูลคาเฟ่' : 'เพิ่มข้อมูลคาเฟ่ใหม่' }} | ระบบจัดการ</title>
 
+  <meta name="csrf-token" content="{{ csrf_token() }}" />
+
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
@@ -100,7 +102,6 @@
 
     .form-text { font-size: 0.875em; color: #6c757d; margin-top: 5px; }
 
-    /* Mobile improvements */
     @media (max-width: 768px) {
       body.sidebar-open { padding-left: 0; }
       .container.mt-5.mb-5 { padding: 20px; margin-top: 20px !important; margin-bottom: 20px !important; }
@@ -108,7 +109,7 @@
       .btn-check + .btn { display: block; width: 100%; margin-right: 0 !important; margin-bottom: 0.5rem !important; }
       .d-flex.justify-content-end.gap-2.mt-3 { flex-direction: column; align-items: stretch; }
       .d-flex.justify-content-end.gap-2.mt-3 .btn { width: 100%; }
-      #map { height: 300px; } /* ลดความสูงบนมือถือ */
+      #map { height: 300px; }
     }
   </style>
 </head>
@@ -147,9 +148,7 @@
 
   <form action="{{ isset($cafe) ? route('admin.cafe.update', $cafe->id) : route('admin.cafe.store') }}" method="POST" enctype="multipart/form-data" class="p-4 rounded" id="cafeForm">
     @csrf
-    @if(isset($cafe))
-      @method('PUT')
-    @endif
+    @if(isset($cafe)) @method('PUT') @endif
 
     <div class="row">
       <div class="col-md-6">
@@ -162,16 +161,15 @@
         <div class="mb-3">
           <label class="form-label">สถานะ</label><br />
           <div class="form-check form-check-inline">
-            <input type="checkbox" id="new_opening" name="is_new_opening" value="1" class="form-check-input"
-              {{ old('is_new_opening', $cafe->is_new_opening ?? false) ? 'checked' : '' }} />
+            <input type="checkbox" id="new_opening" name="is_new_opening" value="1" class="form-check-input" {{ old('is_new_opening', $cafe->is_new_opening ?? false) ? 'checked' : '' }} />
             <label for="new_opening" class="form-check-label">เปิดใหม่</label>
           </div>
         </div>
 
         <div class="mb-3">
-          <label for="images" class="form-label">รูปภาพคาเฟ่ <span class="text-muted">(สูงสุด 5 รูป)</span></label>
+          <label for="images" class="form-label">รูปภาพคาเฟ่ <span class="text-muted">(สูงสุด 5 รูป • 5MB/รูป • รวม 20MB)</span></label>
           <input type="file" class="form-control @error('images.*') is-invalid @enderror" id="images" name="images[]" accept="image/*" multiple>
-          <div class="form-text">เลือกรูปภาพได้หลายรูป (JPG, PNG)</div>
+          <div class="form-text">ระบบจะย่อและบีบอัดรูปให้อัตโนมัติก่อนอัปโหลด</div>
           @error('images.*') <div class="invalid-feedback">{{ $message }}</div> @enderror
 
           @if(isset($cafe) && !empty($cafe->images) && is_array($cafe->images))
@@ -184,7 +182,7 @@
                 </div>
               @endforeach
             </div>
-            <div class="form-text mt-2">หากอัปโหลดรูปภาพใหม่ รูปภาพที่มีอยู่จะถูกแทนที่</div>
+            <div class="form-text mt-2">อัปโหลดใหม่เพื่อแทนที่รูปเดิม</div>
           </div>
           @endif
         </div>
@@ -194,8 +192,7 @@
           <div class="d-flex flex-wrap gap-2">
             @foreach(['ต่ำกว่า 100' => 'primary','101 - 250' => 'success','251 - 500' => 'warning','501 - 1,000' => 'danger','มากกว่า 1,000' => 'dark'] as $label => $color)
               @php $id = 'price' . $loop->index; @endphp
-              <input type="radio" class="btn-check" name="price_range" id="{{ $id }}" value="{{ $label }}" required autocomplete="off"
-                     {{ old('price_range', $cafe->price_range ?? '') == $label ? 'checked' : '' }} />
+              <input type="radio" class="btn-check" name="price_range" id="{{ $id }}" value="{{ $label }}" required autocomplete="off" {{ old('price_range', $cafe->price_range ?? '') == $label ? 'checked' : '' }} />
               <label for="{{ $id }}" class="btn btn-outline-{{ $color }}"><i class="bi bi-currency-bitcoin"></i> {{ $label }}</label>
             @endforeach
           </div>
@@ -207,8 +204,7 @@
           @foreach(['มินิมอล','วินเทจ','โมเดิร์น','อินดัสเทรียล','ธรรมชาติ/สวน','โคซี่/อบอุ่น','อาร์ต/แกลเลอรี่','ลอฟท์','ญี่ปุ่น','ยุโรป'] as $style)
             @php $id = 'style_' . \Illuminate\Support\Str::slug($style); @endphp
             <div class="form-check form-check-inline">
-              <input type="checkbox" id="{{ $id }}" name="cafe_styles[]" value="{{ $style }}" class="form-check-input"
-                {{ in_array($style, old('cafe_styles', $cafe->cafe_styles ?? [])) ? 'checked' : '' }} />
+              <input type="checkbox" id="{{ $id }}" name="cafe_styles[]" value="{{ $style }}" class="form-check-input" {{ in_array($style, old('cafe_styles', $cafe->cafe_styles ?? [])) ? 'checked' : '' }} />
               <label for="{{ $id }}" class="form-check-label">{{ $style }}</label>
             </div>
           @endforeach
@@ -286,12 +282,10 @@
 
         <label class="form-label">เลือกตำแหน่งบนแผนที่ <span class="text-danger">*</span></label>
 
-        <!-- แถบเครื่องมือแผนที่: ใกล้ฉัน + ช่องค้นหา -->
         <div class="d-flex flex-wrap gap-2 mb-2">
           <button type="button" class="btn btn-sm btn-outline-primary" id="locateBtn">
             <i class="bi bi-geo-alt-fill"></i> ใกล้ฉัน
           </button>
-         
         </div>
 
         <div id="map" class="mb-3 position-relative"></div>
@@ -376,8 +370,7 @@
           @foreach(['เงินสด','บัตรเครดิต','บัตรเดบิต','จ่ายผ่านมือถือ','ไม่ระบุ'] as $payment)
             @php $id = 'pay_' . \Illuminate\Support\Str::slug($payment); @endphp
             <div class="form-check form-check-inline">
-              <input type="checkbox" id="{{ $id }}" name="payment_methods[]" value="{{ $payment }}" class="form-check-input"
-                {{ in_array($payment, old('payment_methods', $cafe->payment_methods ?? [])) ? 'checked' : '' }} />
+              <input type="checkbox" id="{{ $id }}" name="payment_methods[]" value="{{ $payment }}" class="form-check-input" {{ in_array($payment, old('payment_methods', $cafe->payment_methods ?? [])) ? 'checked' : '' }} />
               <label for="{{ $id }}" class="form-check-label">{{ $payment }}</label>
             </div>
           @endforeach
@@ -388,8 +381,7 @@
           @foreach(['ห้องประชุม','โซนเด็กเล่น','ที่จอดรถ','เครื่องปรับอากาศ','Wi-Fi'] as $facility)
             @php $id = 'facility_' . \Illuminate\Support\Str::slug($facility); @endphp
             <div class="form-check form-check-inline">
-              <input type="checkbox" id="{{ $id }}" name="facilities[]" value="{{ $facility }}" class="form-check-input"
-                {{ in_array($facility, old('facilities', $cafe->facilities ?? [])) ? 'checked' : '' }} />
+              <input type="checkbox" id="{{ $id }}" name="facilities[]" value="{{ $facility }}" class="form-check-input" {{ in_array($facility, old('facilities', $cafe->facilities ?? [])) ? 'checked' : '' }} />
               <label for="{{ $id }}" class="form-check-label">{{ $facility }}</label>
             </div>
           @endforeach
@@ -400,8 +392,7 @@
           @foreach(['ส่งเดลิเวอรี่','รับจัดงาน','ซื้อกลับบ้าน','รับจองโต๊ะ'] as $service)
             @php $id = 'service_' . \Illuminate\Support\Str::slug($service); @endphp
             <div class="form-check form-check-inline">
-              <input type="checkbox" id="{{ $id }}" name="other_services[]" value="{{ $service }}" class="form-check-input"
-                {{ in_array($service, old('other_services', $cafe->other_services ?? [])) ? 'checked' : '' }} />
+              <input type="checkbox" id="{{ $id }}" name="other_services[]" value="{{ $service }}" class="form-check-input" {{ in_array($service, old('other_services', $cafe->other_services ?? [])) ? 'checked' : '' }} />
               <label for="{{ $id }}" class="form-check-label">{{ $service }}</label>
             </div>
           @endforeach
@@ -423,190 +414,276 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const imageInput = document.getElementById('images');
-    const cafeForm = document.getElementById('cafeForm');
+document.addEventListener('DOMContentLoaded', function () {
+  // ========= ค่าควบคุมอัปโหลด/บีบอัด =========
+  const MAX_FILES = 5;
+  const MAX_PER_FILE = 5 * 1024 * 1024;       // 5MB/ไฟล์ (หลังบีบอัด)
+  const TARGET_PER_FILE = 1.5 * 1024 * 1024;  // เป้าหมาย ~1.5MB/ไฟล์
+  const MAX_TOTAL = 20 * 1024 * 1024;         // รวมทั้งหมด ≤ 20MB
+  const MAX_DIM = 1600;                       // ด้านยาวสุด 1600px
 
-    imageInput?.addEventListener('change', () => {
-      if (imageInput.files.length > 5) {
-        alert('เลือกได้สูงสุด 5 รูปภาพเท่านั้น');
+  const imageInput = document.getElementById('images');
+  const cafeForm = document.getElementById('cafeForm');
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+  const submitBtn = document.getElementById('submitBtn');
+
+  // เตือนจำนวนไฟล์
+  imageInput?.addEventListener('change', () => {
+    if (imageInput.files.length > MAX_FILES) {
+      alert('เลือกได้สูงสุด 5 รูปภาพเท่านั้น');
+      imageInput.value = '';
+    }
+    for (const f of imageInput.files) {
+      if (f.size > 50 * 1024 * 1024) {
+        alert(`ไฟล์ ${f.name} ใหญ่เกิน 50MB ไม่รองรับ`);
         imageInput.value = '';
-      }
-    });
-
-    cafeForm.addEventListener('submit', function(e) {
-      if (imageInput && imageInput.files.length > 5) {
-        e.preventDefault();
-        alert('กรุณาอัปโหลดรูปภาพไม่เกิน 5 รูปเท่านั้น');
         return;
       }
-      if (!document.getElementById('duplicateCoordsWarning').classList.contains('d-none') ||
-          !document.getElementById('outOfBoundsWarning').classList.contains('d-none')) {
-        e.preventDefault();
-        alert('โปรดแก้ไขข้อผิดพลาดเกี่ยวกับพิกัดก่อนบันทึกข้อมูล');
+    }
+  });
+
+  // ดัก submit -> บีบอัดรูป + ส่งด้วย fetch
+  cafeForm.addEventListener('submit', async function(e) {
+    // ตรวจพิกัดก่อน
+    if (!duplicateCoordsWarning.classList.contains('d-none') ||
+        !outOfBoundsWarning.classList.contains('d-none')) {
+      e.preventDefault();
+      alert('โปรดแก้ไขข้อผิดพลาดเกี่ยวกับพิกัดก่อนบันทึกข้อมูล');
+      return;
+    }
+
+    // หากไม่มีรูปให้ส่งแบบปกติ
+    if (!imageInput || imageInput.files.length === 0) return;
+
+    e.preventDefault();
+
+    if (imageInput.files.length > MAX_FILES) {
+      alert('กรุณาอัปโหลดรูปภาพไม่เกิน 5 รูปเท่านั้น');
+      return;
+    }
+
+    // บีบอัดทุกรูป
+    const files = Array.from(imageInput.files);
+    const compressed = [];
+    let totalAfter = 0;
+
+    for (const file of files) {
+      const out = await compressImage(file, {maxDim: MAX_DIM, targetBytes: TARGET_PER_FILE});
+      compressed.push(out);
+      totalAfter += out.blob.size;
+
+      if (out.blob.size > MAX_PER_FILE) {
+        alert(`ไฟล์ ${file.name} หลังบีบอัดยังเกิน 5MB กรุณาเลือกรูปที่เล็กกว่านี้`);
         return;
-      }
-    });
-
-    // ===== Map =====
-    const latInput = document.getElementById('lat');
-    const lngInput = document.getElementById('lng');
-    const duplicateCoordsWarning = document.getElementById('duplicateCoordsWarning');
-    const outOfBoundsWarning = document.getElementById('outOfBoundsWarning');
-    const submitBtn = document.getElementById('submitBtn');
-    const locateBtn = document.getElementById('locateBtn');
-    const searchAddress = document.getElementById('searchAddress');
-
-    // ขอบเขต อ.เมืองสุรินทร์
-    const mueangSurinBounds = L.latLngBounds([[14.75, 103.35], [15.00, 103.65]]);
-    const mueangSurinCenter = [14.885, 103.490];
-
-    // แผนที่ (เหมาะกับมือถือ)
-    const map = L.map('map', { scrollWheelZoom: true, tap: true }).setView(mueangSurinCenter, 12);
-    map.setMaxBounds(mueangSurinBounds);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-
-    // Control Geocoder (ไอคอนแว่นบนแผนที่)
-    const geocoderControl = L.Control.geocoder({
-      geocoder: L.Control.Geocoder.nominatim(),
-      defaultMarkGeocode: false,
-      placeholder: 'ค้นหาสถานที่...',
-      errorMessage: 'ไม่พบสถานที่'
-    })
-    .on('markgeocode', function (e) {
-      const c = e.geocode.center;
-      applyPoint(c.lat, c.lng, true);
-    })
-    .addTo(map);
-
-    let marker;
-
-    // ถ้าเป็นหน้าแก้ไข: ปักหมุดจากค่าที่มีอยู่
-    if (latInput.value && lngInput.value) {
-      const lat = parseFloat(latInput.value);
-      const lng = parseFloat(lngInput.value);
-      if (!isNaN(lat) && !isNaN(lng)) {
-        marker = L.marker([lat, lng]).addTo(map);
-        const inside = mueangSurinBounds.contains([lat, lng]);
-        map.setView([lat, lng], inside ? 15 : 12);
-        if (inside) checkCoordinates(lat, lng); else displayOutOfBoundsWarning(true);
       }
     }
 
-    // คลิกบนแผนที่ -> วางหมุด
-    map.on('click', (e) => {
-      const { lat, lng } = e.latlng;
-      applyPoint(lat, lng, true);
+    if (totalAfter > MAX_TOTAL) {
+      alert('ขนาดไฟล์รวมหลังบีบอัดเกิน 20MB กรุณาลดจำนวน/ขนาดรูป');
+      return;
+    }
+
+    // สร้าง FormData ใหม่จากฟอร์ม แล้วแทนรูปด้วยไฟล์ที่บีบอัด
+    const fd = new FormData(cafeForm);
+    fd.delete('images[]');
+    compressed.forEach((it, idx) => {
+      const safeName = (files[idx].name.replace(/\.[^.]+$/, '') || 'image') + '-compressed.jpg';
+      fd.append('images[]', it.blob, safeName);
     });
 
-    // ปุ่ม "ใกล้ฉัน"
-    locateBtn?.addEventListener('click', () => {
-      if (!navigator.geolocation) { alert('อุปกรณ์ไม่รองรับการระบุตำแหน่ง'); return; }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          if (!mueangSurinBounds.contains([latitude, longitude])) {
-            alert('ตำแหน่งปัจจุบันอยู่นอกเขตอำเภอเมืองสุรินทร์');
-            map.setView(mueangSurinCenter, 13);
-            return;
-          }
-          applyPoint(latitude, longitude, true);
-        },
-        (err) => { console.error(err); alert('ไม่สามารถดึงตำแหน่งปัจจุบันได้'); },
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
-    });
+    // ส่งด้วย fetch (ใช้ POST เสมอ; ถ้าแก้ไข ฟิลด์ _method=PUT จะถูกแนบอยู่แล้ว)
+    const action = cafeForm.getAttribute('action');
 
-    // ค้นหาจากช่อง input ด้านบนแผนที่ (Enter เพื่อ geocode)
-    let pendingGeocode = null;
-    searchAddress?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const q = searchAddress.value?.trim();
-        if (!q) return;
-        if (pendingGeocode) clearTimeout(pendingGeocode);
-        pendingGeocode = setTimeout(() => {
-          geocoderControl.options.geocoder.geocode(q, (results) => {
-            if (!results || !results.length) { alert('ไม่พบสถานที่'); return; }
-            const { center } = results[0];
-            applyPoint(center.lat, center.lng, true);
-          });
-        }, 200);
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังบันทึก...';
+
+    try {
+      const res = await fetch(action, {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': csrf },
+        body: fd,
+        redirect: 'follow'
+      });
+
+      if (res.redirected) { window.location.href = res.url; return; }
+      if (res.ok) {
+        try {
+          const data = await res.json();
+          if (data?.redirect) { window.location.href = data.redirect; return; }
+        } catch {}
+        window.location.reload();
+      } else {
+        const text = await res.text();
+        console.error('Upload failed:', res.status, text);
+        alert('บันทึกไม่สำเร็จ กรุณาลองใหม่หรือเลือกรูปที่เล็กลง');
       }
-    });
+    } catch (err) {
+      console.error(err);
+      alert('มีข้อผิดพลาดระหว่างอัปโหลด');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fas fa-save me-1"></i> บันทึกข้อมูล';
+    }
+  });
 
-    // ปุ่มรีเซ็ต
-    document.getElementById('resetBtn').addEventListener('click', function() {
-      if (marker) { map.removeLayer(marker); marker = null; }
-      latInput.value = '';
-      lngInput.value = '';
-      displayOutOfBoundsWarning(false);
+  // ฟังก์ชันบีบอัดรูป
+  async function compressImage(file, {maxDim=1600, targetBytes=1.5*1024*1024} = {}) {
+    const bitmap = await readImageBitmap(file);
+    const {width, height} = fitContain(bitmap.width, bitmap.height, maxDim);
+    const canvas = document.createElement('canvas');
+    canvas.width = width; canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    let quality = 0.9;
+    let blob = await canvasToBlob(canvas, 'image/jpeg', quality);
+    const steps = [0.85,0.8,0.75,0.7,0.65,0.6];
+    for (const q of steps) {
+      if (blob.size <= targetBytes) break;
+      quality = q;
+      blob = await canvasToBlob(canvas, 'image/jpeg', quality);
+    }
+    return { blob };
+  }
+  function fitContain(w,h,max){ if(w<=max && h<=max) return {width:w,height:h}; const r=Math.min(max/w,max/h); return {width:Math.round(w*r), height:Math.round(h*r)}; }
+  function canvasToBlob(canvas, type, quality){ return new Promise(r => canvas.toBlob(b => r(b), type, quality)); }
+  async function readImageBitmap(file){
+    if ('createImageBitmap' in window) return await createImageBitmap(file);
+    const dataUrl = await fileToDataURL(file);
+    const img = new Image(); img.decoding='async'; img.src=dataUrl; await img.decode();
+    const c=document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight;
+    c.getContext('2d').drawImage(img,0,0);
+    return { width:c.width, height:c.height, drawImage:(ctx,...args)=>ctx.drawImage(img,...args) };
+  }
+  function fileToDataURL(file){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(file); }); }
+
+  // ========= แผนที่ =========
+  const latInput = document.getElementById('lat');
+  const lngInput = document.getElementById('lng');
+  const duplicateCoordsWarning = document.getElementById('duplicateCoordsWarning');
+  const outOfBoundsWarning = document.getElementById('outOfBoundsWarning');
+  const locateBtn = document.getElementById('locateBtn');
+
+  const mueangSurinBounds = L.latLngBounds([[14.75, 103.35], [15.00, 103.65]]);
+  const mueangSurinCenter = [14.885, 103.490];
+
+  const map = L.map('map', { scrollWheelZoom: true, tap: true }).setView(mueangSurinCenter, 12);
+  map.setMaxBounds(mueangSurinBounds);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  const geocoderControl = L.Control.geocoder({
+    geocoder: L.Control.Geocoder.nominatim(),
+    defaultMarkGeocode: false,
+    placeholder: 'ค้นหาสถานที่...',
+    errorMessage: 'ไม่พบสถานที่'
+  })
+  .on('markgeocode', function (e) {
+    const c = e.geocode.center;
+    applyPoint(c.lat, c.lng, true);
+  })
+  .addTo(map);
+
+  let marker;
+
+  if (latInput.value && lngInput.value) {
+    const lat = parseFloat(latInput.value);
+    const lng = parseFloat(lngInput.value);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      marker = L.marker([lat, lng]).addTo(map);
+      const inside = mueangSurinBounds.contains([lat, lng]);
+      map.setView([lat, lng], inside ? 15 : 12);
+      if (inside) checkCoordinates(lat, lng); else displayOutOfBoundsWarning(true);
+    }
+  }
+
+  map.on('click', (e) => {
+    const { lat, lng } = e.latlng;
+    applyPoint(lat, lng, true);
+  });
+
+  locateBtn?.addEventListener('click', () => {
+    if (!navigator.geolocation) { alert('อุปกรณ์ไม่รองรับการระบุตำแหน่ง'); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        if (!mueangSurinBounds.contains([latitude, longitude])) {
+          alert('ตำแหน่งปัจจุบันอยู่นอกเขตอำเภอเมืองสุรินทร์');
+          map.setView(mueangSurinCenter, 13);
+          return;
+        }
+        applyPoint(latitude, longitude, true);
+      },
+      (err) => { console.error(err); alert('ไม่สามารถดึงตำแหน่งปัจจุบันได้'); },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', function() {
+    if (marker) { map.removeLayer(marker); marker = null; }
+    latInput.value = '';
+    lngInput.value = '';
+    displayOutOfBoundsWarning(false);
+    duplicateCoordsWarning.classList.add('d-none');
+    submitBtn.disabled = false;
+    map.setView(mueangSurinCenter, 12);
+    setTimeout(() => map.invalidateSize(), 200);
+  });
+
+  latInput.addEventListener('input', handleManual);
+  lngInput.addEventListener('input', handleManual);
+  function handleManual() {
+    const lat = parseFloat(latInput.value);
+    const lng = parseFloat(lngInput.value);
+    if (isNaN(lat) || isNaN(lng)) { submitBtn.disabled = true; return; }
+    applyPoint(lat, lng, true);
+  }
+
+  function applyPoint(lat, lng, moveMap=false) {
+    const inside = mueangSurinBounds.contains([lat, lng]);
+    if (marker) marker.setLatLng([lat, lng]); else marker = L.marker([lat, lng]).addTo(map);
+    latInput.value = Number(lat).toFixed(6);
+    lngInput.value = Number(lng).toFixed(6);
+    displayOutOfBoundsWarning(!inside);
+    submitBtn.disabled = !inside;
+    if (inside) checkCoordinates(lat, lng);
+    if (moveMap) map.setView([lat, lng], inside ? 16 : 15);
+  }
+
+  function displayOutOfBoundsWarning(show) {
+    outOfBoundsWarning.classList.toggle('d-none', !show);
+  }
+
+  async function checkCoordinates(lat, lng) {
+    if (!lat || !lng) {
       duplicateCoordsWarning.classList.add('d-none');
       submitBtn.disabled = false;
-      map.setView(mueangSurinCenter, 12);
-      setTimeout(() => map.invalidateSize(), 200);
-    });
-
-    // พิมพ์พิกัดเอง
-    latInput.addEventListener('input', handleManual);
-    lngInput.addEventListener('input', handleManual);
-    function handleManual() {
-      const lat = parseFloat(latInput.value);
-      const lng = parseFloat(lngInput.value);
-      if (isNaN(lat) || isNaN(lng)) { submitBtn.disabled = true; return; }
-      applyPoint(lat, lng, true);
+      return;
     }
-
-    // ฟังก์ชันรวมการวางหมุด + อัปเดตฟอร์ม + ตรวจสอบขอบเขต/ซ้ำ
-    function applyPoint(lat, lng, moveMap=false) {
-      const inside = mueangSurinBounds.contains([lat, lng]);
-      if (marker) marker.setLatLng([lat, lng]); else marker = L.marker([lat, lng]).addTo(map);
-      latInput.value = Number(lat).toFixed(6);
-      lngInput.value = Number(lng).toFixed(6);
-      displayOutOfBoundsWarning(!inside);
-      submitBtn.disabled = !inside;
-      if (inside) checkCoordinates(lat, lng);
-      if (moveMap) map.setView([lat, lng], inside ? 16 : 15);
+    const cafeId = "{{ $cafe->id ?? 'null' }}";
+    try {
+      const response = await fetch("{{ route('admin.cafe.check_coordinates') }}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+        body: JSON.stringify({ lat, lng, cafe_id: cafeId })
+      });
+      const data = await response.json();
+      const isDuplicate = data.exists ?? data.is_duplicate ?? false;
+      duplicateCoordsWarning.classList.toggle('d-none', !isDuplicate);
+      submitBtn.disabled = isDuplicate || !mueangSurinBounds.contains([lat, lng]);
+    } catch (error) {
+      console.error('Error checking coordinates:', error);
+      submitBtn.disabled = false;
     }
+  }
 
-    // แสดง/ซ่อนคำเตือนเขต
-    function displayOutOfBoundsWarning(show) {
-      outOfBoundsWarning.classList.toggle('d-none', !show);
-    }
-
-    // ตรวจสอบพิกัดซ้ำในฐานข้อมูล
-    async function checkCoordinates(lat, lng) {
-      if (!lat || !lng) {
-        duplicateCoordsWarning.classList.add('d-none');
-        submitBtn.disabled = false;
-        return;
-      }
-      const cafeId = "{{ $cafe->id ?? 'null' }}";
-      try {
-        const response = await fetch("{{ route('admin.cafe.check_coordinates') }}", {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-          body: JSON.stringify({ lat, lng, cafe_id: cafeId })
-        });
-        const data = await response.json();
-        const isDuplicate = data.exists ?? data.is_duplicate ?? false;
-        duplicateCoordsWarning.classList.toggle('d-none', !isDuplicate);
-        submitBtn.disabled = isDuplicate || !mueangSurinBounds.contains([lat, lng]);
-      } catch (error) {
-        console.error('Error checking coordinates:', error);
-        submitBtn.disabled = false;
-      }
-    }
-
-    // ปรับขนาดแผนที่เมื่อโหลด/รีไซส์ (ช่วยบนมือถือ)
-    setTimeout(() => map.invalidateSize(), 300);
-    window.addEventListener('resize', () => map.invalidateSize());
-  });
+  setTimeout(() => map.invalidateSize(), 300);
+  window.addEventListener('resize', () => map.invalidateSize());
+});
 </script>
 </body>
 </html>
