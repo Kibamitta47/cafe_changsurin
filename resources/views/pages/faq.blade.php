@@ -176,7 +176,7 @@
         'name' => 'Craft Cafe Surin',
         'alias'=> 'craft-surin',
         'image'=> '/images/Top10_/craft-surin.png',
-        'url'  => url('/cafes/12'),
+        'url'  => url('/cafes/8'),
         'features' => ['wifi','cheap','parking'],
       ],
       'charoensuk' => [
