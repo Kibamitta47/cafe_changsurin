@@ -106,9 +106,6 @@ class PageController extends Controller
     {
         return view('pages.faq');
     }
-public function showWiFiPage()
-    {
-        return view('pages.wifi');
-    }
+
     
 }

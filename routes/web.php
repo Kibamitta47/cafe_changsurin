@@ -34,7 +34,6 @@ Route::get('/about-us', [PageController::class, 'showAboutPage'])->name('about.u
 Route::get('/top-10-cafes', [PageController::class, 'showTop10Page'])->name('cafes.top10');
 Route::get('/newly-cafes', [PageController::class, 'showNewlyCafesPage'])->name('cafes.newly');
 Route::get('/FAQ-cafes', [PageController::class, 'showFAQPage'])->name('cafes.faq');
-Route::get('/wifi-cafes', [PageController::class, 'showWiFiPage'])->name('cafes.wifi');
 
 
 
