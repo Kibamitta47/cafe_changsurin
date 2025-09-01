@@ -73,7 +73,7 @@
     $cafes = [
       'follow' => [
         'name' => 'Follow the Sun.Home Cafe’',
-        'image' => '/images/cafes/follow-sun.jpg',
+        'image' => '/images/cafes/\Top10_\follow-sun.jpg',
         'url'   => url('/cafes/1'),
         'features' => ['wifi','cheap','minimal'],
       ],
