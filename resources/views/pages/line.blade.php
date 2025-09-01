@@ -49,24 +49,18 @@
             <!-- แบ่งซ้ายขวา -->
             <div class="flex flex-col md:flex-row gap-10">
 
-                <!-- ซ้าย: สำหรับผู้ใช้มือถือ -->
-                <div class="flex-1">
-                    <h3 class="font-semibold text-slate-700 text-center mb-6 text-lg">สำหรับผู้ใช้สมาร์ทโฟน</h3>
-                    <a href="{{ $lineAddUrl ?? 'https://line.me/ti/p/@nongchangsurin' }}" target="_blank"
-                       class="flex w-full items-center justify-center gap-3 rounded-xl bg-[#06C755] px-6 py-3 text-white font-extrabold text-lg shadow-lg shadow-green-500/40 hover:bg-[#05a646] transition-all duration-300 transform hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-green-400">
-                        <i class="fa-brands fa-line fa-lg"></i>
-                        <span>แตะเพื่อเพิ่มเพื่อน</span>
-                    </a>
-                </div>
- <div class="fixed bottom-0 inset-x-0 sm:hidden bg-white/95 backdrop-blur border-t border-slate-200 p-3 z-40">
+                
+                <!-- แถบปุ่มติดขอบล่าง (แสดงเฉพาะบนมือถือ) -->
+  <div class="fixed bottom-0 inset-x-0 sm:hidden bg-white/95 backdrop-blur border-t border-slate-200 p-3 z-40">
     <div class="max-w-xl mx-auto px-2">
       <a href="https://lin.ee/pc4H6dbo" target="_blank" rel="noopener"
          class="flex w-full items-center justify-center gap-2 rounded-xl bg-[#06C755] px-4 py-3 text-white font-extrabold shadow-lg hover:bg-[#05a646] transition">
         <i class="fab fa-line text-lg"></i>
-        <span>แจ้งปัญหาผ่าน LINE</span>
+        <span>แตะเพื่อเพิ่มเพื่อน</span>
       </a>
     </div>
   </div>
+
                 <!-- ขวา: สำหรับผู้ใช้คอมพิวเตอร์ -->
                 <div class="flex-1 text-center">
                     <h3 class="font-semibold text-slate-700 mb-6 text-lg">สำหรับผู้ใช้คอมพิวเตอร์</h3>
