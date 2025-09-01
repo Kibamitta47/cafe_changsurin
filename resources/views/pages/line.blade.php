@@ -58,7 +58,15 @@
                         <span>แตะเพื่อเพิ่มเพื่อน</span>
                     </a>
                 </div>
-
+ <div class="fixed bottom-0 inset-x-0 sm:hidden bg-white/95 backdrop-blur border-t border-slate-200 p-3 z-40">
+    <div class="max-w-xl mx-auto px-2">
+      <a href="https://lin.ee/pc4H6dbo" target="_blank" rel="noopener"
+         class="flex w-full items-center justify-center gap-2 rounded-xl bg-[#06C755] px-4 py-3 text-white font-extrabold shadow-lg hover:bg-[#05a646] transition">
+        <i class="fab fa-line text-lg"></i>
+        <span>แจ้งปัญหาผ่าน LINE</span>
+      </a>
+    </div>
+  </div>
                 <!-- ขวา: สำหรับผู้ใช้คอมพิวเตอร์ -->
                 <div class="flex-1 text-center">
                     <h3 class="font-semibold text-slate-700 mb-6 text-lg">สำหรับผู้ใช้คอมพิวเตอร์</h3>
