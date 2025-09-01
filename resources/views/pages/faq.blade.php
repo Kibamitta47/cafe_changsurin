@@ -89,7 +89,7 @@
     $cafes = [
       'follow' => [
         'name' => 'Follow the Sun.Home Cafe’',
-        'image' => '/images/Top10_/follow-sun.jpg', // ✅ สำคัญ: โฟลเดอร์ Top10_ และนามสกุล .jpg
+        'image' => '/images/Top10_/follow-sun.cafe.png', // ✅ สำคัญ: โฟลเดอร์ Top10_ และนามสกุล .jpg
         'url'   => url('/cafes/1'),
         'features' => ['wifi','cheap','minimal'],
       ],
