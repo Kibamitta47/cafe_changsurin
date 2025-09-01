@@ -6,25 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ค้นหาคาเฟ่ตามคุณสมบัติ</title>
   <style>
-    :root{
-      --brand:#e63946; --text:#111827; --muted:#667085; --chip:#e0f2fe; --chip-br:#bae6fd;
-    }
+    :root{ --brand:#e63946; --text:#111827; --muted:#667085; --chip:#e0f2fe; --chip-br:#bae6fd; }
     *{box-sizing:border-box}
     body{margin:0; font-family:"Prompt",system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:linear-gradient(135deg,#fdfbfb,#ebedee); color:var(--text)}
     .wrap{width:min(1100px,94%); margin:28px auto 72px}
     h1.title{font:700 1.95rem/1.2 "Prompt",system-ui; text-align:center; margin:10px 0 6px; color:#444}
     h1.title span{color:var(--brand)}
     .update{color:var(--muted); text-align:center; margin:0 0 18px; font-size:.95rem}
-    /* ปุ่มทางลัด */
     .shortcuts{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:12px auto 26px}
     .shortcuts button{background:var(--brand); color:#fff; border:0; border-radius:999px; padding:10px 14px; font:700 .9rem/1 "Prompt"; cursor:pointer; box-shadow:0 6px 16px rgba(230,57,70,.28); transition:.18s}
     .shortcuts button:hover{filter:brightness(.95); transform:translateY(-1px)}
-    /* กล่องแต่ละหมวด */
     .section{background:#fff; border-radius:16px; box-shadow:0 10px 26px rgba(0,0,0,.08); padding:18px; margin:16px 0}
     .section h2{margin:0 0 6px; font:800 1.25rem/1.25 "Prompt"}
     .section h2 .tag{display:inline-block; margin-inline-start:6px; font:800 .75rem/1; letter-spacing:.3px; color:#fff; background:var(--brand); padding:6px 8px; border-radius:10px}
     .section p.desc{margin:0 0 14px; color:var(--muted)}
-    /* การ์ดคาเฟ่ */
     .grid{display:grid; gap:14px; grid-template-columns: repeat(auto-fill, minmax(240px,1fr))}
     .card{background:#fff; border:1px solid #eef2f7; border-radius:14px; overflow:hidden; display:flex; flex-direction:column; transition:.18s}
     .card:hover{transform:translateY(-3px); box-shadow:0 12px 28px rgba(0,0,0,.10)}
@@ -39,8 +34,8 @@
     .btn{display:inline-block; text-decoration:none; background:#111827; color:#fff; padding:9px 12px; border-radius:10px; font:800 .85rem/1; transition:.15s}
     .btn:hover{background:#000}
     .btn.disabled{background:#cbd5e1; pointer-events:none}
-    /* ว่างเปล่า */
     .empty{border:2px dashed #e2e8f0; background:#f8fafc; color:#64748b; border-radius:14px; padding:18px; text-align:center; font-weight:700}
+    .debug{font: 500 .85rem/1.5 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; background:#0b1020; color:#92f5d9; padding:14px; border-radius:10px; white-space:pre-wrap; overflow:auto; margin:16px 0}
     @media (max-width:520px){
       h1.title{font-size:1.6rem}
       .shortcuts{gap:8px}
@@ -53,7 +48,6 @@
   <h1 class="title">✨ ค้นหา <span>คาเฟ่ตามคุณสมบัติ</span></h1>
   <p class="update">อัปเดตล่าสุด: {{ now()->format('d/m/Y H:i') }} น.</p>
 
-  {{-- ปุ่มทางลัด --}}
   <div class="shortcuts">
     <button onclick="jumpTo('wifi')">💻 Wi-Fi</button>
     <button onclick="jumpTo('meeting')">🏢 ห้องประชุม</button>
@@ -65,24 +59,37 @@
 
   @php
     /**
-     * ฟังก์ชันช่วย: คืน URL รูปจาก public/ ถ้าไฟล์ไม่เจอจะคืน placeholder
+     * คืน URL ที่ตรงกับ scheme ปัจจุบัน (กันปัญหา http/https ไม่ตรงจนโดนบล็อก)
      */
-    function safe_public_image($relative){
+    function scheme_asset($relative){
       $rel = ltrim($relative, '/');
-      $path = public_path($rel);
-      return file_exists($path) ? asset($relative) : asset('/images/placeholder-cafe.jpg');
+      return request()->isSecure() ? secure_asset($rel) : asset($rel);
     }
 
     /**
-     * ฐานข้อมูลคาเฟ่ (แก้ไขที่นี่ที่เดียว)
-     * - image: ใส่พาธภายใต้ public/ เช่น /images/Top10_/follow-sun.jpg
-     * - url:   ใส่ url('/cafes/{id}') เมื่อทราบ id จริง
-     * - features: wifi|meeting|cheap|parking|minimal (ใช้สร้างชิป)
+     * คืน URL ของรูปจาก public/ ถ้าไม่มีจะลอง placeholder ถ้ายังไม่มีอีกจะปล่อย SVG data URL
+     */
+    function safe_public_image($relative){
+      $rel = ltrim($relative, '/');
+      $file = public_path($rel);
+      if (file_exists($file)) return scheme_asset($rel);
+
+      $placeholderRel  = 'images/placeholder-cafe.jpg';
+      $placeholderFile = public_path($placeholderRel);
+      if (file_exists($placeholderFile)) return scheme_asset($placeholderRel);
+
+      $svg = rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500"><rect fill="#f1f5f9" width="100%" height="100%"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#94a3b8" font-size="24" font-family="Arial, sans-serif">No Image</text></svg>');
+      return "data:image/svg+xml;charset=UTF-8,".$svg;
+    }
+
+    /**
+     * ข้อมูลคาเฟ่ (แก้ที่นี่ที่เดียว)
+     * NOTE: ใส่พาธใต้ public/ เท่านั้น เช่น /images/Top10_/follow-sun.jpg
      */
     $cafes = [
       'follow' => [
         'name' => 'Follow the Sun.Home Cafe’',
-        'image' => '/images/Top10_/follow-sun.jpg',   // ✅ แก้พาธถูกต้อง ใช้ forward slash
+        'image' => '/images/Top10_/follow-sun.jpg', // ✅ สำคัญ: โฟลเดอร์ Top10_ และนามสกุล .jpg
         'url'   => url('/cafes/1'),
         'features' => ['wifi','cheap','minimal'],
       ],
@@ -148,27 +155,40 @@
       ],
     ];
 
-    // หมวดจากข้อมูลที่ให้มา
     $categories = [
       'wifi'    => ['title' => '💻 Wi-Fi', 'desc' => 'คาเฟ่ต่อเน็ตฟรี ทำงาน/เรียนออนไลน์ลื่นไหล', 'keys' => ['follow','little-elephant','dammachat','journey','craft']],
       'meeting' => ['title' => '🏢 ห้องประชุม', 'desc' => 'มีห้องประชุม/โซนเงียบ เหมาะนัดคุยงาน', 'keys' => ['little-elephant','bscups']],
       'cheap'   => ['title' => '💰 ราคาย่อมเยา', 'desc' => 'เมนูเข้าถึงง่าย ราคาสบายกระเป๋า', 'keys' => ['follow','craft','charoensuk','life','healing']],
-      'kids'    => ['title' => '🧸 โซนเด็กเล่น', 'desc' => 'มุมสำหรับเด็ก ๆ เล่นเพลิน ผู้ปกครองนั่งชิล', 'keys' => []], // ยังไม่มี
+      'kids'    => ['title' => '🧸 โซนเด็กเล่น', 'desc' => 'มุมสำหรับเด็ก ๆ เล่นเพลิน ผู้ปกครองนั่งชิล', 'keys' => []],
       'parking' => ['title' => '🚗 ที่จอดรถ', 'desc' => 'มีที่จอดรถยนต์/มอเตอร์ไซค์สะดวก', 'keys' => ['little-elephant','journey','craft','charoensuk','life']],
       'minimal' => ['title' => '🎨 มินิมอล', 'desc' => 'โทนมินิมอล สว่างคลีน ถ่ายรูปสวย', 'keys' => ['follow','dammachat','healing','kind','parich']],
     ];
 
-    // ยูทิลสร้างชิปจาก features
     function featureChips($features){
-      $map = [
-        'wifi'=>'Wi-Fi ฟรี', 'meeting'=>'ห้องประชุม', 'cheap'=>'ราคาย่อมเยา',
-        'parking'=>'ที่จอดรถ', 'minimal'=>'มินิมอล'
-      ];
+      $map = ['wifi'=>'Wi-Fi ฟรี', 'meeting'=>'ห้องประชุม', 'cheap'=>'ราคาย่อมเยา', 'parking'=>'ที่จอดรถ', 'minimal'=>'มินิมอล'];
       return array_values(array_intersect_key($map, array_flip($features)));
+    }
+
+    // --- DEBUG PANEL: เปิดด้วย ?debug=1 ---
+    $debugOutput = null;
+    if (request()->boolean('debug')) {
+      $lines = [];
+      foreach ($cafes as $k=>$c){
+        $rel = ltrim($c['image'],'/');
+        $path = public_path($rel);
+        $exists = file_exists($path) ? '✅ exists' : '❌ missing';
+        $lines[] = sprintf("%s\n  rel: /%s\n  path: %s\n  %s\n", $c['name'], $rel, $path, $exists);
+      }
+      $debugOutput = implode("\n", $lines);
     }
   @endphp
 
-  {{-- เรนเดอร์ทุกหมวด --}}
+  {{-- DEBUG PANEL --}}
+  @if ($debugOutput)
+    <div class="debug">{{ $debugOutput }}</div>
+  @endif
+
+  {{-- RENDER --}}
   @foreach ($categories as $slug => $cat)
     <section id="{{ $slug }}" class="section">
       <h2>{{ $cat['title'] }} <span class="tag">{{ count($cat['keys']) ?: '0' }} แห่ง</span></h2>
@@ -183,12 +203,7 @@
             @if ($c)
               <article class="card">
                 <div class="media">
-                  <img
-                    src="{{ safe_public_image($c['image']) }}"
-                    alt="รูปภาพ {{ $c['name'] }}"
-                    loading="lazy"
-                  />
-                  {{-- แสดงแบดจ์คุณสมบัติตัวหลักของหมวด --}}
+                  <img src="{{ safe_public_image($c['image']) }}" alt="รูปภาพ {{ $c['name'] }}" loading="lazy" />
                   <span class="badge">
                     @switch($slug)
                       @case('wifi')     📶 Wi-Fi @break
