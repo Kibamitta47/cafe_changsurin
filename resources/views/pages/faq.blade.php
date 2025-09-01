@@ -211,7 +211,7 @@
         'name' => 'Parich พาริช คาเฟ่สุรินทร์',
         'alias'=> 'parich',
         'image'=> '/images/Top10_/parich.png',
-        'url'  => url('/cafes/16'),
+        'url'  => url('/cafes/18'),
         'features' => ['minimal'],
       ],
       'bscups' => [
