@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{{ isset($cafe) ? 'แก้ไขข้อมูลคาเฟ่' : 'เพิ่มข้อมูลคาเฟ่ใหม่' }}</title>
 
+  <meta name="csrf-token" content="{{ csrf_token() }}" />
+
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
@@ -79,9 +81,9 @@
             </div>
 
             <div class="mb-3">
-              <label for="images" class="form-label">รูปภาพคาเฟ่ <span class="text-muted">(สูงสุด 5 รูป)</span></label>
+              <label for="images" class="form-label">รูปภาพคาเฟ่ <span class="text-muted">(สูงสุด 5 รูป • 5MB/รูป • รวม 20MB)</span></label>
               <input type="file" class="form-control @error('images.*') is-invalid @enderror" id="images" name="images[]" accept="image/*" multiple>
-              <div class="form-text">รองรับ JPG/PNG เลือกได้หลายรูป</div>
+              <div class="form-text">ระบบจะย่อ & บีบอัดรูปให้อัตโนมัติก่อนอัปโหลด</div>
               @error('images.*')<div class="invalid-feedback">{{ $message }}</div>@enderror
 
               @if(isset($cafe) && is_array($cafe->images) && count($cafe->images))
@@ -354,24 +356,180 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  // ========== รูปภาพ ==========
+  // ---------- ค่าควบคุมการอัปโหลด ----------
+  const MAX_FILES = 5;
+  const MAX_PER_FILE = 5 * 1024 * 1024;       // 5MB/ไฟล์ (ตรวจของเดิม)
+  const TARGET_PER_FILE = 1.5 * 1024 * 1024;  // บีบอัดให้เล็กกว่าประมาณนี้
+  const MAX_TOTAL = 20 * 1024 * 1024;         // รวมทั้งหมด ≤ 20MB หลังบีบอัด
+  const MAX_DIM = 1600;                        // ย่อลงให้ด้านยาวสุดไม่เกิน 1600px
+
   const imageInput = document.getElementById('images');
   const cafeForm = document.getElementById('cafeForm');
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+  // ------------ ตรวจจำนวนไฟล์ทันทีที่เลือก ------------
   imageInput?.addEventListener('change', () => {
-    if (imageInput.files.length > 5) {
+    if (imageInput.files.length > MAX_FILES) {
       alert('เลือกได้สูงสุด 5 รูปภาพเท่านั้น');
       imageInput.value = '';
+      return;
+    }
+    for (const f of imageInput.files) {
+      if (f.size > 50 * 1024 * 1024) { // กันเผื่อรูปใหญ่มากผิดปกติ
+        alert(`ไฟล์ ${f.name} ใหญ่เกิน 50MB ไม่รองรับ`);
+        imageInput.value = '';
+        return;
+      }
     }
   });
-  cafeForm.addEventListener('submit', function(e) {
-    if (imageInput && imageInput.files.length > 5) {
-      e.preventDefault(); alert('กรุณาอัปโหลดรูปภาพไม่เกิน 5 รูป'); return;
-    }
+
+  // ------------- ดัก submit เพื่อบีบอัดรูป + ส่งด้วย fetch -------------
+  cafeForm.addEventListener('submit', async function(e) {
+    // เงื่อนไขอื่น
     if (!duplicateCoordsWarning.classList.contains('d-none') ||
         !outOfBoundsWarning.classList.contains('d-none')) {
       e.preventDefault(); alert('โปรดแก้ไขพิกัดก่อนบันทึก'); return;
     }
+
+    // ถ้าไม่มีไฟล์ ก็ปล่อยให้ submit ปกติ
+    if (!imageInput || imageInput.files.length === 0) return;
+
+    e.preventDefault();
+
+    // 1) ตรวจจำนวนไฟล์
+    if (imageInput.files.length > MAX_FILES) {
+      alert('กรุณาอัปโหลดรูปภาพไม่เกิน 5 รูป');
+      return;
+    }
+
+    // 2) บีบอัดไฟล์ทั้งหมด
+    const files = Array.from(imageInput.files);
+    const compressed = [];
+    let totalAfter = 0;
+
+    for (const file of files) {
+      // ถ้าไฟล์เดิมไม่ใหญ่มาก จะบีบให้สั้น (เพื่อให้แน่ใจหลุด 413)
+      const out = await compressImage(file, {maxDim: MAX_DIM, targetBytes: TARGET_PER_FILE});
+      compressed.push(out);
+      totalAfter += out.blob.size;
+
+      if (out.blob.size > MAX_PER_FILE) {
+        alert(`ไฟล์ ${file.name} หลังบีบอัดยังเกิน 5MB กรุณาเลือกไฟล์ที่เล็กกว่านี้`);
+        return;
+      }
+    }
+
+    if (totalAfter > MAX_TOTAL) {
+      alert('ขนาดไฟล์รวมหลังบีบอัดเกิน 20MB กรุณาลดจำนวน/ขนาดรูป');
+      return;
+    }
+
+    // 3) เตรียม FormData: ลบทุกรายการชื่อ images[] เดิม แล้วใส่ไฟล์ที่บีบอัดแทน
+    const fd = new FormData(cafeForm);
+    fd.delete('images[]');
+    compressed.forEach((it, idx) => {
+      const safeName = (files[idx].name.replace(/\.[^.]+$/, '') || 'image') + '-compressed.jpg';
+      fd.append('images[]', it.blob, safeName);
+    });
+
+    // 4) ส่งด้วย fetch (method เป็น POST เสมอ, PUT ใช้ _method)
+    const action = cafeForm.getAttribute('action');
+    const method = (cafeForm.getAttribute('method') || 'POST').toUpperCase(); // จะเป็น POST อยู่แล้ว
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังบันทึก...';
+
+    try {
+      const res = await fetch(action, {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': csrf },
+        body: fd,
+        redirect: 'follow'
+      });
+      // ถ้าสำเร็จ Laravel มัก redirect -> ให้ตามไป
+      if (res.redirected) {
+        window.location.href = res.url;
+        return;
+      }
+      if (res.ok) {
+        // อาจเป็น JSON หรือ HTML; พยายามกลับไป dashboard
+        try {
+          const data = await res.json();
+          if (data?.redirect) { window.location.href = data.redirect; return; }
+        } catch {}
+        window.location.reload();
+      } else {
+        const text = await res.text();
+        console.error('Upload failed:', res.status, text);
+        alert('บันทึกไม่สำเร็จ กรุณาลองใหม่หรือเลือกรูปที่เล็กลง');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('มีข้อผิดพลาดระหว่างอัปโหลด');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>บันทึกข้อมูล';
+    }
   });
+
+  // ---------- ฟังก์ชันบีบอัดรูป ----------
+  async function compressImage(file, {maxDim=1600, targetBytes=1.5*1024*1024} = {}) {
+    const bitmap = await readImageBitmap(file);
+    const {width, height} = fitContain(bitmap.width, bitmap.height, maxDim);
+
+    // วาดลง canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = width; canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0, width, height);
+
+    // ลองลดคุณภาพหลายสเต็ปจนได้ขนาดที่ต้องการ
+    let quality = 0.9;
+    let blob = await canvasToBlob(canvas, 'image/jpeg', quality);
+    const steps = [0.85, 0.8, 0.75, 0.7, 0.65, 0.6];
+    for (const q of steps) {
+      if (blob.size <= targetBytes) break;
+      quality = q;
+      blob = await canvasToBlob(canvas, 'image/jpeg', quality);
+    }
+    return { blob };
+  }
+
+  function fitContain(w, h, max) {
+    if (w <= max && h <= max) return {width:w, height:h};
+    const r = Math.min(max / w, max / h);
+    return {width: Math.round(w*r), height: Math.round(h*r)};
+  }
+
+  function canvasToBlob(canvas, type, quality){
+    return new Promise(resolve => canvas.toBlob(b => resolve(b), type, quality));
+  }
+
+  async function readImageBitmap(file){
+    if ('createImageBitmap' in window) {
+      return await createImageBitmap(file);
+    }
+    // fallback
+    const dataUrl = await fileToDataURL(file);
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = dataUrl;
+    await img.decode();
+    // วาดใส่ canvas เพื่อได้ ImageBitmap-like
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth; c.height = img.naturalHeight;
+    c.getContext('2d').drawImage(img, 0, 0);
+    return { width: c.width, height: c.height, drawImage: (ctx, ...args)=>ctx.drawImage(img, ...args) };
+  }
+
+  function fileToDataURL(file){
+    return new Promise((resolve,reject)=>{
+      const fr = new FileReader();
+      fr.onload = ()=> resolve(fr.result);
+      fr.onerror = reject;
+      fr.readAsDataURL(file);
+    });
+  }
 
   // ========== แผนที่ ==========
   const latInput = document.getElementById('lat');
@@ -391,7 +549,6 @@ document.addEventListener('DOMContentLoaded', function () {
     maxZoom:19,attribution:'© OpenStreetMap contributors'
   }).addTo(map);
 
-  // === ค้นหาสถานที่บนแผนที่ (Geocoder) ===
   const geocoder = L.Control.geocoder({
     geocoder: L.Control.Geocoder.nominatim(),
     defaultMarkGeocode: false,
@@ -406,7 +563,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
   let marker;
 
-  // ปักหมุดเริ่มต้นหากมีค่า
   if (latInput.value && lngInput.value) {
     const lat = parseFloat(latInput.value), lng = parseFloat(lngInput.value);
     if (!isNaN(lat) && !isNaN(lng)) {
@@ -416,10 +572,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  // คลิกเลือกพิกัด
   map.on('click', (e)=> applyPoint(e.latlng.lat, e.latlng.lng, true));
 
-  // ปุ่มใกล้ฉัน (ระบุตำแหน่ง)
   locateBtn.addEventListener('click', ()=>{
     if (!navigator.geolocation){ alert('อุปกรณ์ไม่รองรับการระบุตำแหน่ง'); return; }
     navigator.geolocation.getCurrentPosition(
@@ -437,7 +591,6 @@ document.addEventListener('DOMContentLoaded', function () {
     );
   });
 
-  // รีเซ็ตพิกัด
   document.getElementById('resetBtn').addEventListener('click', function() {
     if (marker){ map.removeLayer(marker); marker=null; }
     latInput.value=''; lngInput.value='';
@@ -447,7 +600,6 @@ document.addEventListener('DOMContentLoaded', function () {
     map.setView(center,12);
   });
 
-  // พิมพ์ lat/lng เอง
   latInput.addEventListener('input', handleManual);
   lngInput.addEventListener('input', handleManual);
 
@@ -494,11 +646,10 @@ document.addEventListener('DOMContentLoaded', function () {
       submitBtn.disabled = isDup || !bounds.contains([lat,lng]);
     }catch(err){
       console.error('check_coordinates error:', err);
-      submitBtn.disabled=false; // อนุญาตให้ส่งชั่วคราวหากตรวจสอบล้มเหลว
+      submitBtn.disabled=false;
     }
   }
 
-  // ปรับขนาดแผนที่ให้พอดีเมื่อโหลด/เปลี่ยนขนาดจอ
   setTimeout(()=> map.invalidateSize(), 300);
   window.addEventListener('resize', ()=> map.invalidateSize());
 });
