@@ -58,103 +58,173 @@
   </div>
 
   @php
-    /**
-     * คืน URL ที่ตรงกับ scheme ปัจจุบัน (กันปัญหา http/https ไม่ตรงจนโดนบล็อก)
-     */
-    function scheme_asset($relative){
+    use Illuminate\Support\Str;
+
+    // สร้าง URL ให้ตรงกับ http/https ปัจจุบัน
+    $scheme_asset = function(string $relative){
       $rel = ltrim($relative, '/');
       return request()->isSecure() ? secure_asset($rel) : asset($rel);
-    }
+    };
 
-    /**
-     * คืน URL ของรูปจาก public/ ถ้าไม่มีจะลอง placeholder ถ้ายังไม่มีอีกจะปล่อย SVG data URL
-     */
-    function safe_public_image($relative){
-      $rel = ltrim($relative, '/');
-      $file = public_path($rel);
-      if (file_exists($file)) return scheme_asset($rel);
+    // ตัวแก้ปัญหารูป: หาไฟล์ตามลำดับความน่าจะเป็น (หลายโฟลเดอร์ หลายนามสกุล หลายชื่อ)
+    $IMG_DIRS = ['images/Top10_', 'images/cafes', 'images'];
+    $IMG_EXTS = ['png','jpg','jpeg','webp','gif'];
 
-      $placeholderRel  = 'images/placeholder-cafe.jpg';
-      $placeholderFile = public_path($placeholderRel);
-      if (file_exists($placeholderFile)) return scheme_asset($placeholderRel);
+    $resolve_image = function(string $preferred, string $name, string $alias) use ($scheme_asset, $IMG_DIRS, $IMG_EXTS){
+      $candidates = [];
+      $preferred = ltrim($preferred, '/');
+      if ($preferred !== '') {
+        $candidates[] = $preferred;
+        // ลองนามสกุลอื่นด้วย ถ้าตัดนามสกุลเดิมได้
+        if (preg_match('/\.[A-Za-z0-9]+$/', $preferred)) {
+          $base = preg_replace('/\.[A-Za-z0-9]+$/', '', $preferred);
+          foreach ($IMG_EXTS as $ext) $candidates[] = $base.'.'.$ext;
+        }
+      }
 
+      // slug จาก alias และชื่อร้าน
+      $slugs = array_values(array_unique(array_filter([
+        trim($alias),
+        Str::slug($name, '-')
+      ])));
+
+      foreach ($slugs as $slug) {
+        foreach ($IMG_DIRS as $dir) {
+          foreach ($IMG_EXTS as $ext) {
+            $candidates[] = rtrim($dir,'/').'/'.$slug.'.'.$ext;
+          }
+        }
+      }
+
+      // ตรวจตัวเลือกทั้งหมด
+      $seen = [];
+      foreach ($candidates as $rel) {
+        if (isset($seen[$rel])) continue; $seen[$rel]=1;
+        $abs = public_path($rel);
+        if (file_exists($abs)) return $scheme_asset($rel);
+      }
+
+      // glob แบบหลวม: หาไฟล์ในไดเรกทอรีด้วยคีย์เวิร์ดจากชื่อ
+      $keywords = array_values(array_unique(array_filter([
+        $alias,
+        ...array_map(fn($w)=>Str::slug($w,'-'), preg_split('/\s+/', preg_replace('/[^\p{L}\p{N}\s-]+/u',' ', $name)))
+      ])));
+      $keywords = array_slice($keywords, 0, 4); // จำกัด
+
+      foreach ($IMG_DIRS as $dir) {
+        $absDir = public_path($dir);
+        if (!is_dir($absDir)) continue;
+        $files = @scandir($absDir) ?: [];
+        foreach ($files as $fn) {
+          if ($fn === '.' || $fn === '..') continue;
+          $lower = mb_strtolower($fn);
+          foreach ($keywords as $kw) {
+            if ($kw && (str_contains($lower, mb_strtolower($kw)))) {
+              foreach ($IMG_EXTS as $ext) {
+                if (preg_match('/\.'.preg_quote($ext,'/').'$/i', $fn)) {
+                  return $scheme_asset(rtrim($dir,'/').'/'.$fn);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // ใช้ placeholder ถ้ามี
+      $placeholderRel = 'images/placeholder-cafe.jpg';
+      if (file_exists(public_path($placeholderRel))) return $scheme_asset($placeholderRel);
+
+      // สุดท้าย SVG data URL (ไม่มีวัน 404)
       $svg = rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500"><rect fill="#f1f5f9" width="100%" height="100%"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#94a3b8" font-size="24" font-family="Arial, sans-serif">No Image</text></svg>');
       return "data:image/svg+xml;charset=UTF-8,".$svg;
-    }
+    };
 
     /**
-     * ข้อมูลคาเฟ่ (แก้ที่นี่ที่เดียว)
-     * NOTE: ใส่พาธใต้ public/ เท่านั้น เช่น /images/Top10_/follow-sun.jpg
+     * ข้อมูลคาเฟ่
+     * - image: ใส่ "ภาพที่อยากให้ใช้ก่อน" ได้ (ถ้าไม่เจอ โค้ดจะลองหาให้เอง)
+     * - alias: คีย์สั้น ๆ ช่วยจับคู่ชื่อไฟล์ เช่น little-elephant, dammachat
      */
     $cafes = [
       'follow' => [
         'name' => 'Follow the Sun.Home Cafe’',
-        'image' => '/images/Top10_/follow-sun.cafe.png', // ✅ สำคัญ: โฟลเดอร์ Top10_ และนามสกุล .jpg
-        'url'   => url('/cafes/1'),
+        'alias'=> 'follow-sun',
+        'image'=> '/images/Top10_/follow-sun.cafe.png', // อันนี้ขึ้นแล้วตามที่แจ้ง
+        'url'  => url('/cafes/1'),
         'features' => ['wifi','cheap','minimal'],
       ],
       'little-elephant' => [
         'name' => 'Little Elephant Patisserie & Special Coffee Bar',
-        'image' => '/images/Top10_/little-elephant.png',
-        'url'   => url('/cafes/2'),
+        'alias'=> 'little-elephant',
+        'image'=> '/images/Top10_/little-elephant.png', // ถ้าไฟล์นี้ไม่มี โค้ดจะค้นหาในหลายรูปแบบให้
+        'url'  => url('/cafes/2'),
         'features' => ['wifi','meeting','parking'],
       ],
       'dammachat' => [
         'name' => 'ดัมมะชาติ Eatery & Coffee by Jaokao Vol.3',
-        'image' => '/images/Top10_/dammachat.png',
-        'url'   => url('/cafes/4'),
+        'alias'=> 'dammachat',
+        'image'=> '/images/Top10_/dammachat.png',
+        'url'  => url('/cafes/4'),
         'features' => ['wifi','minimal'],
       ],
       'journey' => [
         'name' => 'Journe’y Roastery & Special Coffee',
-        'image' => '/images/Top10_/journey.png',
-        'url'   => url('/cafes/5'),
+        'alias'=> 'journey',
+        'image'=> '/images/Top10_/journey.png',
+        'url'  => url('/cafes/5'),
         'features' => ['wifi','parking'],
       ],
       'craft' => [
         'name' => 'Craft Cafe Surin',
-        'image' => '/images/Top10_/craft-surin.png',
-        'url'   => url('/cafes/12'),
+        'alias'=> 'craft-surin',
+        'image'=> '/images/Top10_/craft-surin.png',
+        'url'  => url('/cafes/12'),
         'features' => ['wifi','cheap','parking'],
       ],
       'charoensuk' => [
         'name' => 'CHAROENSUK Café เจริญสุข คาเฟ่',
-        'image' => '/images/Top10_/charoensuk.png',
-        'url'   => url('/cafes/9'),
+        'alias'=> 'charoensuk',
+        'image'=> '/images/Top10_/charoensuk.png',
+        'url'  => url('/cafes/9'),
         'features' => ['cheap','parking'],
       ],
       'life' => [
         'name' => 'Life Coffee at Home',
-        'image' => '/images/Top10_/life.png',
-        'url'   => url('/cafes/11'),
+        'alias'=> 'life',
+        'image'=> '/images/Top10_/life.png',
+        'url'  => url('/cafes/11'),
         'features' => ['cheap','parking'],
       ],
       'healing' => [
         'name' => 'Healing Cafe',
-        'image' => '/images/Top10_/healing.png',
-        'url'   => url('/cafes/14'),
+        'alias'=> 'healing',
+        'image'=> '/images/Top10_/healing.png',
+        'url'  => url('/cafes/14'),
         'features' => ['minimal','cheap'],
       ],
       'kind' => [
         'name' => 'Kind Cafe',
-        'image' => '/images/Top10_/kind.png',
-        'url'   => url('/cafes/15'),
+        'alias'=> 'kind',
+        'image'=> '/images/Top10_/kind.png',
+        'url'  => url('/cafes/15'),
         'features' => ['minimal'],
       ],
       'parich' => [
         'name' => 'Parich พาริช คาเฟ่สุรินทร์',
-        'image' => '/images/Top10_/parich.png',
-        'url'   => url('/cafes/16'),
+        'alias'=> 'parich',
+        'image'=> '/images/Top10_/parich.png',
+        'url'  => url('/cafes/16'),
         'features' => ['minimal'],
       ],
       'bscups' => [
         'name' => 'B’s cups coffee',
-        'image' => '/images/Top10_/bscups.png',
-        'url'   => url('/cafes/18'),
+        'alias'=> 'bscups',
+        'image'=> '/images/Top10_/bscups.png',
+        'url'  => url('/cafes/18'),
         'features' => ['meeting'],
       ],
     ];
 
+    // หมวด
     $categories = [
       'wifi'    => ['title' => '💻 Wi-Fi', 'desc' => 'คาเฟ่ต่อเน็ตฟรี ทำงาน/เรียนออนไลน์ลื่นไหล', 'keys' => ['follow','little-elephant','dammachat','journey','craft']],
       'meeting' => ['title' => '🏢 ห้องประชุม', 'desc' => 'มีห้องประชุม/โซนเงียบ เหมาะนัดคุยงาน', 'keys' => ['little-elephant','bscups']],
@@ -164,26 +234,21 @@
       'minimal' => ['title' => '🎨 มินิมอล', 'desc' => 'โทนมินิมอล สว่างคลีน ถ่ายรูปสวย', 'keys' => ['follow','dammachat','healing','kind','parich']],
     ];
 
-    function featureChips($features){
-      $map = ['wifi'=>'Wi-Fi ฟรี', 'meeting'=>'ห้องประชุม', 'cheap'=>'ราคาย่อมเยา', 'parking'=>'ที่จอดรถ', 'minimal'=>'มินิมอล'];
-      return array_values(array_intersect_key($map, array_flip($features)));
-    }
-
-    // --- DEBUG PANEL: เปิดด้วย ?debug=1 ---
+    // แผง DEBUG: ?debug=1
     $debugOutput = null;
     if (request()->boolean('debug')) {
       $lines = [];
-      foreach ($cafes as $k=>$c){
-        $rel = ltrim($c['image'],'/');
-        $path = public_path($rel);
-        $exists = file_exists($path) ? '✅ exists' : '❌ missing';
-        $lines[] = sprintf("%s\n  rel: /%s\n  path: %s\n  %s\n", $c['name'], $rel, $path, $exists);
+      foreach ($cafes as $key => $c){
+        $src = $resolve_image($c['image'] ?? '', $c['name'] ?? '', $c['alias'] ?? $key);
+        $rel = ltrim($c['image'] ?? '', '/');
+        $abs = $rel ? public_path($rel) : '(none)';
+        $exists = $rel && file_exists($abs) ? '✅ preferred exists' : '❌ preferred missing';
+        $lines[] = "{$c['name']}\n  preferred: /{$rel}\n  path: {$abs}\n  {$exists}\n  RESOLVED → {$src}\n";
       }
       $debugOutput = implode("\n", $lines);
     }
   @endphp
 
-  {{-- DEBUG PANEL --}}
   @if ($debugOutput)
     <div class="debug">{{ $debugOutput }}</div>
   @endif
@@ -201,9 +266,10 @@
           @foreach ($cat['keys'] as $key)
             @php $c = $cafes[$key] ?? null; @endphp
             @if ($c)
+              @php $imgSrc = $resolve_image($c['image'] ?? '', $c['name'] ?? '', $c['alias'] ?? $key); @endphp
               <article class="card">
                 <div class="media">
-                  <img src="{{ safe_public_image($c['image']) }}" alt="รูปภาพ {{ $c['name'] }}" loading="lazy" />
+                  <img src="{{ $imgSrc }}" alt="รูปภาพ {{ $c['name'] }}" loading="lazy" />
                   <span class="badge">
                     @switch($slug)
                       @case('wifi')     📶 Wi-Fi @break
@@ -218,8 +284,11 @@
                 <div class="body">
                   <h3 class="name">{{ $c['name'] }}</h3>
                   <div class="chips">
-                    @foreach (featureChips($c['features']) as $chip)
-                      <span class="chip">{{ $chip }}</span>
+                    @php
+                      $map = ['wifi'=>'Wi-Fi ฟรี','meeting'=>'ห้องประชุม','cheap'=>'ราคาย่อมเยา','parking'=>'ที่จอดรถ','minimal'=>'มินิมอล'];
+                    @endphp
+                    @foreach (($c['features'] ?? []) as $f)
+                      @if (isset($map[$f])) <span class="chip">{{ $map[$f] }}</span> @endif
                     @endforeach
                   </div>
                   <div class="actions">
