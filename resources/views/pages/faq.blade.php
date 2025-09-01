@@ -197,7 +197,7 @@
         'name' => 'Healing Cafe',
         'alias'=> 'healing',
         'image'=> '/images/Top10_/healing.png',
-        'url'  => url('/cafes/14'),
+        'url'  => url('/cafes/11'),
         'features' => ['minimal','cheap'],
       ],
       'kind' => [
