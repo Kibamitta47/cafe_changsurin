@@ -190,7 +190,7 @@
         'name' => 'Life Coffee at Home',
         'alias'=> 'life',
         'image'=> '/images/Top10_/life.png',
-        'url'  => url('/cafes/11'),
+        'url'  => url('/cafes/10'),
         'features' => ['cheap','parking'],
       ],
       'healing' => [
