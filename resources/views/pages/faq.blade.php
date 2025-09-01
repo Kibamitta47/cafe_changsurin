@@ -65,15 +65,24 @@
 
   @php
     /**
-     * ศูนย์รวมข้อมูลคาเฟ่ (แก้ที่นี่ที่เดียว)
-     * - image: รูปหน้าปก (ใส่รูปจริงได้) 
-     * - url: ลิงก์รายละเอียด (ใส่ url('/cafes/{id}') เมื่อทราบ id)
-     * - features: แท็กช่วยแสดง (เช่น wifi, meeting, cheap, parking, minimal)
+     * ฟังก์ชันช่วย: คืน URL รูปจาก public/ ถ้าไฟล์ไม่เจอจะคืน placeholder
+     */
+    function safe_public_image($relative){
+      $rel = ltrim($relative, '/');
+      $path = public_path($rel);
+      return file_exists($path) ? asset($relative) : asset('/images/placeholder-cafe.jpg');
+    }
+
+    /**
+     * ฐานข้อมูลคาเฟ่ (แก้ไขที่นี่ที่เดียว)
+     * - image: ใส่พาธภายใต้ public/ เช่น /images/Top10_/follow-sun.jpg
+     * - url:   ใส่ url('/cafes/{id}') เมื่อทราบ id จริง
+     * - features: wifi|meeting|cheap|parking|minimal (ใช้สร้างชิป)
      */
     $cafes = [
       'follow' => [
         'name' => 'Follow the Sun.Home Cafe’',
-        'image' => '/images/cafes/\Top10_\follow-sun.jpg',
+        'image' => '/images/Top10_/follow-sun.jpg',   // ✅ แก้พาธถูกต้อง ใช้ forward slash
         'url'   => url('/cafes/1'),
         'features' => ['wifi','cheap','minimal'],
       ],
@@ -139,7 +148,7 @@
       ],
     ];
 
-    // หมวดที่คุณให้มา
+    // หมวดจากข้อมูลที่ให้มา
     $categories = [
       'wifi'    => ['title' => '💻 Wi-Fi', 'desc' => 'คาเฟ่ต่อเน็ตฟรี ทำงาน/เรียนออนไลน์ลื่นไหล', 'keys' => ['follow','little-elephant','dammachat','journey','craft']],
       'meeting' => ['title' => '🏢 ห้องประชุม', 'desc' => 'มีห้องประชุม/โซนเงียบ เหมาะนัดคุยงาน', 'keys' => ['little-elephant','bscups']],
@@ -155,7 +164,7 @@
         'wifi'=>'Wi-Fi ฟรี', 'meeting'=>'ห้องประชุม', 'cheap'=>'ราคาย่อมเยา',
         'parking'=>'ที่จอดรถ', 'minimal'=>'มินิมอล'
       ];
-      return array_values(array_intersect_key($map,array_flip($features)));
+      return array_values(array_intersect_key($map, array_flip($features)));
     }
   @endphp
 
@@ -175,10 +184,9 @@
               <article class="card">
                 <div class="media">
                   <img
-                    src="{{ asset($c['image']) }}"
+                    src="{{ safe_public_image($c['image']) }}"
                     alt="รูปภาพ {{ $c['name'] }}"
                     loading="lazy"
-                    onerror="this.src='{{ asset('/images/placeholder-cafe.jpg') }}'; this.onerror=null;"
                   />
                   {{-- แสดงแบดจ์คุณสมบัติตัวหลักของหมวด --}}
                   <span class="badge">
@@ -220,7 +228,7 @@
   function jumpTo(id){
     const el = document.getElementById(id);
     if(!el) return;
-    window.scrollTo({top: el.getBoundingClientRect().top + window.scrollY - 8, behavior:'smooth'});
+    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 8, behavior:'smooth' });
   }
 </script>
 </body>
