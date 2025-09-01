@@ -56,11 +56,11 @@ class LineLoginController extends Controller
         ]);
 
        $tokenData = $response->json();
-dd($tokenData);
 
-// if (!isset($tokenData['id_token'])) {
-//     return redirect('/login')->with('error', 'การยืนยันตัวตนล้มเหลว');
-// }
+
+ if (!isset($tokenData['id_token'])) {
+    return redirect('/login')->with('error', 'การยืนยันตัวตนล้มเหลว');
+}
 
         // decode id_token (JWT) เอาข้อมูล user
         $userInfo = $this->decodeIdToken($tokenData['id_token']);
