@@ -55,11 +55,12 @@ class LineLoginController extends Controller
             'client_secret' => config('services.line.client_secret'),
         ]);
 
-        $tokenData = $response->json();
+       $tokenData = $response->json();
+dd($tokenData);
 
-        if (!isset($tokenData['id_token'])) {
-            return redirect('/login')->with('error', 'การยืนยันตัวตนล้มเหลว');
-        }
+// if (!isset($tokenData['id_token'])) {
+//     return redirect('/login')->with('error', 'การยืนยันตัวตนล้มเหลว');
+// }
 
         // decode id_token (JWT) เอาข้อมูล user
         $userInfo = $this->decodeIdToken($tokenData['id_token']);
