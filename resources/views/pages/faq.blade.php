@@ -204,7 +204,7 @@
         'name' => 'Kind Cafe',
         'alias'=> 'kind',
         'image'=> '/images/Top10_/kind.png',
-        'url'  => url('/cafes/15'),
+        'url'  => url('/cafes/14'),
         'features' => ['minimal'],
       ],
       'parich' => [
