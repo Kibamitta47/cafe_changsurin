@@ -4,28 +4,49 @@ use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\ServiceProvider;
 
 return [
-'name' => env('APP_NAME', 'Laravel'),
-'env' => env('APP_ENV', 'production'),
-'debug' => (bool) env('APP_DEBUG', false),
 
-'url' => env('APP_URL', 'http://localhost'),
- 'asset_url' => env('ASSET_URL'),
- 'timezone' => 'UTC',
-'locale' => 'en',
-'fallback_locale' => 'en',
-'faker_locale' => 'en_US',
-'key' => env('APP_KEY'),
-'cipher' => 'AES-256-CBC',
-'maintenance' => [
+    'name' => env('APP_NAME', 'Laravel'),
+
+    'env' => env('APP_ENV', 'production'),
+
+    'debug' => (bool) env('APP_DEBUG', false),
+
+    'url' => env('APP_URL', 'http://localhost'),
+
+    'asset_url' => env('ASSET_URL'),
+
+    'timezone' => 'UTC',
+
+    'locale' => 'en',
+
+    'fallback_locale' => 'en',
+
+    'faker_locale' => 'en_US',
+
+    'key' => env('APP_KEY'),
+
+    'cipher' => 'AES-256-CBC',
+
+    'maintenance' => [
         'driver' => 'file',
         // 'store' => 'redis',
-],
+    ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Autoloaded Service Providers
+    |--------------------------------------------------------------------------
+    |
+    | Providers ที่ระบบจะโหลดอัตโนมัติ
+    |
+    */
     'providers' => ServiceProvider::defaultProviders()->merge([
         /*
          * Package Service Providers...
          */
-       
+        Laravel\Socialite\SocialiteServiceProvider::class,
+        SocialiteProviders\Manager\ServiceProvider::class,
+
         /*
          * Application Service Providers...
          */
@@ -37,8 +58,18 @@ return [
         App\Providers\TelescopeServiceProvider::class,
         App\Providers\FortifyServiceProvider::class,
         App\Providers\JetstreamServiceProvider::class,
-        ])->toArray(),'aliases' => Facade::defaultAliases()->merge([
-        // 'Example' => App\Facades\Example::class,
+    ])->toArray(),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Class Aliases
+    |--------------------------------------------------------------------------
+    |
+    | Aliases ที่สามารถเรียกใช้งานได้เหมือน class ปกติ
+    |
+    */
+    'aliases' => Facade::defaultAliases()->merge([
+        'Socialite' => Laravel\Socialite\Facades\Socialite::class,
     ])->toArray(),
 
 ];

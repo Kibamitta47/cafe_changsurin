@@ -54,7 +54,7 @@ Route::middleware('guest')->group(function () {
 
     // Line Auth
     Route::get('/auth/line/redirect', [LineLoginController::class, 'redirectToLine'])->name('line.login');
-    Route::get('/auth/line/callback', [LineLoginController::class, 'handleLineCallback']);
+Route::get('/auth/line/callback', [LineLoginController::class, 'handleLineCallback'])->name('line.callback');
     
     // Admin Auth
     Route::get('/login-admin', [AdminAuthController::class, 'showLogin'])->name('login.admin');

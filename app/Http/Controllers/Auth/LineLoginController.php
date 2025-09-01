@@ -3,48 +3,77 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str; 
-use Laravel\Socialite\Facades\Socialite;
+use App\Models\User;
 
 class LineLoginController extends Controller
 {
-    /**
-     * Redirect the user to the LINE authentication page.
-     */
+    // STEP 1: ส่งผู้ใช้ไปหน้า LINE Login
     public function redirectToLine()
     {
-        return Socialite::driver('line')->redirect();
+        $clientId = config('services.line.client_id');
+        $redirectUri = config('services.line.redirect');
+        $state = csrf_token(); // ป้องกัน CSRF
+        $scope = 'profile openid email';
+
+        $url = "https://access.line.me/oauth2/v2.1/authorize?" . http_build_query([
+            'response_type' => 'code',
+            'client_id'     => $clientId,
+            'redirect_uri'  => $redirectUri,
+            'state'         => $state,
+            'scope'         => $scope,
+        ]);
+
+        return redirect($url);
     }
 
-    /**
-     * Obtain the user information from LINE.
-     */
-    public function handleLineCallback()
+    // STEP 2: LINE ส่ง callback กลับมา
+    public function handleLineCallback(Request $request)
     {
-        try {
-            $lineUser = Socialite::driver('line')->user();
-
-            
-
-            $user = User::updateOrCreate([
-                'line_id' => $lineUser->getId(),
-            ], [
-                'name' => $lineUser->getName(),
-                'email' => $lineUser->getEmail(),
-                // แก้ไขจาก str_random() เป็น Str::random()
-                'password' => bcrypt(Str::random(16)) 
-            ]);
-
-            Auth::login($user);
-
-            // คุณสามารถเปลี่ยน '/dashboard' เป็นหน้าที่ต้องการไปหลังล็อกอินสำเร็จ
-              return redirect()->route('welcome');
-
-        } catch (\Exception $e) {
-            // ส่งกลับไปหน้า login พร้อมข้อความ error
-            return redirect('/login')->with('error', 'เกิดข้อผิดพลาดในการล็อกอินผ่าน LINE: ' . $e->getMessage());
+        if ($request->has('error')) {
+            return redirect('/login')->with('error', 'ไม่สามารถเข้าสู่ระบบด้วย LINE ได้');
         }
+
+        // แลก token
+        $response = Http::asForm()->post('https://api.line.me/oauth2/v2.1/token', [
+            'grant_type'    => 'authorization_code',
+            'code'          => $request->input('code'),
+            'redirect_uri'  => config('services.line.redirect'),
+            'client_id'     => config('services.line.client_id'),
+            'client_secret' => config('services.line.client_secret'),
+        ]);
+
+        $tokenData = $response->json();
+
+        if (!isset($tokenData['id_token'])) {
+            return redirect('/login')->with('error', 'การยืนยันตัวตนล้มเหลว');
+        }
+
+        // decode id_token (JWT) เอาข้อมูล user
+        $userInfo = $this->decodeIdToken($tokenData['id_token']);
+
+        // หา user หรือสร้างใหม่
+        $user = User::firstOrCreate(
+            ['line_id' => $userInfo['sub']],
+            [
+                'name'  => $userInfo['name'] ?? 'Line User',
+                'email' => $userInfo['email'] ?? ($userInfo['sub'] . '@line.local'),
+                'password' => bcrypt(str()->random(16)),
+            ]
+        );
+
+        // login user
+        Auth::login($user);
+
+        return redirect()->route('user.dashboard');
+    }
+
+    // ฟังก์ชัน decode JWT (id_token)
+    private function decodeIdToken($idToken)
+    {
+        $parts = explode('.', $idToken);
+        return json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true);
     }
 }

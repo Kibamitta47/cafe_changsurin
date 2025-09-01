@@ -71,7 +71,8 @@
       </div>
     @endif
 
-    <a href="#" id="line-login-btn" class="btn btn-line w-100">
+    {{-- ปุ่ม login --}}
+    <a href="{{ route('line.login') }}" class="btn btn-line w-100">
       <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-chat-left-dots me-2" viewBox="0 0 16 16">
         <path d="M14 1a1 1 0 0 1 1 1v11.586l-2.707-2.707A1 1 0 0 0 11 11H3a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h11zm-4 6.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
       </svg>
@@ -82,30 +83,6 @@
       ยังไม่มีบัญชี? <a href="{{ route('register') }}">ลงทะเบียน</a>
     </div>
   </div>
-
- <script>
-  document.getElementById("line-login-btn").addEventListener("click", function(e) {
-    e.preventDefault();
-
-    const webLoginUrl = "{{ route('line.login') }}"; // เว็บ OAuth ของคุณ
-    const liffUrl = "https://liff.line.me/2007859458-0kknRNQO"; // ใช้ LIFF ID จริงจากรูป
-
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-    if (isMobile) {
-      // เปิดผ่าน LIFF (จะดีดเข้าแอป LINE อัตโนมัติ)
-      window.location.href = liffUrl;
-
-      // เผื่อเปิดแอปไม่ติด → ตกไปใช้เว็บ OAuth
-      setTimeout(function() {
-        window.location.href = webLoginUrl;
-      }, 1200);
-    } else {
-      // Desktop → ใช้เว็บ OAuth
-      window.location.href = webLoginUrl;
-    }
-  });
-</script>
 
 </body>
 </html>
