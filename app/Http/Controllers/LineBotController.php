@@ -12,7 +12,7 @@ class LineBotController extends Controller
     public function webhook(Request $request)
     {
         $data = $request->all();
-        Log::info($data);
+        Log::info("Webhook Data: ", $data);
 
         $events = $data['events'] ?? [];
 
@@ -22,8 +22,10 @@ class LineBotController extends Controller
             // 🟢 ถ้าผู้ใช้ส่งข้อความ
             if ($event['type'] === 'message' && $event['message']['type'] === 'text') {
                 $userText = trim($event['message']['text']);
+                Log::info("User Text: " . $userText);
 
                 if (mb_strpos($userText, 'ค้นหาคาเฟ่ใกล้ฉัน') !== false) {
+                    Log::info("Matched keyword: ค้นหาคาเฟ่ใกล้ฉัน → ส่ง Quick Reply");
                     $this->sendLocationQuickReply($replyToken);
                 }
             }
@@ -32,6 +34,8 @@ class LineBotController extends Controller
             if ($event['type'] === 'message' && $event['message']['type'] === 'location') {
                 $lat = $event['message']['latitude'];
                 $lng = $event['message']['longitude'];
+
+                Log::info("User Location Received: lat={$lat}, lng={$lng}");
 
                 // Query หา 5 คาเฟ่ใกล้สุดในรัศมี 30 กม.
                 $cafes = DB::select("
@@ -44,6 +48,8 @@ class LineBotController extends Controller
                     ORDER BY distance ASC
                     LIMIT 5
                 ", [$lat, $lng, $lat]);
+
+                Log::info("Nearby Cafes Query Result: ", $cafes);
 
                 if (empty($cafes)) {
                     $this->replyMessage($replyToken, [
@@ -116,6 +122,8 @@ class LineBotController extends Controller
                     ]
                 ];
 
+                Log::info("Flex Message Built: ", $flexMessage);
+
                 $this->replyMessage($replyToken, $flexMessage);
             }
         }
@@ -141,6 +149,7 @@ class LineBotController extends Controller
                 ]
             ]
         ];
+        Log::info("Sending QuickReply: ", $quickReplyMessage);
         $this->replyMessage($replyToken, $quickReplyMessage);
     }
 
@@ -148,6 +157,11 @@ class LineBotController extends Controller
     private function replyMessage($replyToken, $message)
     {
         $accessToken = env('LINE_CHANNEL_ACCESS_TOKEN');
+
+        Log::info("Replying Message to LINE API", [
+            'replyToken' => $replyToken,
+            'message' => $message
+        ]);
 
         Http::withHeaders([
             'Content-Type' => 'application/json',
