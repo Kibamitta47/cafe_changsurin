@@ -17,9 +17,10 @@ class LineBotController extends Controller
         $events = $data['events'] ?? [];
 
         foreach ($events as $event) {
-            $replyToken = $event['replyToken'];
+            $replyToken = $event['replyToken'] ?? null;
+            if (!$replyToken) continue;
 
-            // 🟢 ถ้าผู้ใช้ส่งข้อความ
+            // 🟢 กรณีส่งข้อความปกติ
             if ($event['type'] === 'message' && $event['message']['type'] === 'text') {
                 $userText = trim($event['message']['text']);
 
@@ -28,7 +29,7 @@ class LineBotController extends Controller
                 }
             }
 
-            // 🟢 ถ้าผู้ใช้กดปุ่ม Rich Menu (Postback)
+            // 🟢 กรณีกดปุ่ม Rich Menu (Postback)
             if ($event['type'] === 'postback') {
                 $data = $event['postback']['data'] ?? '';
 
@@ -37,12 +38,12 @@ class LineBotController extends Controller
                 }
             }
 
-            // 🟢 ถ้าผู้ใช้แชร์ Location
+            // 🟢 กรณีผู้ใช้แชร์ Location
             if ($event['type'] === 'message' && $event['message']['type'] === 'location') {
                 $lat = $event['message']['latitude'];
                 $lng = $event['message']['longitude'];
 
-                // Query หาคาเฟ่ใกล้สุด (30 กม.)
+                // ค้นหาคาเฟ่ใน DB (รัศมี 30 กม.)
                 $cafes = DB::select("
                     SELECT cafe_id, cafe_name, address, lat, lng, phone,
                     ( 6371 * acos( cos( radians(?) ) * cos( radians(lat) )
@@ -62,7 +63,7 @@ class LineBotController extends Controller
                     return;
                 }
 
-                // 🧩 Flex Message แสดงคาเฟ่
+                // Flex Message แสดงคาเฟ่
                 $bubbles = [];
                 foreach ($cafes as $cafe) {
                     $bubbles[] = [
@@ -132,7 +133,7 @@ class LineBotController extends Controller
         return response()->json(['status' => 'ok']);
     }
 
-    // ✅ ฟังก์ชันส่ง Quick Reply Location
+    // ✅ ส่ง Quick Reply ให้แชร์ Location
     private function sendLocationQuickReply($replyToken)
     {
         $quickReplyMessage = [
