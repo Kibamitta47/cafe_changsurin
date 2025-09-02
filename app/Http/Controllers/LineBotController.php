@@ -160,15 +160,19 @@ class LineBotController extends Controller
 
     // ✅ ฟังก์ชันตอบกลับ
     private function replyMessage($replyToken, $message)
-    {
-        $accessToken = env('LINE_CHANNEL_ACCESS_TOKEN');
+{
+    $accessToken = env('LINE_CHANNEL_ACCESS_TOKEN');
 
-        Http::withHeaders([
-            'Content-Type' => 'application/json',
-            'Authorization' => 'Bearer ' . $accessToken,
-        ])->post('https://api.line.me/v2/bot/message/reply', [
-            'replyToken' => $replyToken,
-            'messages' => [$message], // ✅ ต้องห่อเป็น array เสมอ
-        ]);
-    }
+    $payload = [
+        'replyToken' => $replyToken,
+        'messages'   => [$message], // ต้องห่อใน array
+    ];
+
+    Log::info("Replying Message to LINE API", $payload);
+
+    Http::withHeaders([
+        'Content-Type'  => 'application/json',
+        'Authorization' => 'Bearer ' . $accessToken,
+    ])->post('https://api.line.me/v2/bot/message/reply', $payload);
+}
 }
