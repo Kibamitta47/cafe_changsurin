@@ -17,7 +17,7 @@ class LineBotController extends Controller
         $events = $data['events'] ?? [];
 
         foreach ($events as $event) {
-            // บาง event (เช่น unfollow) จะไม่มี replyToken
+            // ป้องกัน error เวลามี event ที่ไม่มี replyToken (เช่น unfollow)
             if (!isset($event['replyToken'])) {
                 continue;
             }
@@ -160,16 +160,15 @@ class LineBotController extends Controller
 
     // ✅ ฟังก์ชันตอบกลับ
     private function replyMessage($replyToken, $message)
-{
-    $accessToken = config('services.line.channel_access_token'); // ✅ ใช้ config()
+    {
+        $accessToken = config('services.line.channel_access_token');
 
-    Http::withHeaders([
-        'Content-Type' => 'application/json',
-        'Authorization' => 'Bearer ' . $accessToken,
-    ])->post('https://api.line.me/v2/bot/message/reply', [
-        'replyToken' => $replyToken,
-        'messages' => [$message],
-    ]);
-}
-
+        Http::withHeaders([
+            'Content-Type' => 'application/json',
+            'Authorization' => 'Bearer ' . $accessToken,
+        ])->post('https://api.line.me/v2/bot/message/reply', [
+            'replyToken' => $replyToken,
+            'messages' => [$message],
+        ]);
+    }
 }
