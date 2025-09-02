@@ -15,6 +15,7 @@ use App\Http\Controllers\UserReviewController;
 use App\Http\Controllers\PageController;
 
 
+
 /*
 |--------------------------------------------------------------------------
 | Public Routes
@@ -151,3 +152,5 @@ Route::middleware('auth:admin')->prefix('admin')->name('admin.')->group(function
 |
 */
 Route::get('/cafes/{cafe}', [AdminCafeController::class, 'show'])->name('cafes.show');
+
+Route::post('/line/webhook', [LineBotController::class, 'webhook']);
