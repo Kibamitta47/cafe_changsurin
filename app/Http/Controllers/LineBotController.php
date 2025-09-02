@@ -23,7 +23,7 @@ class LineBotController extends Controller
             if ($event['type'] === 'message' && $event['message']['type'] === 'text') {
                 $userText = trim($event['message']['text']);
 
-                // ✅ ใช้ strpos ตรวจแบบ contains ป้องกัน space หรือข้อความเกิน
+                // ✅ ใช้ strpos ตรวจแบบ contains (กัน space/ตัวสะกดเกิน)
                 if (mb_strpos($userText, 'ค้นหาคาเฟ่ใกล้ฉัน') !== false) {
                     $quickReplyMessage = [
                         "type" => "text",
