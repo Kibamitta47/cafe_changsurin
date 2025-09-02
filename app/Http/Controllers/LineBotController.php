@@ -17,25 +17,23 @@ class LineBotController extends Controller
         $events = $data['events'] ?? [];
 
         foreach ($events as $event) {
-            $replyToken = $event['replyToken'] ?? null;
-            if (!$replyToken) continue;
+            $replyToken = $event['replyToken'];
 
-            // ✅ ถ้าผู้ใช้ส่งข้อความ
+            // 🟢 ถ้าผู้ใช้ส่งข้อความ
             if ($event['type'] === 'message' && $event['message']['type'] === 'text') {
                 $userText = trim($event['message']['text']);
 
-                // ใช้ strpos กันข้อความไม่ตรงเป๊ะ
                 if (mb_strpos($userText, 'ค้นหาคาเฟ่ใกล้ฉัน') !== false) {
                     $this->sendLocationQuickReply($replyToken);
                 }
             }
 
-            // ✅ ถ้าผู้ใช้แชร์ Location
+            // 🟢 ถ้าผู้ใช้แชร์ Location
             if ($event['type'] === 'message' && $event['message']['type'] === 'location') {
                 $lat = $event['message']['latitude'];
                 $lng = $event['message']['longitude'];
 
-                // Query หาคาเฟ่ใกล้สุด (30 กม.)
+                // Query หา 5 คาเฟ่ใกล้สุดในรัศมี 30 กม.
                 $cafes = DB::select("
                     SELECT cafe_id, cafe_name, address, lat, lng, phone,
                     ( 6371 * acos( cos( radians(?) ) * cos( radians(lat) )
@@ -55,7 +53,7 @@ class LineBotController extends Controller
                     return;
                 }
 
-                // 🧩 Flex Message
+                // 🧩 สร้าง Flex Message Carousel
                 $bubbles = [];
                 foreach ($cafes as $cafe) {
                     $bubbles[] = [
@@ -125,7 +123,7 @@ class LineBotController extends Controller
         return response()->json(['status' => 'ok']);
     }
 
-    // ✅ ฟังก์ชัน Quick Reply Location
+    // ✅ ฟังก์ชันส่ง Quick Reply Location
     private function sendLocationQuickReply($replyToken)
     {
         $quickReplyMessage = [
