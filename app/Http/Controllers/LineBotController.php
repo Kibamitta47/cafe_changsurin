@@ -19,12 +19,15 @@ class LineBotController extends Controller
         foreach ($events as $event) {
             $replyToken = $event['replyToken'];
 
-            // 🟢 ถ้าผู้ใช้ส่งข้อความ
+            // 🟢 กรณีข้อความ (Text Message)
             if ($event['type'] === 'message' && $event['message']['type'] === 'text') {
                 $userText = trim($event['message']['text']);
+                $normalizedText = mb_strtolower($userText, 'UTF-8'); // แปลงเป็นตัวพิมพ์เล็ก
 
-                // ✅ ใช้ strpos ตรวจแบบ contains (กัน space/ตัวสะกดเกิน)
-                if (mb_strpos($userText, 'ค้นหาคาเฟ่ใกล้ฉัน') !== false) {
+                // ✅ ตรวจว่ามีคำว่า "ค้นหาคาเฟ่ใกล้ฉัน"
+                if (mb_strpos($normalizedText, 'ค้นหาคาเฟ่ใกล้ฉัน') !== false) {
+                    Log::info("Trigger cafe search by text: " . $userText);
+
                     $quickReplyMessage = [
                         "type" => "text",
                         "text" => "กรุณาส่งพิกัดของคุณเพื่อค้นหาคาเฟ่ใกล้คุณ 🐘☕",
@@ -44,12 +47,12 @@ class LineBotController extends Controller
                 }
             }
 
-            // 🟢 ถ้าผู้ใช้แชร์ Location (ส่ง lat/lng)
+            // 🟢 กรณีผู้ใช้ส่ง Location
             if ($event['type'] === 'message' && $event['message']['type'] === 'location') {
                 $lat = $event['message']['latitude'];
                 $lng = $event['message']['longitude'];
 
-                // Query หาคาเฟ่ใกล้สุด (ในรัศมี 30 กม.)
+                // 🔍 Query หาคาเฟ่ใน DB (รัศมี 30 กม.)
                 $cafes = DB::select("
                     SELECT cafe_id, cafe_name, address, lat, lng, phone,
                     ( 6371 * acos( cos( radians(?) ) * cos( radians(lat) )
@@ -69,7 +72,7 @@ class LineBotController extends Controller
                     return;
                 }
 
-                // 🧩 สร้าง Flex Message
+                // 🧩 สร้าง Flex Message แสดงคาเฟ่
                 $bubbles = [];
                 foreach ($cafes as $cafe) {
                     $bubbles[] = [
