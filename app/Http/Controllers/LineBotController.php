@@ -17,9 +17,8 @@ class LineBotController extends Controller
         $events = $data['events'] ?? [];
 
         foreach ($events as $event) {
-            // ป้องกัน error เวลามี event ที่ไม่มี replyToken (เช่น unfollow)
             if (!isset($event['replyToken'])) {
-                continue;
+                continue; // กัน error กรณี event ไม่มี replyToken เช่น unfollow
             }
 
             $replyToken = $event['replyToken'];
@@ -29,9 +28,24 @@ class LineBotController extends Controller
                 $userText = trim($event['message']['text']);
                 Log::info("User Text: " . $userText);
 
-                if (mb_strpos($userText, 'ค้นหาคาเฟ่ใกล้ฉัน') !== false) {
+                if ($userText === 'ค้นหาคาเฟ่ใกล้ฉัน') {
                     Log::info("Matched keyword: ค้นหาคาเฟ่ใกล้ฉัน → ส่ง Quick Reply");
-                    $this->sendLocationQuickReply($replyToken);
+
+                    $this->replyMessage($replyToken, [
+                        "type" => "text",
+                        "text" => "กรุณาส่งพิกัดของคุณเพื่อค้นหาคาเฟ่ใกล้คุณ 🐘☕",
+                        "quickReply" => [
+                            "items" => [
+                                [
+                                    "type" => "action",
+                                    "action" => [
+                                        "type" => "location",
+                                        "label" => "📍 แชร์ตำแหน่งของฉัน"
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]);
                 }
             }
 
@@ -136,39 +150,17 @@ class LineBotController extends Controller
         return response()->json(['status' => 'ok']);
     }
 
-    // ✅ ฟังก์ชันส่ง Quick Reply Location
-    private function sendLocationQuickReply($replyToken)
-    {
-        $message = [
-            "type" => "text",
-            "text" => "กรุณาส่งพิกัดของคุณเพื่อค้นหาคาเฟ่ใกล้คุณ 🐘☕",
-            "quickReply" => [
-                "items" => [
-                    [
-                        "type" => "action",
-                        "action" => [
-                            "type" => "location",
-                            "label" => "📍 แชร์ตำแหน่งของฉัน"
-                        ]
-                    ]
-                ]
-            ]
-        ];
-
-        $this->replyMessage($replyToken, $message);
-    }
-
-    // ✅ ฟังก์ชันตอบกลับ
+    // ✅ ฟังก์ชันส่งข้อความกลับไปที่ LINE
     private function replyMessage($replyToken, $message)
     {
-        $accessToken = config('services.line.channel_access_token');
+        $accessToken = config('services.line.channel_access_token'); // ✅ ดึงจาก config/services.php
 
         Http::withHeaders([
             'Content-Type' => 'application/json',
             'Authorization' => 'Bearer ' . $accessToken,
         ])->post('https://api.line.me/v2/bot/message/reply', [
             'replyToken' => $replyToken,
-            'messages' => [$message],
+            'messages' => [$message], // ✅ ต้องเป็น array
         ]);
     }
 }
