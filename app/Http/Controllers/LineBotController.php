@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 
 class LineBotController extends Controller
 {
@@ -20,141 +19,52 @@ class LineBotController extends Controller
             $replyToken = $event['replyToken'] ?? null;
             if (!$replyToken) continue;
 
-            // 🟢 กรณีส่งข้อความปกติ
+            // ถ้าผู้ใช้กดปุ่ม Rich Menu → มันจะส่งข้อความ "ค้นหาคาเฟ่ใกล้ฉัน"
             if ($event['type'] === 'message' && $event['message']['type'] === 'text') {
                 $userText = trim($event['message']['text']);
 
-                if (mb_strpos($userText, 'ค้นหาคาเฟ่ใกล้ฉัน') !== false) {
+                if ($userText === 'ค้นหาคาเฟ่ใกล้ฉัน') {
                     $this->sendLocationQuickReply($replyToken);
                 }
             }
 
-            // 🟢 กรณีกดปุ่ม Rich Menu (Postback)
-            if ($event['type'] === 'postback') {
-                $data = $event['postback']['data'] ?? '';
-
-                if ($data === 'search_nearby_cafe') {
-                    $this->sendLocationQuickReply($replyToken);
-                }
-            }
-
-            // 🟢 กรณีผู้ใช้แชร์ Location
+            // ถ้าผู้ใช้แชร์ Location จริง ๆ
             if ($event['type'] === 'message' && $event['message']['type'] === 'location') {
                 $lat = $event['message']['latitude'];
                 $lng = $event['message']['longitude'];
 
-                // ค้นหาคาเฟ่ใน DB (รัศมี 30 กม.)
-                $cafes = DB::select("
-                    SELECT cafe_id, cafe_name, address, lat, lng, phone,
-                    ( 6371 * acos( cos( radians(?) ) * cos( radians(lat) )
-                    * cos( radians(lng) - radians(?) )
-                    + sin( radians(?) ) * sin( radians(lat) ) ) ) AS distance
-                    FROM cafes
-                    HAVING distance < 30
-                    ORDER BY distance ASC
-                    LIMIT 5
-                ", [$lat, $lng, $lat]);
-
-                if (empty($cafes)) {
-                    $this->replyMessage($replyToken, [
-                        "type" => "text",
-                        "text" => "ไม่พบคาเฟ่ในรัศมี 30 กม. จากคุณ 😢"
-                    ]);
-                    return;
-                }
-
-                // Flex Message แสดงคาเฟ่
-                $bubbles = [];
-                foreach ($cafes as $cafe) {
-                    $bubbles[] = [
-                        "type" => "bubble",
-                        "body" => [
-                            "type" => "box",
-                            "layout" => "vertical",
-                            "contents" => [
-                                [
-                                    "type" => "text",
-                                    "text" => $cafe->cafe_name,
-                                    "weight" => "bold",
-                                    "size" => "lg"
-                                ],
-                                [
-                                    "type" => "text",
-                                    "text" => $cafe->address,
-                                    "wrap" => true,
-                                    "size" => "sm",
-                                    "color" => "#666666"
-                                ],
-                                [
-                                    "type" => "text",
-                                    "text" => "📍 ห่าง " . round($cafe->distance, 2) . " กม.",
-                                    "size" => "sm",
-                                    "color" => "#999999"
-                                ],
-                                [
-                                    "type" => "text",
-                                    "text" => "☎ " . ($cafe->phone ?? "ไม่มีข้อมูล"),
-                                    "size" => "sm",
-                                    "color" => "#999999"
-                                ]
-                            ]
-                        ],
-                        "footer" => [
-                            "type" => "box",
-                            "layout" => "vertical",
-                            "contents" => [
-                                [
-                                    "type" => "button",
-                                    "style" => "link",
-                                    "action" => [
-                                        "type" => "uri",
-                                        "label" => "เปิดแผนที่",
-                                        "uri" => "https://maps.google.com/?q={$cafe->lat},{$cafe->lng}"
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ];
-                }
-
-                $flexMessage = [
-                    "type" => "flex",
-                    "altText" => "คาเฟ่ใกล้คุณ",
-                    "contents" => [
-                        "type" => "carousel",
-                        "contents" => $bubbles
-                    ]
-                ];
-
-                $this->replyMessage($replyToken, $flexMessage);
+                $this->replyMessage($replyToken, [
+                    "type" => "text",
+                    "text" => "ได้รับพิกัดแล้ว 📍\nLat: {$lat}, Lng: {$lng}"
+                ]);
             }
         }
 
         return response()->json(['status' => 'ok']);
     }
 
-    // ✅ ส่ง Quick Reply ให้แชร์ Location
+    // ส่ง Quick Reply ขอแชร์ Location
     private function sendLocationQuickReply($replyToken)
     {
-        $quickReplyMessage = [
+        $message = [
             "type" => "text",
-            "text" => "กรุณาส่งพิกัดของคุณเพื่อค้นหาคาเฟ่ใกล้คุณ 🐘☕",
+            "text" => "📍 กรุณาส่งพิกัดของคุณเพื่อค้นหาคาเฟ่ใกล้เคียง",
             "quickReply" => [
                 "items" => [
                     [
                         "type" => "action",
                         "action" => [
                             "type" => "location",
-                            "label" => "📍 แชร์ตำแหน่งของฉัน"
+                            "label" => "แชร์ตำแหน่งของฉัน"
                         ]
                     ]
                 ]
             ]
         ];
-        $this->replyMessage($replyToken, $quickReplyMessage);
+        $this->replyMessage($replyToken, $message);
     }
 
-    // ✅ ฟังก์ชันตอบกลับ
+    // ฟังก์ชันส่งข้อความกลับ
     private function replyMessage($replyToken, $message)
     {
         $accessToken = env('LINE_CHANNEL_ACCESS_TOKEN');
