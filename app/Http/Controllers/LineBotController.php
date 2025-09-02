@@ -19,11 +19,12 @@ class LineBotController extends Controller
         foreach ($events as $event) {
             $replyToken = $event['replyToken'];
 
-            // 🟢 ถ้าผู้ใช้ส่งข้อความว่า "ค้นหาคาเฟ่ใกล้ฉัน"
+            // 🟢 ถ้าผู้ใช้ส่งข้อความ
             if ($event['type'] === 'message' && $event['message']['type'] === 'text') {
                 $userText = trim($event['message']['text']);
 
-                if ($userText === 'ค้นหาคาเฟ่ใกล้ฉัน') {
+                // ✅ ใช้ strpos ตรวจแบบ contains ป้องกัน space หรือข้อความเกิน
+                if (mb_strpos($userText, 'ค้นหาคาเฟ่ใกล้ฉัน') !== false) {
                     $quickReplyMessage = [
                         "type" => "text",
                         "text" => "กรุณาส่งพิกัดของคุณเพื่อค้นหาคาเฟ่ใกล้คุณ 🐘☕",
