@@ -133,42 +133,37 @@ class LineBotController extends Controller
 
     // ✅ ฟังก์ชันส่ง Quick Reply Location
     private function sendLocationQuickReply($replyToken)
-    {
-        $quickReplyMessage = [
-            "type" => "text",
-            "text" => "กรุณาส่งพิกัดของคุณเพื่อค้นหาคาเฟ่ใกล้คุณ 🐘☕",
-            "quickReply" => [
-                "items" => [
-                    [
-                        "type" => "action",
-                        "action" => [
-                            "type" => "location",
-                            "label" => "📍 แชร์ตำแหน่งของฉัน"
-                        ]
+{
+    $message = [
+        "type" => "text",
+        "text" => "กรุณาส่งพิกัดของคุณเพื่อค้นหาคาเฟ่ใกล้คุณ 🐘☕",
+        "quickReply" => [
+            "items" => [
+                [
+                    "type" => "action",
+                    "action" => [
+                        "type" => "location",
+                        "label" => "📍 แชร์ตำแหน่งของฉัน"
                     ]
                 ]
             ]
-        ];
-        Log::info("Sending QuickReply: ", $quickReplyMessage);
-        $this->replyMessage($replyToken, $quickReplyMessage);
-    }
+        ]
+    ];
 
+    $this->replyMessage($replyToken, $message);
+}
     // ✅ ฟังก์ชันตอบกลับ
     private function replyMessage($replyToken, $message)
-    {
-        $accessToken = env('LINE_CHANNEL_ACCESS_TOKEN');
+{
+    $accessToken = env('LINE_CHANNEL_ACCESS_TOKEN');
 
-        Log::info("Replying Message to LINE API", [
-            'replyToken' => $replyToken,
-            'message' => $message
-        ]);
+    Http::withHeaders([
+        'Content-Type' => 'application/json',
+        'Authorization' => 'Bearer ' . $accessToken,
+    ])->post('https://api.line.me/v2/bot/message/reply', [
+        'replyToken' => $replyToken,
+        'messages' => [$message], // ✅ ต้องเป็น array เสมอ
+    ]);
+}
 
-        Http::withHeaders([
-            'Content-Type' => 'application/json',
-            'Authorization' => 'Bearer ' . $accessToken,
-        ])->post('https://api.line.me/v2/bot/message/reply', [
-            'replyToken' => $replyToken,
-            'messages' => [$message],
-        ]);
-    }
 }
