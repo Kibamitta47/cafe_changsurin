@@ -12,7 +12,9 @@ class LineBotController extends Controller
     public function webhook(Request $request)
     {
         $data = $request->all();
-        Log::info("Webhook Data: ", $data);
+
+        // 🟢 Debug payload ที่ LINE ส่งมา
+        Log::info("Raw Webhook: " . json_encode($data, JSON_UNESCAPED_UNICODE));
 
         $events = $data['events'] ?? [];
 
@@ -23,7 +25,7 @@ class LineBotController extends Controller
 
             $replyToken = $event['replyToken'];
 
-            // ✅ ถ้าผู้ใช้พิมพ์ข้อความ
+            // ✅ ถ้าเป็นข้อความ
             if ($event['type'] === 'message' && $event['message']['type'] === 'text') {
                 $userText = trim($event['message']['text']);
                 Log::info("User Text: " . $userText);
@@ -47,14 +49,14 @@ class LineBotController extends Controller
                 }
             }
 
-            // ✅ ถ้าผู้ใช้ส่ง Location
+            // ✅ ถ้าเป็นการแชร์ location
             if ($event['type'] === 'message' && $event['message']['type'] === 'location') {
                 $lat = $event['message']['latitude'];
                 $lng = $event['message']['longitude'];
 
                 Log::info("User Location Received: lat={$lat}, lng={$lng}");
 
-                // 🔍 Query หา 5 คาเฟ่ในรัศมี 5 กม. พร้อมรูป
+                // 🔍 Query คาเฟ่ในรัศมี 5 กม.
                 $cafes = DB::table('cafes')
                     ->leftJoin('cafe_images', 'cafes.cafe_id', '=', 'cafe_images.cafe_id')
                     ->select(
@@ -85,14 +87,16 @@ class LineBotController extends Controller
                     return;
                 }
 
-                // 🧩 สร้าง Flex Message Carousel
+                // 🧩 Flex Message
                 $bubbles = [];
                 foreach ($cafes as $cafe) {
                     $bubbles[] = [
                         "type" => "bubble",
                         "hero" => [
                             "type" => "image",
-                            "url" => $cafe->image_path ? url($cafe->image_path) : url('/images/logo.png'),
+                            "url" => $cafe->image_path 
+                                ? url($cafe->image_path) 
+                                : url('/images/logo.png'),
                             "size" => "full",
                             "aspectRatio" => "20:13",
                             "aspectMode" => "cover"
@@ -162,10 +166,9 @@ class LineBotController extends Controller
         return response()->json(['status' => 'ok']);
     }
 
-    // ✅ ฟังก์ชันส่งข้อความกลับไปที่ LINE
     private function replyMessage($replyToken, $message)
     {
-        $accessToken = config('services.line.channel_access_token'); 
+        $accessToken = config('services.line.channel_access_token');
 
         Http::withHeaders([
             'Content-Type' => 'application/json',
