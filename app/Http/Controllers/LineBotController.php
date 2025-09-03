@@ -51,7 +51,7 @@ class LineBotController extends Controller
 
                 Log::info("User Location: lat={$lat}, lng={$lng}");
 
-                // ✅ ใช้ Raw SQL แทน setBindings()
+                // ✅ Query หาร้าน
                 $cafes = DB::select("
                     SELECT cafes.cafe_id, cafes.cafe_name, cafes.address, cafes.lat, cafes.lng, cafes.phone,
                            ci.image_path,
@@ -78,9 +78,10 @@ class LineBotController extends Controller
                 // ✅ Flex Message
                 $bubbles = [];
                 foreach ($cafes as $cafe) {
+                    // แก้ตรงนี้ ใช้ asset() เพื่อให้เป็น URL จริง
                     $imageUrl = $cafe->image_path
-                        ? url("/" . ltrim($cafe->image_path, '/')) // ➜ ทำให้เป็น domain จริง
-                        : url("/images/logo.png");
+                        ? asset($cafe->image_path) // คืน URL เช่น https://nongchangsaren.ddns.net/storage/cafes/xxxx.jpg
+                        : asset('images/logo.png');
 
                     $bubbles[] = [
                         "type" => "bubble",
