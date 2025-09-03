@@ -244,7 +244,13 @@
                   </template>
                 </div>
               </div>
-
+              <div class="border-t border-slate-200 pt-3">
+                <label class="flex items-center text-slate-600 text-sm">
+                  <input type="checkbox" x-model="filters.isNewOpening"
+                         class="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500">
+                  <span class="ml-2">✨ คาเฟ่เปิดใหม่</span>
+                </label>
+              </div>
               <div class="border-t border-slate-200 pt-3">
                 <h4 class="font-semibold text-slate-700 mb-2 text-sm">วันเปิดทำการ</h4>
                 <div class="grid grid-cols-2 gap-2">
@@ -333,14 +339,6 @@
                     </label>
                   </template>
                 </div>
-              </div>
-
-              <div class="border-t border-slate-200 pt-3">
-                <label class="flex items-center text-slate-600 text-sm">
-                  <input type="checkbox" x-model="filters.isNewOpening"
-                         class="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500">
-                  <span class="ml-2">✨ คาเฟ่เปิดใหม่</span>
-                </label>
               </div>
             </div>
           </div>
