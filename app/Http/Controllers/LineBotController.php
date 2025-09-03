@@ -81,78 +81,66 @@ class LineBotController extends Controller
                 // 🧩 สร้าง Flex Message Carousel
                 $bubbles = [];
                 foreach ($cafes as $cafe) {
-                    // ดึงรูปจาก column images (json)
-                    $images = json_decode($cafe->images ?? '[]', true);
-                    $imageUrl = null;
+                    // ✅ ดึงรูปจาก JSON
+                    $images = json_decode($cafe->images, true);
+                    $imageUrl = !empty($images) ? url('images/' . $images[0]) : url('images/logo.png');
 
-                    if (!empty($images)) {
-                        $imageUrl = url('images/' . $images[0]); // เอารูปแรก
-                    }
-
-                    $bubble = [
+                    $bubbles[] = [
                         "type" => "bubble",
-                    ];
-
-                    // ✅ ถ้ามีรูป ให้ใส่ hero
-                    if ($imageUrl) {
-                        $bubble["hero"] = [
+                        "hero" => [
                             "type" => "image",
                             "url" => $imageUrl,
                             "size" => "full",
                             "aspectRatio" => "20:13",
                             "aspectMode" => "cover"
-                        ];
-                    }
-
-                    $bubble["body"] = [
-                        "type" => "box",
-                        "layout" => "vertical",
-                        "contents" => [
-                            [
-                                "type" => "text",
-                                "text" => $cafe->cafe_name,
-                                "weight" => "bold",
-                                "size" => "lg"
-                            ],
-                            [
-                                "type" => "text",
-                                "text" => $cafe->address,
-                                "wrap" => true,
-                                "size" => "sm",
-                                "color" => "#666666"
-                            ],
-                            [
-                                "type" => "text",
-                                "text" => "📍 ห่าง " . round($cafe->distance, 2) . " กม.",
-                                "size" => "sm",
-                                "color" => "#999999"
-                            ],
-                            [
-                                "type" => "text",
-                                "text" => "☎ " . ($cafe->phone ?? "ไม่มีข้อมูล"),
-                                "size" => "sm",
-                                "color" => "#999999"
+                        ],
+                        "body" => [
+                            "type" => "box",
+                            "layout" => "vertical",
+                            "contents" => [
+                                [
+                                    "type" => "text",
+                                    "text" => $cafe->cafe_name,
+                                    "weight" => "bold",
+                                    "size" => "lg"
+                                ],
+                                [
+                                    "type" => "text",
+                                    "text" => $cafe->address,
+                                    "wrap" => true,
+                                    "size" => "sm",
+                                    "color" => "#666666"
+                                ],
+                                [
+                                    "type" => "text",
+                                    "text" => "📍 ห่าง " . round($cafe->distance, 2) . " กม.",
+                                    "size" => "sm",
+                                    "color" => "#999999"
+                                ],
+                                [
+                                    "type" => "text",
+                                    "text" => "☎ " . ($cafe->phone ?? "ไม่มีข้อมูล"),
+                                    "size" => "sm",
+                                    "color" => "#999999"
+                                ]
                             ]
-                        ]
-                    ];
-
-                    $bubble["footer"] = [
-                        "type" => "box",
-                        "layout" => "vertical",
-                        "contents" => [
-                            [
-                                "type" => "button",
-                                "style" => "link",
-                                "action" => [
-                                    "type" => "uri",
-                                    "label" => "เปิดแผนที่",
-                                    "uri" => "https://maps.google.com/?q={$cafe->lat},{$cafe->lng}"
+                        ],
+                        "footer" => [
+                            "type" => "box",
+                            "layout" => "vertical",
+                            "contents" => [
+                                [
+                                    "type" => "button",
+                                    "style" => "link",
+                                    "action" => [
+                                        "type" => "uri",
+                                        "label" => "เปิดแผนที่",
+                                        "uri" => "https://maps.google.com/?q={$cafe->lat},{$cafe->lng}"
+                                    ]
                                 ]
                             ]
                         ]
                     ];
-
-                    $bubbles[] = $bubble;
                 }
 
                 $flexMessage = [
