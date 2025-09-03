@@ -18,19 +18,17 @@ class LineBotController extends Controller
 
         foreach ($events as $event) {
             if (!isset($event['replyToken'])) {
-                continue; // กัน error กรณี event ไม่มี replyToken เช่น unfollow
+                continue;
             }
 
             $replyToken = $event['replyToken'];
 
-            // 🟢 ถ้าผู้ใช้ส่งข้อความ
+            // ✅ ถ้าผู้ใช้ส่งข้อความ
             if ($event['type'] === 'message' && $event['message']['type'] === 'text') {
                 $userText = trim($event['message']['text']);
                 Log::info("User Text: " . $userText);
 
                 if ($userText === 'ค้นหาคาเฟ่ใกล้ฉัน') {
-                    Log::info("Matched keyword: ค้นหาคาเฟ่ใกล้ฉัน → ส่ง Quick Reply");
-
                     $this->replyMessage($replyToken, [
                         "type" => "text",
                         "text" => "กรุณาส่งพิกัดของคุณเพื่อค้นหาคาเฟ่ใกล้คุณ 🐘☕",
@@ -49,16 +47,16 @@ class LineBotController extends Controller
                 }
             }
 
-            // 🟢 ถ้าผู้ใช้แชร์ Location
+            // ✅ ถ้าผู้ใช้แชร์ Location
             if ($event['type'] === 'message' && $event['message']['type'] === 'location') {
                 $lat = $event['message']['latitude'];
                 $lng = $event['message']['longitude'];
 
                 Log::info("User Location Received: lat={$lat}, lng={$lng}");
 
-                // Query หา 5 คาเฟ่ใกล้สุดในรัศมี 5 กม.
+                // 🔎 Query หา 5 คาเฟ่ใกล้สุดในรัศมี 5 กม.
                 $cafes = DB::select("
-                    SELECT cafe_id, cafe_name, address, lat, lng, phone, images,
+                    SELECT cafe_id, cafe_name, address, lat, lng, phone,
                     ( 6371 * acos( cos( radians(?) ) * cos( radians(lat) )
                     * cos( radians(lng) - radians(?) )
                     + sin( radians(?) ) * sin( radians(lat) ) ) ) AS distance
@@ -68,8 +66,6 @@ class LineBotController extends Controller
                     LIMIT 5
                 ", [$lat, $lng, $lat]);
 
-                Log::info("Nearby Cafes Query Result: ", $cafes);
-
                 if (empty($cafes)) {
                     $this->replyMessage($replyToken, [
                         "type" => "text",
@@ -78,12 +74,18 @@ class LineBotController extends Controller
                     return;
                 }
 
-                // 🧩 สร้าง Flex Message Carousel
+                // 🖼 Flex Message
                 $bubbles = [];
                 foreach ($cafes as $cafe) {
-                    // ✅ ดึงรูปจาก JSON
-                    $images = json_decode($cafe->images, true);
-                    $imageUrl = !empty($images) ? url('images/' . $images[0]) : url('images/logo.png');
+                    // 🔎 ดึงรูปจากตาราง cafe_images
+                    $images = DB::table('cafe_images')
+                        ->where('cafe_id', $cafe->cafe_id)
+                        ->limit(1)
+                        ->pluck('image_path');
+
+                    $imageUrl = $images->isNotEmpty()
+                        ? url($images[0])
+                        : url('images/default.png'); // ถ้าไม่มีรูปใช้ default
 
                     $bubbles[] = [
                         "type" => "bubble",
@@ -152,8 +154,6 @@ class LineBotController extends Controller
                     ]
                 ];
 
-                Log::info("Flex Message Built: ", $flexMessage);
-
                 $this->replyMessage($replyToken, $flexMessage);
             }
         }
@@ -161,17 +161,17 @@ class LineBotController extends Controller
         return response()->json(['status' => 'ok']);
     }
 
-    // ✅ ฟังก์ชันส่งข้อความกลับไปที่ LINE
+    // ✅ ฟังก์ชันส่งข้อความกลับ LINE
     private function replyMessage($replyToken, $message)
     {
-        $accessToken = config('services.line.channel_access_token'); // ✅ ดึงจาก config/services.php
+        $accessToken = config('services.line.channel_access_token');
 
         Http::withHeaders([
             'Content-Type' => 'application/json',
             'Authorization' => 'Bearer ' . $accessToken,
         ])->post('https://api.line.me/v2/bot/message/reply', [
             'replyToken' => $replyToken,
-            'messages' => [$message], // ✅ ต้องเป็น array
+            'messages' => [$message],
         ]);
     }
 }
