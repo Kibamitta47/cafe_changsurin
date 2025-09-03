@@ -51,21 +51,20 @@ class LineBotController extends Controller
 
                 Log::info("User Location: lat={$lat}, lng={$lng}");
 
-                // ✅ Query หาคาเฟ่
+                // ✅ Query คาเฟ่
                 $cafes = DB::select("
-                    SELECT cafes.cafe_id, cafes.cafe_name, cafes.address, cafes.lat, cafes.lng, cafes.phone,
+                    SELECT cafes.cafe_id, cafes.cafe_name, cafes.address, cafes.lat, cafes.lng, cafes.phone, ci.image_path,
                            (6371 * acos(
                                cos(radians(?)) * cos(radians(cafes.lat)) *
                                cos(radians(cafes.lng) - radians(?)) +
                                sin(radians(?)) * sin(radians(cafes.lat))
                            )) AS distance
                     FROM cafes
+                    LEFT JOIN cafe_images ci ON cafes.cafe_id = ci.cafe_id
                     HAVING distance < 5
                     ORDER BY distance ASC
                     LIMIT 5
                 ", [$lat, $lng, $lat]);
-
-                Log::info("Nearby Cafes: " . json_encode($cafes, JSON_UNESCAPED_UNICODE));
 
                 if (empty($cafes)) {
                     $this->replyMessage($replyToken, [
@@ -75,20 +74,55 @@ class LineBotController extends Controller
                     return;
                 }
 
-                // ✅ แปลงผลลัพธ์เป็น text ธรรมดา
-                $msg = "เจอคาเฟ่ " . count($cafes) . " ร้านใกล้คุณ 📍\n\n";
+                // ✅ Flex Message
+                $bubbles = [];
                 foreach ($cafes as $cafe) {
-                    $msg .= "☕ " . $cafe->cafe_name . "\n";
-                    $msg .= "ที่อยู่: " . ($cafe->address ?? "-") . "\n";
-                    $msg .= "☎ " . ($cafe->phone ?? "ไม่มีข้อมูล") . "\n";
-                    $msg .= "ห่าง: " . round($cafe->distance, 2) . " กม.\n";
-                    $msg .= "---------------------\n";
+                    $imageUrl = $cafe->image_path
+                        ? url("storage/cafes/" . basename($cafe->image_path)) // ให้เป็น public URL ที่ใช้ได้จริง
+                        : url("/images/logo.png");
+
+                    $bubbles[] = [
+                        "type" => "bubble",
+                        "hero" => [
+                            "type" => "image",
+                            "url" => $imageUrl,
+                            "size" => "full",
+                            "aspectRatio" => "20:13",
+                            "aspectMode" => "cover"
+                        ],
+                        "body" => [
+                            "type" => "box",
+                            "layout" => "vertical",
+                            "contents" => [
+                                ["type" => "text", "text" => $cafe->cafe_name, "weight" => "bold", "size" => "lg"],
+                                ["type" => "text", "text" => $cafe->address ?? "-", "wrap" => true, "size" => "sm", "color" => "#666666"],
+                                ["type" => "text", "text" => "📍 ห่าง " . round($cafe->distance, 2) . " กม.", "size" => "sm", "color" => "#999999"],
+                                ["type" => "text", "text" => "☎ " . ($cafe->phone ?? "ไม่มีข้อมูล"), "size" => "sm", "color" => "#999999"]
+                            ]
+                        ],
+                        "footer" => [
+                            "type" => "box",
+                            "layout" => "vertical",
+                            "contents" => [[
+                                "type" => "button",
+                                "style" => "link",
+                                "action" => [
+                                    "type" => "uri",
+                                    "label" => "เปิดแผนที่",
+                                    "uri" => "https://maps.google.com/?q={$cafe->lat},{$cafe->lng}"
+                                ]
+                            ]]
+                        ]
+                    ];
                 }
 
-                $this->replyMessage($replyToken, [
-                    "type" => "text",
-                    "text" => $msg
-                ]);
+                $flexMessage = [
+                    "type" => "flex",
+                    "altText" => "คาเฟ่ใกล้คุณ",
+                    "contents" => ["type" => "carousel", "contents" => $bubbles]
+                ];
+
+                $this->replyMessage($replyToken, $flexMessage);
             }
         }
 
