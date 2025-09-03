@@ -601,6 +601,16 @@
     }
 
     function pageController(config) {
+      // ====== เพิ่ม mapping วันและตัวช่วยขยายช่วงวัน ======
+      const DAY_ORDER = ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
+      const ALL_DAYS = [...DAY_ORDER];
+
+      // รองรับคำว่า "ทุกวัน" หรือภาษาอังกฤษที่อาจเจอ
+      function isEveryday(s) {
+        const t = (s || '').toString().trim();
+        return ['ทุกวัน','เปิดทุกวัน','everyday','daily','open daily'].some(x => t.toLowerCase() === x.toLowerCase());
+      }
+
       return {
         allCafes: [],
         filteredCafes: [],
@@ -610,7 +620,7 @@
         cafesPerPage: 12,
         searchTerm: '',
         selectedHour: '',
-        mobileFilterOpen: false, // ✅ ย้ายมาไว้ที่ root เพื่อให้ปุ่มด้านบนสั่งงานได้
+        mobileFilterOpen: false, // ✅ คุม drawer บนมือถือ
         availableFilters: {
           priceRanges: ['฿','฿฿','฿฿฿','฿฿฿฿','฿฿฿฿฿'],
           days: ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'],
@@ -618,6 +628,39 @@
         },
         filters: { rating: 0, time: '', days: [], isNewOpening: false, priceRanges: [], styles: [], facilities: [], paymentMethods: [], otherServices: [] },
         likedCafeIds: config.initialLikedIds || [],
+
+        // === ตัวช่วย: ขยายช่วงวันจาก openDay → closeDay (รวมปลายทาง) ===
+        expandOpenDays(openDay, closeDay) {
+          // ทุกวัน
+          if (isEveryday(openDay) || isEveryday(closeDay)) return [...ALL_DAYS];
+
+          const start = DAY_ORDER.indexOf((openDay || '').trim());
+          const end   = DAY_ORDER.indexOf((closeDay || '').trim());
+
+          // ถ้าไม่พบวัน (เช่น ค่าว่าง) ให้พยายามตีความ:
+          if (start === -1 && end === -1) {
+            // ไม่มีข้อมูล → คืนค่าว่าง (ให้ผ่านเฉพาะตัวกรองอื่น)
+            return [];
+          }
+          if (start !== -1 && end === -1) {
+            // มีวันเริ่ม แต่ไม่มีวันจบ → ถือว่าเปิดเฉพาะวันเดียว
+            return [DAY_ORDER[start]];
+          }
+          if (start === -1 && end !== -1) {
+            // มีวันจบ แต่ไม่มีวันเริ่ม → ถือว่าเปิดเฉพาะวันจบ
+            return [DAY_ORDER[end]];
+          }
+
+          // กรณี start..end ปกติ (รองรับคร่อมสัปดาห์)
+          const result = [];
+          let i = start;
+          while (true) {
+            result.push(DAY_ORDER[i]);
+            if (i === end) break;
+            i = (i + 1) % 7; // วนรอบสัปดาห์
+          }
+          return result;
+        },
 
         initializeAllData() {
           this.loadCafeData();
@@ -638,28 +681,36 @@
 
         loadCafeData() {
           const els = document.querySelectorAll('#cafe-data-source .cafe-item');
-          this.allCafes = Array.from(els).map(el => ({
-            id: parseInt(el.dataset.id),
-            likeUrl: el.dataset.likeUrl,
-            title: el.dataset.title,
-            address: el.dataset.address,
-            link: el.dataset.link,
-            imageUrls: JSON.parse(el.dataset.images || '[]'),
-            placeName: el.dataset.placeName,
-            rating: parseFloat(el.dataset.rating || 0),
-            openDay: el.dataset.openDay,
-            closeDay: el.dataset.closeDay,
-            openTime: el.dataset.openTime,
-            closeTime: el.dataset.closeTime,
-            phone: el.dataset.phone,
-            priceRange: el.dataset.priceRange,
-            originalPriceRange: el.dataset.originalPriceRange,
-            isNewOpening: el.dataset.isNewOpening === 'true',
-            cafeStyles: el.dataset.styles ? el.dataset.styles.split(',').filter(Boolean) : [],
-            facilities: el.dataset.facilities ? el.dataset.facilities.split(',').filter(Boolean) : [],
-            paymentMethods: el.dataset.paymentMethods ? el.dataset.paymentMethods.split(',').filter(Boolean) : [],
-            otherServices: el.dataset.otherServices ? el.dataset.otherServices.split(',').filter(Boolean) : [],
-          }));
+          this.allCafes = Array.from(els).map(el => {
+            const openDay = el.dataset.openDay;
+            const closeDay = el.dataset.closeDay;
+            const expanded = this.expandOpenDays(openDay, closeDay);
+
+            return {
+              id: parseInt(el.dataset.id),
+              likeUrl: el.dataset.likeUrl,
+              title: el.dataset.title,
+              address: el.dataset.address,
+              link: el.dataset.link,
+              imageUrls: JSON.parse(el.dataset.images || '[]'),
+              placeName: el.dataset.placeName,
+              rating: parseFloat(el.dataset.rating || 0),
+              openDay: openDay,
+              closeDay: closeDay,
+              openTime: el.dataset.openTime,
+              closeTime: el.dataset.closeTime,
+              phone: el.dataset.phone,
+              priceRange: el.dataset.priceRange,
+              originalPriceRange: el.dataset.originalPriceRange,
+              isNewOpening: el.dataset.isNewOpening === 'true',
+              cafeStyles: el.dataset.styles ? el.dataset.styles.split(',').filter(Boolean) : [],
+              facilities: el.dataset.facilities ? el.dataset.facilities.split(',').filter(Boolean) : [],
+              paymentMethods: el.dataset.paymentMethods ? el.dataset.paymentMethods.split(',').filter(Boolean) : [],
+              otherServices: el.dataset.otherServices ? el.dataset.otherServices.split(',').filter(Boolean) : [],
+              // ✅ เก็บวันเปิดแบบขยายช่วงไว้ใช้กรอง
+              openDaysExpanded: expanded,
+            };
+          });
           this.filteredCafes = this.allCafes;
         },
 
@@ -685,14 +736,20 @@
           this.filteredCafes = this.allCafes.filter(cafe => {
             if (this.filters.rating > 0 && cafe.rating < this.filters.rating) return false;
             if (this.filters.isNewOpening && !cafe.isNewOpening) return false;
+
+            // เวลาเปิดทำการ
             if (this.filters.time) {
               const open = cafe.openTime || '00:00', close = cafe.closeTime || '23:59';
               if (!(open <= this.filters.time && this.filters.time <= close)) return false;
             }
+
+            // ✅ กรองวันด้วย openDaysExpanded (ขยายช่วง จ-ศ → รวม อังคาร/พุธ/พฤหัสบดี)
             if (this.filters.days.length) {
-              const dayStr = `${cafe.openDay || ''} ${cafe.closeDay || ''}`;
-              if (!this.filters.days.some(d => dayStr.includes(d))) return false;
+              const openDays = cafe.openDaysExpanded || [];
+              const hasAny = this.filters.days.some(d => openDays.includes(d));
+              if (!hasAny) return false;
             }
+
             if (this.filters.priceRanges.length && !this.filters.priceRanges.includes(cafe.priceRange)) return false;
             if (this.filters.styles.length && !this.filters.styles.some(s => cafe.cafeStyles.includes(s))) return false;
             if (this.filters.facilities.length && !this.filters.facilities.some(f => cafe.facilities.includes(f))) return false;
