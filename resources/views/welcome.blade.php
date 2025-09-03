@@ -76,7 +76,7 @@
       </div>
     </div>
 
-    <!-- Mobile filter drawer (ใช้ state จาก root) -->
+    <!-- Mobile filter drawer -->
     <template x-if="mobileFilterOpen">
       <div class="fixed inset-0 z-50 lg:hidden" @keydown.escape.window="mobileFilterOpen=false" x-init="$watch('mobileFilterOpen', v => document.documentElement.classList.toggle('overflow-hidden', v))">
         <div class="absolute inset-0 bg-black/40" @click="mobileFilterOpen = false"></div>
@@ -88,7 +88,6 @@
             </button>
           </div>
 
-          <!-- FILTER CONTENT (mobile copy) -->
           <div class="space-y-4">
             <div class="relative">
               <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
@@ -323,19 +322,6 @@
                       <input type="checkbox" x-model="filters.facilities" :value="f"
                              class="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500">
                       <span class="ml-2" x-text="f"></span>
-                    </label>
-                  </template>
-                </div>
-              </div>
-
-              <div class="border-t border-slate-200 pt-3">
-                <h4 class="font-semibold text-slate-700 mb-2 text-sm">บริการเพิ่มเติม</h4>
-                <div class="space-y-1">
-                  <template x-for="s in availableFilters.otherServices" :key="s">
-                    <label class="flex items-center text-slate-600 text-sm">
-                      <input type="checkbox" x-model="filters.otherServices" :value="s"
-                             class="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500">
-                      <span class="ml-2" x-text="s"></span>
                     </label>
                   </template>
                 </div>
@@ -599,11 +585,10 @@
     }
 
     function pageController(config) {
-      // ====== เพิ่ม mapping วันและตัวช่วยขยายช่วงวัน ======
+      // ====== mapping วัน + ตัวช่วยขยายช่วงวัน ======
       const DAY_ORDER = ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
       const ALL_DAYS = [...DAY_ORDER];
 
-      // รองรับคำว่า "ทุกวัน" หรือภาษาอังกฤษที่อาจเจอ
       function isEveryday(s) {
         const t = (s || '').toString().trim();
         return ['ทุกวัน','เปิดทุกวัน','everyday','daily','open daily'].some(x => t.toLowerCase() === x.toLowerCase());
@@ -618,7 +603,7 @@
         cafesPerPage: 12,
         searchTerm: '',
         selectedHour: '',
-        mobileFilterOpen: false, // ✅ คุม drawer บนมือถือ
+        mobileFilterOpen: false,
         availableFilters: {
           priceRanges: ['฿','฿฿','฿฿฿','฿฿฿฿','฿฿฿฿฿'],
           days: ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'],
@@ -627,35 +612,20 @@
         filters: { rating: 0, time: '', days: [], isNewOpening: false, priceRanges: [], styles: [], facilities: [], paymentMethods: [], otherServices: [] },
         likedCafeIds: config.initialLikedIds || [],
 
-        // === ตัวช่วย: ขยายช่วงวันจาก openDay → closeDay (รวมปลายทาง) ===
         expandOpenDays(openDay, closeDay) {
-          // ทุกวัน
           if (isEveryday(openDay) || isEveryday(closeDay)) return [...ALL_DAYS];
-
           const start = DAY_ORDER.indexOf((openDay || '').trim());
           const end   = DAY_ORDER.indexOf((closeDay || '').trim());
+          if (start === -1 && end === -1) return [];
+          if (start !== -1 && end === -1) return [DAY_ORDER[start]];
+          if (start === -1 && end !== -1) return [DAY_ORDER[end]];
 
-          // ถ้าไม่พบวัน (เช่น ค่าว่าง) ให้พยายามตีความ:
-          if (start === -1 && end === -1) {
-            // ไม่มีข้อมูล → คืนค่าว่าง (ให้ผ่านเฉพาะตัวกรองอื่น)
-            return [];
-          }
-          if (start !== -1 && end === -1) {
-            // มีวันเริ่ม แต่ไม่มีวันจบ → ถือว่าเปิดเฉพาะวันเดียว
-            return [DAY_ORDER[start]];
-          }
-          if (start === -1 && end !== -1) {
-            // มีวันจบ แต่ไม่มีวันเริ่ม → ถือว่าเปิดเฉพาะวันจบ
-            return [DAY_ORDER[end]];
-          }
-
-          // กรณี start..end ปกติ (รองรับคร่อมสัปดาห์)
           const result = [];
           let i = start;
           while (true) {
             result.push(DAY_ORDER[i]);
             if (i === end) break;
-            i = (i + 1) % 7; // วนรอบสัปดาห์
+            i = (i + 1) % 7;
           }
           return result;
         },
@@ -674,7 +644,7 @@
           this.allNews = Array.from(els).map(el => ({
             id: parseInt(el.dataset.id), title: el.dataset.title, link: el.dataset.link, image: el.dataset.image, dateString: el.dataset.dateString
           }));
-          this.filteredNews = this.allNews;
+          this.filteredNews = [...this.allNews]; // ✅ clone ป้องกัน render ซ้ำ
         },
 
         loadCafeData() {
@@ -705,11 +675,10 @@
               facilities: el.dataset.facilities ? el.dataset.facilities.split(',').filter(Boolean) : [],
               paymentMethods: el.dataset.paymentMethods ? el.dataset.paymentMethods.split(',').filter(Boolean) : [],
               otherServices: el.dataset.otherServices ? el.dataset.otherServices.split(',').filter(Boolean) : [],
-              // ✅ เก็บวันเปิดแบบขยายช่วงไว้ใช้กรอง
               openDaysExpanded: expanded,
             };
           });
-          this.filteredCafes = this.allCafes;
+          this.filteredCafes = [...this.allCafes];
         },
 
         extractAvailableFilters() {
@@ -731,23 +700,19 @@
         applyFilters() {
           this.displayedCafeCount = this.cafesPerPage;
           const q = this.searchTerm.toLowerCase().trim();
+
+          // ===== กรองคาเฟ่ =====
           this.filteredCafes = this.allCafes.filter(cafe => {
             if (this.filters.rating > 0 && cafe.rating < this.filters.rating) return false;
             if (this.filters.isNewOpening && !cafe.isNewOpening) return false;
-
-            // เวลาเปิดทำการ
             if (this.filters.time) {
               const open = cafe.openTime || '00:00', close = cafe.closeTime || '23:59';
               if (!(open <= this.filters.time && this.filters.time <= close)) return false;
             }
-
-            // ✅ กรองวันด้วย openDaysExpanded (ขยายช่วง จ-ศ → รวม อังคาร/พุธ/พฤหัสบดี)
             if (this.filters.days.length) {
               const openDays = cafe.openDaysExpanded || [];
-              const hasAny = this.filters.days.some(d => openDays.includes(d));
-              if (!hasAny) return false;
+              if (!this.filters.days.some(d => openDays.includes(d))) return false;
             }
-
             if (this.filters.priceRanges.length && !this.filters.priceRanges.includes(cafe.priceRange)) return false;
             if (this.filters.styles.length && !this.filters.styles.some(s => cafe.cafeStyles.includes(s))) return false;
             if (this.filters.facilities.length && !this.filters.facilities.some(f => cafe.facilities.includes(f))) return false;
@@ -761,13 +726,18 @@
             return true;
           });
 
-          this.filteredNews = this.allNews.filter(n => !q || n.title.toLowerCase().includes(q));
+          // ===== กรองข่าว (reset จาก allNews ทุกครั้ง) =====
+          this.filteredNews = this.allNews.filter(n => {
+            if (q && !n.title.toLowerCase().includes(q)) return false;
+            return true;
+          });
         },
 
         clearFilters() {
           this.filters = { rating:0, time:'', days:[], isNewOpening:false, priceRanges:[], styles:[], facilities:[], paymentMethods:[], otherServices:[] };
           this.selectedHour = '';
           this.searchTerm = '';
+          this.filteredNews = [...this.allNews]; // ✅ รีเซ็ตข่าว
         },
 
         isLiked(id) { return Array.isArray(this.likedCafeIds) && this.likedCafeIds.includes(id); },
