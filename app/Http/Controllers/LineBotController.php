@@ -56,14 +56,14 @@ class LineBotController extends Controller
 
                 Log::info("User Location Received: lat={$lat}, lng={$lng}");
 
-                // Query หา 5 คาเฟ่ใกล้สุดในรัศมี 30 กม.
+                // ✅ Query หา 5 คาเฟ่ใกล้สุดในรัศมี 5 กม.
                 $cafes = DB::select("
-                    SELECT cafe_id, cafe_name, address, lat, lng, phone,
+                    SELECT cafe_id, cafe_name, address, lat, lng, phone, image,
                     ( 6371 * acos( cos( radians(?) ) * cos( radians(lat) )
                     * cos( radians(lng) - radians(?) )
                     + sin( radians(?) ) * sin( radians(lat) ) ) ) AS distance
                     FROM cafes
-                    HAVING distance < 30
+                    HAVING distance <= 5
                     ORDER BY distance ASC
                     LIMIT 5
                 ", [$lat, $lng, $lat]);
@@ -73,16 +73,23 @@ class LineBotController extends Controller
                 if (empty($cafes)) {
                     $this->replyMessage($replyToken, [
                         "type" => "text",
-                        "text" => "ไม่พบคาเฟ่ในรัศมี 30 กม. จากคุณ 😢"
+                        "text" => "ไม่พบคาเฟ่ในรัศมี 5 กม. จากคุณ 😢"
                     ]);
                     return;
                 }
 
-                // 🧩 สร้าง Flex Message Carousel
+                // 🧩 สร้าง Flex Message Carousel + รูป
                 $bubbles = [];
                 foreach ($cafes as $cafe) {
                     $bubbles[] = [
                         "type" => "bubble",
+                        "hero" => [
+                            "type" => "image",
+                            "url" => url("/images/cafes/" . ($cafe->image ?? "no-image.png")),
+                            "size" => "full",
+                            "aspectRatio" => "20:13",
+                            "aspectMode" => "cover"
+                        ],
                         "body" => [
                             "type" => "box",
                             "layout" => "vertical",
