@@ -12,15 +12,13 @@ class LineBotController extends Controller
     public function webhook(Request $request)
     {
         $data = $request->all();
-
-        // 🟢 Debug payload ที่ LINE ส่งมา
         Log::info("Raw Webhook: " . json_encode($data, JSON_UNESCAPED_UNICODE));
 
         $events = $data['events'] ?? [];
 
         foreach ($events as $event) {
             if (!isset($event['replyToken'])) {
-                continue; // กัน error event ไม่มี replyToken เช่น unfollow
+                continue;
             }
 
             $replyToken = $event['replyToken'];
@@ -28,58 +26,48 @@ class LineBotController extends Controller
             // ✅ ถ้าเป็นข้อความ
             if ($event['type'] === 'message' && $event['message']['type'] === 'text') {
                 $userText = trim($event['message']['text']);
-                Log::info("User Text: " . $userText);
 
                 if ($userText === 'ค้นหาคาเฟ่ใกล้ฉัน') {
                     $this->replyMessage($replyToken, [
                         "type" => "text",
                         "text" => "กรุณาส่งพิกัดของคุณเพื่อค้นหาคาเฟ่ใกล้คุณ 🐘☕",
                         "quickReply" => [
-                            "items" => [
-                                [
-                                    "type" => "action",
-                                    "action" => [
-                                        "type" => "location",
-                                        "label" => "📍 แชร์ตำแหน่งของฉัน"
-                                    ]
+                            "items" => [[
+                                "type" => "action",
+                                "action" => [
+                                    "type" => "location",
+                                    "label" => "📍 แชร์ตำแหน่งของฉัน"
                                 ]
-                            ]
+                            ]]
                         ]
                     ]);
                 }
             }
 
-            // ✅ ถ้าเป็นการแชร์ location
+            // ✅ ถ้าเป็น location
             if ($event['type'] === 'message' && $event['message']['type'] === 'location') {
                 $lat = $event['message']['latitude'];
                 $lng = $event['message']['longitude'];
 
-                Log::info("User Location Received: lat={$lat}, lng={$lng}");
+                Log::info("User Location: lat={$lat}, lng={$lng}");
 
-                // 🔍 Query คาเฟ่ในรัศมี 5 กม.
-                $cafes = DB::table('cafes')
-                    ->leftJoin('cafe_images', 'cafes.cafe_id', '=', 'cafe_images.cafe_id')
-                    ->select(
-                        'cafes.cafe_id',
-                        'cafes.cafe_name',
-                        'cafes.address',
-                        'cafes.lat',
-                        'cafes.lng',
-                        'cafes.phone',
-                        'cafe_images.image_path',
-                        DB::raw('(6371 * acos(cos(radians(?)) * cos(radians(cafes.lat)) 
-                            * cos(radians(cafes.lng) - radians(?)) 
-                            + sin(radians(?)) * sin(radians(cafes.lat)))) AS distance')
-                    )
-                    ->setBindings([$lat, $lng, $lat])
-                    ->having('distance', '<', 5)
-                    ->orderBy('distance', 'asc')
-                    ->limit(5)
-                    ->get();
+                // ✅ ใช้ Raw SQL แทน setBindings()
+                $cafes = DB::select("
+                    SELECT cafes.cafe_id, cafes.cafe_name, cafes.address, cafes.lat, cafes.lng, cafes.phone,
+                           ci.image_path,
+                           (6371 * acos(
+                               cos(radians(?)) * cos(radians(cafes.lat)) *
+                               cos(radians(cafes.lng) - radians(?)) +
+                               sin(radians(?)) * sin(radians(cafes.lat))
+                           )) AS distance
+                    FROM cafes
+                    LEFT JOIN cafe_images ci ON cafes.cafe_id = ci.cafe_id
+                    HAVING distance < 5
+                    ORDER BY distance ASC
+                    LIMIT 5
+                ", [$lat, $lng, $lat]);
 
-                Log::info("Nearby Cafes Query Result: ", $cafes->toArray());
-
-                if ($cafes->isEmpty()) {
+                if (empty($cafes)) {
                     $this->replyMessage($replyToken, [
                         "type" => "text",
                         "text" => "ไม่พบคาเฟ่ในรัศมี 5 กม. จากคุณ 😢"
@@ -87,16 +75,18 @@ class LineBotController extends Controller
                     return;
                 }
 
-                // 🧩 Flex Message
+                // ✅ Flex Message
                 $bubbles = [];
                 foreach ($cafes as $cafe) {
+                    $imageUrl = $cafe->image_path
+                        ? url("/" . ltrim($cafe->image_path, '/')) // ➜ ทำให้เป็น domain จริง
+                        : url("/images/logo.png");
+
                     $bubbles[] = [
                         "type" => "bubble",
                         "hero" => [
                             "type" => "image",
-                            "url" => $cafe->image_path 
-                                ? url($cafe->image_path) 
-                                : url('/images/logo.png'),
+                            "url" => $imageUrl,
                             "size" => "full",
                             "aspectRatio" => "20:13",
                             "aspectMode" => "cover"
@@ -105,47 +95,24 @@ class LineBotController extends Controller
                             "type" => "box",
                             "layout" => "vertical",
                             "contents" => [
-                                [
-                                    "type" => "text",
-                                    "text" => $cafe->cafe_name,
-                                    "weight" => "bold",
-                                    "size" => "lg"
-                                ],
-                                [
-                                    "type" => "text",
-                                    "text" => $cafe->address,
-                                    "wrap" => true,
-                                    "size" => "sm",
-                                    "color" => "#666666"
-                                ],
-                                [
-                                    "type" => "text",
-                                    "text" => "📍 ห่าง " . round($cafe->distance, 2) . " กม.",
-                                    "size" => "sm",
-                                    "color" => "#999999"
-                                ],
-                                [
-                                    "type" => "text",
-                                    "text" => "☎ " . ($cafe->phone ?? "ไม่มีข้อมูล"),
-                                    "size" => "sm",
-                                    "color" => "#999999"
-                                ]
+                                ["type" => "text", "text" => $cafe->cafe_name, "weight" => "bold", "size" => "lg"],
+                                ["type" => "text", "text" => $cafe->address, "wrap" => true, "size" => "sm", "color" => "#666666"],
+                                ["type" => "text", "text" => "📍 ห่าง " . round($cafe->distance, 2) . " กม.", "size" => "sm", "color" => "#999999"],
+                                ["type" => "text", "text" => "☎ " . ($cafe->phone ?? "ไม่มีข้อมูล"), "size" => "sm", "color" => "#999999"]
                             ]
                         ],
                         "footer" => [
                             "type" => "box",
                             "layout" => "vertical",
-                            "contents" => [
-                                [
-                                    "type" => "button",
-                                    "style" => "link",
-                                    "action" => [
-                                        "type" => "uri",
-                                        "label" => "เปิดแผนที่",
-                                        "uri" => "https://maps.google.com/?q={$cafe->lat},{$cafe->lng}"
-                                    ]
+                            "contents" => [[
+                                "type" => "button",
+                                "style" => "link",
+                                "action" => [
+                                    "type" => "uri",
+                                    "label" => "เปิดแผนที่",
+                                    "uri" => "https://maps.google.com/?q={$cafe->lat},{$cafe->lng}"
                                 ]
-                            ]
+                            ]]
                         ]
                     ];
                 }
@@ -153,10 +120,7 @@ class LineBotController extends Controller
                 $flexMessage = [
                     "type" => "flex",
                     "altText" => "คาเฟ่ใกล้คุณ",
-                    "contents" => [
-                        "type" => "carousel",
-                        "contents" => $bubbles
-                    ]
+                    "contents" => ["type" => "carousel", "contents" => $bubbles]
                 ];
 
                 $this->replyMessage($replyToken, $flexMessage);
