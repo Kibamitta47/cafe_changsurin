@@ -53,14 +53,13 @@ class LineBotController extends Controller
 
                 // ✅ Query คาเฟ่
                 $cafes = DB::select("
-                    SELECT cafes.cafe_id, cafes.cafe_name, cafes.address, cafes.lat, cafes.lng, cafes.phone, ci.image_path,
+                    SELECT cafes.cafe_id, cafes.cafe_name, cafes.address, cafes.lat, cafes.lng, cafes.phone,
                            (6371 * acos(
                                cos(radians(?)) * cos(radians(cafes.lat)) *
                                cos(radians(cafes.lng) - radians(?)) +
                                sin(radians(?)) * sin(radians(cafes.lat))
                            )) AS distance
                     FROM cafes
-                    LEFT JOIN cafe_images ci ON cafes.cafe_id = ci.cafe_id
                     HAVING distance < 5
                     ORDER BY distance ASC
                     LIMIT 5
@@ -74,22 +73,11 @@ class LineBotController extends Controller
                     return;
                 }
 
-                // ✅ Flex Message
+                // ✅ Flex Message (ไม่มี hero image)
                 $bubbles = [];
                 foreach ($cafes as $cafe) {
-                    $imageUrl = $cafe->image_path
-                        ? url("storage/cafes/" . basename($cafe->image_path)) // ให้เป็น public URL ที่ใช้ได้จริง
-                        : url("/images/logo.png");
-
                     $bubbles[] = [
                         "type" => "bubble",
-                        "hero" => [
-                            "type" => "image",
-                            "url" => $imageUrl,
-                            "size" => "full",
-                            "aspectRatio" => "20:13",
-                            "aspectMode" => "cover"
-                        ],
                         "body" => [
                             "type" => "box",
                             "layout" => "vertical",
