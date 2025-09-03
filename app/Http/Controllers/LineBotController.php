@@ -56,14 +56,14 @@ class LineBotController extends Controller
 
                 Log::info("User Location Received: lat={$lat}, lng={$lng}");
 
-                // ✅ Query หา 5 คาเฟ่ใกล้สุดในรัศมี 5 กม.
+                // Query หา 5 คาเฟ่ใกล้สุดในรัศมี 5 กม.
                 $cafes = DB::select("
-                    SELECT cafe_id, cafe_name, address, lat, lng, phone, image,
+                    SELECT cafe_id, cafe_name, address, lat, lng, phone, images,
                     ( 6371 * acos( cos( radians(?) ) * cos( radians(lat) )
                     * cos( radians(lng) - radians(?) )
                     + sin( radians(?) ) * sin( radians(lat) ) ) ) AS distance
                     FROM cafes
-                    HAVING distance <= 5
+                    HAVING distance < 5
                     ORDER BY distance ASC
                     LIMIT 5
                 ", [$lat, $lng, $lat]);
@@ -78,18 +78,31 @@ class LineBotController extends Controller
                     return;
                 }
 
-                // 🧩 สร้าง Flex Message Carousel + รูป
+                // 🧩 สร้าง Flex Message Carousel
                 $bubbles = [];
                 foreach ($cafes as $cafe) {
-                    $bubbles[] = [
+                    // ✅ ดึงรูปภาพจากคอลัมน์ images (json)
+                    $imageUrl = null;
+                    if (!empty($cafe->images)) {
+                        $decoded = json_decode($cafe->images, true);
+                        if (is_array($decoded) && count($decoded) > 0) {
+                            if (filter_var($decoded[0], FILTER_VALIDATE_URL)) {
+                                $imageUrl = $decoded[0]; // เป็น URL อยู่แล้ว
+                            } else {
+                                $imageUrl = url('images/' . $decoded[0]); // เป็นไฟล์ใน public/images
+                            }
+                        }
+                    }
+
+                    $bubble = [
                         "type" => "bubble",
-                        "hero" => [
+                        "hero" => $imageUrl ? [
                             "type" => "image",
-                            "url" => url("/images/cafes/" . ($cafe->image ?? "no-image.png")),
+                            "url" => $imageUrl,
                             "size" => "full",
                             "aspectRatio" => "20:13",
                             "aspectMode" => "cover"
-                        ],
+                        ] : null,
                         "body" => [
                             "type" => "box",
                             "layout" => "vertical",
@@ -137,6 +150,12 @@ class LineBotController extends Controller
                             ]
                         ]
                     ];
+
+                    if (!$imageUrl) {
+                        unset($bubble['hero']);
+                    }
+
+                    $bubbles[] = $bubble;
                 }
 
                 $flexMessage = [
@@ -160,14 +179,14 @@ class LineBotController extends Controller
     // ✅ ฟังก์ชันส่งข้อความกลับไปที่ LINE
     private function replyMessage($replyToken, $message)
     {
-        $accessToken = config('services.line.channel_access_token'); // ✅ ดึงจาก config/services.php
+        $accessToken = config('services.line.channel_access_token');
 
         Http::withHeaders([
             'Content-Type' => 'application/json',
             'Authorization' => 'Bearer ' . $accessToken,
         ])->post('https://api.line.me/v2/bot/message/reply', [
             'replyToken' => $replyToken,
-            'messages' => [$message], // ✅ ต้องเป็น array
+            'messages' => [$message],
         ]);
     }
 }
