@@ -18,19 +18,17 @@ class LineBotController extends Controller
 
         foreach ($events as $event) {
             if (!isset($event['replyToken'])) {
-                continue; // กัน error กรณี event ไม่มี replyToken เช่น unfollow
+                continue; // กัน error event ไม่มี replyToken เช่น unfollow
             }
 
             $replyToken = $event['replyToken'];
 
-            // 🟢 ถ้าผู้ใช้ส่งข้อความ
+            // ✅ ถ้าผู้ใช้พิมพ์ข้อความ
             if ($event['type'] === 'message' && $event['message']['type'] === 'text') {
                 $userText = trim($event['message']['text']);
                 Log::info("User Text: " . $userText);
 
                 if ($userText === 'ค้นหาคาเฟ่ใกล้ฉัน') {
-                    Log::info("Matched keyword: ค้นหาคาเฟ่ใกล้ฉัน → ส่ง Quick Reply");
-
                     $this->replyMessage($replyToken, [
                         "type" => "text",
                         "text" => "กรุณาส่งพิกัดของคุณเพื่อค้นหาคาเฟ่ใกล้คุณ 🐘☕",
@@ -49,28 +47,37 @@ class LineBotController extends Controller
                 }
             }
 
-            // 🟢 ถ้าผู้ใช้แชร์ Location
+            // ✅ ถ้าผู้ใช้ส่ง Location
             if ($event['type'] === 'message' && $event['message']['type'] === 'location') {
                 $lat = $event['message']['latitude'];
                 $lng = $event['message']['longitude'];
 
                 Log::info("User Location Received: lat={$lat}, lng={$lng}");
 
-                // Query หา 5 คาเฟ่ใกล้สุดในรัศมี 5 กม.
-                $cafes = DB::select("
-                    SELECT cafe_id, cafe_name, address, lat, lng, phone,
-                    ( 6371 * acos( cos( radians(?) ) * cos( radians(lat) )
-                    * cos( radians(lng) - radians(?) )
-                    + sin( radians(?) ) * sin( radians(lat) ) ) ) AS distance
-                    FROM cafes
-                    HAVING distance < 5
-                    ORDER BY distance ASC
-                    LIMIT 5
-                ", [$lat, $lng, $lat]);
+                // 🔍 Query หา 5 คาเฟ่ในรัศมี 5 กม. พร้อมรูป
+                $cafes = DB::table('cafes')
+                    ->leftJoin('cafe_images', 'cafes.cafe_id', '=', 'cafe_images.cafe_id')
+                    ->select(
+                        'cafes.cafe_id',
+                        'cafes.cafe_name',
+                        'cafes.address',
+                        'cafes.lat',
+                        'cafes.lng',
+                        'cafes.phone',
+                        'cafe_images.image_path',
+                        DB::raw('(6371 * acos(cos(radians(?)) * cos(radians(cafes.lat)) 
+                            * cos(radians(cafes.lng) - radians(?)) 
+                            + sin(radians(?)) * sin(radians(cafes.lat)))) AS distance')
+                    )
+                    ->setBindings([$lat, $lng, $lat])
+                    ->having('distance', '<', 5)
+                    ->orderBy('distance', 'asc')
+                    ->limit(5)
+                    ->get();
 
-                Log::info("Nearby Cafes Query Result: ", $cafes);
+                Log::info("Nearby Cafes Query Result: ", $cafes->toArray());
 
-                if (empty($cafes)) {
+                if ($cafes->isEmpty()) {
                     $this->replyMessage($replyToken, [
                         "type" => "text",
                         "text" => "ไม่พบคาเฟ่ในรัศมี 5 กม. จากคุณ 😢"
@@ -78,19 +85,14 @@ class LineBotController extends Controller
                     return;
                 }
 
-                // 🧩 สร้าง Flex Message Carousel พร้อมรูป
+                // 🧩 สร้าง Flex Message Carousel
                 $bubbles = [];
                 foreach ($cafes as $cafe) {
-                    // ดึงรูปจากตาราง cafe_images (เอารูปแรก)
-                    $image = DB::table('cafe_images')
-                        ->where('cafe_id', $cafe->cafe_id)
-                        ->value('image_path');
-
                     $bubbles[] = [
                         "type" => "bubble",
                         "hero" => [
                             "type" => "image",
-                            "url" => $image ? url($image) : url('/images/logo.png'),
+                            "url" => $cafe->image_path ? url($cafe->image_path) : url('/images/logo.png'),
                             "size" => "full",
                             "aspectRatio" => "20:13",
                             "aspectMode" => "cover"
@@ -153,8 +155,6 @@ class LineBotController extends Controller
                     ]
                 ];
 
-                Log::info("Flex Message Built: ", $flexMessage);
-
                 $this->replyMessage($replyToken, $flexMessage);
             }
         }
@@ -165,14 +165,14 @@ class LineBotController extends Controller
     // ✅ ฟังก์ชันส่งข้อความกลับไปที่ LINE
     private function replyMessage($replyToken, $message)
     {
-        $accessToken = config('services.line.channel_access_token'); // ✅ ดึงจาก config/services.php
+        $accessToken = config('services.line.channel_access_token'); 
 
         Http::withHeaders([
             'Content-Type' => 'application/json',
             'Authorization' => 'Bearer ' . $accessToken,
         ])->post('https://api.line.me/v2/bot/message/reply', [
             'replyToken' => $replyToken,
-            'messages' => [$message], // ✅ ต้องเป็น array
+            'messages' => [$message],
         ]);
     }
 }
