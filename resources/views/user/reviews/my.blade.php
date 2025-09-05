@@ -24,7 +24,6 @@
     @media (min-width:768px){ .main{ padding:2rem; } }
     .review-card{ border:0; border-radius:var(--radius); box-shadow:var(--shadow); }
     .review-card:hover{ box-shadow:var(--shadow-lg); }
-    .cafe-thumb{ width:72px; height:72px; border-radius:.75rem; object-fit:cover; background:#e9ecef; }
     .star{ color:#f59e0b; } /* ดาวสีทอง */
     .empty{ background:#fff; border:1px dashed #dee2e6; border-radius:var(--radius); text-align:center; padding:3rem 1.5rem; }
     .truncate-2{
@@ -62,15 +61,12 @@
           @foreach ($reviews as $review)
             @php
               $cafe = $review->cafe ?? null;
-              $images = is_array($cafe->images ?? null) ? $cafe->images : [];
-              $thumb = !empty($images) ? asset('storage/'.$images[0]) : 'https://placehold.co/200x200/E2E8F0/64748B?text=Cafe';
               $rating = (int)($review->rating ?? 0);
             @endphp
 
             <div class="card review-card">
               <div class="card-body">
                 <div class="d-flex gap-3">
-                  <img src="{{ $thumb }}" alt="รูป {{ $cafe->cafe_name ?? 'คาเฟ่' }}" class="cafe-thumb d-none d-sm-block">
                   <div class="w-100">
                     <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
                       <div>
