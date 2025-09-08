@@ -13,7 +13,7 @@ class ProfileController extends Controller
     // แสดงฟอร์ม
     public function edit(Request $request): View
     {
-        return view('user.profile-edit', ['user' => $request->user()]);
+        return view('user.profile', ['user' => $request->user()]);
     }
 
     // อัปเดตเฉพาะชื่อ + รูปโปรไฟล์
