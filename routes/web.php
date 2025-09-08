@@ -13,6 +13,7 @@ use App\Http\Controllers\UserDashboardController;
 use App\Http\Controllers\LineBotController;
 use App\Http\Controllers\UserReviewController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\ProfileController;
 
 
 
@@ -76,8 +77,8 @@ Route::get('/auth/line/callback', [LineLoginController::class, 'handleLineCallba
 */
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('user.dashboard');
-    Route::get('/profile', fn() => view('user.profile'))->name('user.profile.show');
-    Route::put('/profile', [UserAuthController::class, 'updateProfile'])->name('user.profile.update');
+       Route::get('/profile', [ProfileController::class, 'edit'])->name('user.profile.show');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('user.profile.update');
     Route::post('/logout', [UserAuthController::class, 'logout'])->name('user.logout');
 
     // My Cafes (Owned by User)

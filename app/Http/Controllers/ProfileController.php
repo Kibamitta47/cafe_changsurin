@@ -2,59 +2,48 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ProfileUpdateRequest;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    /**
-     * Display the user's profile form.
-     */
+    // แสดงฟอร์ม
     public function edit(Request $request): View
     {
-        return view('profile.edit', [
-            'user' => $request->user(),
-        ]);
+        return view('user.profile-edit', ['user' => $request->user()]);
     }
 
-    /**
-     * Update the user's profile information.
-     */
-    public function update(ProfileUpdateRequest $request): RedirectResponse
+    // อัปเดตเฉพาะชื่อ + รูปโปรไฟล์
+    public function update(Request $request)
     {
-        $request->user()->fill($request->validated());
-
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
-        }
-
-        $request->user()->save();
-
-        return Redirect::route('profile.edit')->with('status', 'profile-updated');
-    }
-
-    /**
-     * Delete the user's account.
-     */
-    public function destroy(Request $request): RedirectResponse
-    {
-        $request->validateWithBag('userDeletion', [
-            'password' => ['required', 'current_password'],
-        ]);
-
         $user = $request->user();
 
-        Auth::logout();
+        $validated = $request->validate([
+            'name' => ['required','string','max:255'],
+            'profile_image' => ['nullable','image','mimes:jpg,jpeg,png,webp','max:3072'], // 3MB
+        ], [
+            'name.required' => 'กรุณากรอกชื่อผู้ใช้',
+            'profile_image.image' => 'ไฟล์รูปไม่ถูกต้อง',
+            'profile_image.mimes' => 'รองรับเฉพาะ jpg, jpeg, png, webp',
+            'profile_image.max' => 'ขนาดไฟล์ต้องไม่เกิน 3MB',
+        ]);
 
-        $user->delete();
+        // อัปโหลดรูป (ถ้ามี)
+        if ($request->hasFile('profile_image')) {
+            if ($user->profile_image && Storage::disk('public')->exists($user->profile_image)) {
+                Storage::disk('public')->delete($user->profile_image);
+            }
+            $path = $request->file('profile_image')->store('avatars', 'public');
+            $user->profile_image = $path;
+        }
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        // อัปเดตชื่อเท่านั้น
+        $user->name = $validated['name'];
+        $user->save();
 
-        return Redirect::to('/');
+        return Redirect::route('user.profile.show')->with('success', 'บันทึกโปรไฟล์เรียบร้อยแล้ว');
     }
 }
