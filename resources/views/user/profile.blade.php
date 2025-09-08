@@ -14,8 +14,8 @@
     .profile-card { background:#fff; border-radius:.75rem; box-shadow:0 10px 15px -3px rgb(0 0 0 / .1), 0 4px 6px -4px rgb(0 0 0 / .1); }
     .profile-avatar { position:relative; width:150px; height:150px; margin:0 auto 1rem; }
     .profile-avatar img, .profile-avatar .avatar-placeholder {
-        width:100%; height:100%; border-radius:50%; object-fit:cover;
-        border:4px solid #fff; box-shadow:0 4px 6px -1px rgb(0 0 0 / .1);
+      width:100%; height:100%; border-radius:50%; object-fit:cover;
+      border:4px solid #fff; box-shadow:0 4px 6px -1px rgb(0 0 0 / .1);
     }
     .avatar-placeholder { display:flex; align-items:center; justify-content:center; background:#eef2f7; color:#c0c7d1; font-size:4rem; }
     .avatar-upload-button { position:absolute; bottom:6px; right:6px; width:42px; height:42px; border-radius:50%; background:#0D6EFD; color:#fff; border:2px solid #fff; display:flex; align-items:center; justify-content:center; cursor:pointer; }
@@ -32,7 +32,6 @@
 <div class="container my-5">
   <div class="text-center mb-4">
     <h1 class="fw-bold">จัดการโปรไฟล์</h1>
-    <p class="text-secondary">แก้ไขได้เฉพาะ “ชื่อผู้ใช้” และ “รูปโปรไฟล์”</p>
   </div>
 
   @if(session('success'))
@@ -48,7 +47,7 @@
   @endif
 
   <div class="profile-card p-4 p-md-5">
-    <form method="POST" action="{{ route('user.profile.update') }}" enctype="multipart/form-data">
+    <form id="profileForm" method="POST" action="{{ route('user.profile.update') }}" enctype="multipart/form-data">
       @csrf
       @method('PUT')
 
@@ -64,12 +63,12 @@
               </div>
               <img id="imagePreview" class="d-none" alt="รูปโปรไฟล์">
             @endif
-            <label for="profile_image" class="avatar-upload-button">
+            <label for="profile_image" class="avatar-upload-button" title="อัปโหลดรูป">
               <i class="bi bi-camera-fill"></i>
             </label>
             <input type="file" id="profile_image" name="profile_image" class="d-none" accept="image/*">
           </div>
-          <div class="small text-muted">ไฟล์: jpg, jpeg, png, webp (≤3MB)</div>
+          <div id="imgHint" class="small text-danger d-none mt-2"></div>
         </div>
 
         <!-- ชื่อ -->
@@ -95,21 +94,114 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+/**
+ * บีบอัดรูปฝั่ง client ด้วย <canvas> ให้ไม่เกิน MAX_BYTES
+ * - ลดด้านยาวสุดไม่เกิน MAX_DIM
+ * - ลดคุณภาพแบบไล่ระดับจนกว่าจะ < MAX_BYTES (อย่างน้อย 0.5)
+ */
 document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('profile_image');
   const preview = document.getElementById('imagePreview');
   const placeholder = document.getElementById('imagePreviewPlaceholder');
+  const form = document.getElementById('profileForm');
+  const hint = document.getElementById('imgHint');
 
-  input.addEventListener('change', (e) => {
+  const MAX_BYTES = 3 * 1024 * 1024;   // 3MB ให้ตรงกับ Laravel validation
+  const MAX_DIM = 1600;                // ด้านยาวสุดไม่เกิน 1600px
+  const MIN_QUALITY = 0.5;
+
+  async function compressImage(file) {
+    // ถ้าไฟล์เล็กอยู่แล้วก็คืนไฟล์เดิม
+    if (file.size <= MAX_BYTES) return file;
+
+    const img = new Image();
+    const dataURL = await fileToDataURL(file);
+    img.src = dataURL;
+    await img.decode();
+
+    // คำนวณขนาดใหม่รักษาอัตราส่วน
+    let { width, height } = img;
+    const scale = Math.min(1, MAX_DIM / Math.max(width, height));
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, width, height);
+
+    // พยายามบีบอัดเป็น JPEG ไล่คุณภาพลงทีละนิด
+    let quality = 0.85;
+    let blob = await canvasToBlob(canvas, 'image/jpeg', quality);
+
+    while (blob.size > MAX_BYTES && quality > MIN_QUALITY) {
+      quality = Math.max(MIN_QUALITY, quality - 0.1);
+      blob = await canvasToBlob(canvas, 'image/jpeg', quality);
+    }
+
+    // สร้างไฟล์ใหม่ชื่อ friendly
+    const name = (file.name || 'avatar').replace(/\.[^.]+$/, '') + '.jpg';
+    return new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() });
+  }
+
+  function fileToDataURL(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function canvasToBlob(canvas, type, quality) {
+    return new Promise(resolve => canvas.toBlob(b => resolve(b), type, quality));
+  }
+
+  function replaceInputFile(inputEl, newFile) {
+    const dt = new DataTransfer();
+    dt.items.add(newFile);
+    inputEl.files = dt.files;
+  }
+
+  input.addEventListener('change', async (e) => {
+    hint.classList.add('d-none');
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // บีบอัดถ้าจำเป็น
+    const finalFile = await compressImage(file);
+    if (finalFile !== file) {
+      replaceInputFile(input, finalFile);
+      hint.textContent = `บีบอัดรูปจาก ${(file.size/1024/1024).toFixed(2)}MB → ${(finalFile.size/1024/1024).toFixed(2)}MB`;
+      hint.classList.remove('d-none');
+    } else if (file.size > MAX_BYTES) {
+      hint.textContent = 'ไฟล์ใหญ่เกินไป โปรดลองเลือกรูปที่เล็กลง';
+      hint.classList.remove('d-none');
+    }
+
+    // พรีวิว
     const reader = new FileReader();
     reader.onload = (ev) => {
       if (placeholder) placeholder.classList.add('d-none');
       preview.src = ev.target.result;
       preview.classList.remove('d-none');
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(finalFile);
+  });
+
+  // กันกรณีผู้ใช้ไม่ได้เปลี่ยนไฟล์ แต่ไฟล์เดิมยังใหญ่เกิน
+  form.addEventListener('submit', async (e) => {
+    const f = input.files?.[0];
+    if (f && f.size > MAX_BYTES) {
+      e.preventDefault();
+      const smaller = await compressImage(f);
+      replaceInputFile(input, smaller);
+      hint.textContent = `บีบอัดเพิ่มเติมเป็น ${(smaller.size/1024/1024).toFixed(2)}MB แล้ว กดบันทึกอีกครั้ง`;
+      hint.classList.remove('d-none');
+      // ส่งใหม่อัตโนมัติถ้าหลังบีบอัดแล้วไม่เกิน
+      if (smaller.size <= MAX_BYTES) form.submit();
+    }
   });
 });
 </script>
