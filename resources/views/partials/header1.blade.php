@@ -1,4 +1,3 @@
-<!-- resources/views/partials/header.blade.php -->
 <nav class="navbar navbar-expand-lg fixed-top bg-white shadow-sm">
   <div class="container">
     <!-- Logo -->
@@ -28,18 +27,34 @@
 
       <!-- Dropdown โปรไฟล์ -->
       <div class="dropdown ms-3">
-        <button class="btn btn-light border rounded-circle dropdown-toggle" data-bs-toggle="dropdown">
-          <i class="bi bi-person"></i>
+        <button class="btn border-0 p-0 dropdown-toggle" data-bs-toggle="dropdown" style="background: none;">
+          @if(Auth::user()->profile_image)
+            <img src="{{ asset('storage/' . Auth::user()->profile_image) }}"
+                 alt="โปรไฟล์"
+                 class="rounded-circle"
+                 style="width:40px; height:40px; object-fit:cover; border:2px solid #ddd;">
+          @else
+            <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&background=0D6EFD&color=fff"
+                 alt="default avatar"
+                 class="rounded-circle"
+                 style="width:40px; height:40px; object-fit:cover; border:2px solid #ddd;">
+          @endif
         </button>
         <ul class="dropdown-menu dropdown-menu-end">
           <li class="dropdown-header">
             ลงชื่อเข้าใช้ในชื่อ <br><strong>{{ Auth::user()->name }}</strong>
           </li>
-          <li><a class="dropdown-item" href="{{ route('user.profile.show') }}"><i class="bi bi-pencil-square me-2"></i>แก้ไขโปรไฟล์</a></li>
+          <li>
+            <a class="dropdown-item" href="{{ route('user.profile.show') }}">
+              <i class="bi bi-pencil-square me-2"></i>แก้ไขโปรไฟล์
+            </a>
+          </li>
           <li>
             <form method="POST" action="{{ route('user.logout') }}">
               @csrf
-              <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i>ออกจากระบบ</button>
+              <button type="submit" class="dropdown-item text-danger">
+                <i class="bi bi-box-arrow-right me-2"></i>ออกจากระบบ
+              </button>
             </form>
           </li>
         </ul>
