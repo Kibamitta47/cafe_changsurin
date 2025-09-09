@@ -21,35 +21,37 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+  <!-- Swiper (Hero & Thumbs) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
+
   <style>
-    body{
-      font-family:'Kanit',sans-serif;
-      background:
-        radial-gradient(1200px 600px at 20% 0%, #fef3c7 0%, transparent 60%),
-        radial-gradient(1200px 600px at 100% 20%, #cffafe 0%, transparent 55%),
-        linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-    }
+    body{font-family:'Kanit',sans-serif;background:
+      radial-gradient(1200px 600px at 20% 0%, #fef3c7 0%, transparent 60%),
+      radial-gradient(1200px 600px at 100% 20%, #cffafe 0%, transparent 55%),
+      linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)}
     [x-cloak]{display:none!important}
     .glass{backdrop-filter:blur(12px); background:rgba(255,255,255,.75)}
     .chip{ @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm border; }
-    .no-scrollbar::-webkit-scrollbar{display:none}
-    .no-scrollbar{ -ms-overflow-style:none; scrollbar-width:none }
   </style>
 </head>
 <body class="min-h-screen text-slate-800"
       x-data="{ tab:'info', lightbox:false, lightboxSrc:'', copied:false }"
       x-init="setTimeout(()=>copied=false,2000)">
 
-  @guest @include('components.1navbar') @endguest
-  @auth  @include('components.2navbar') @endauth
+  {{-- Navbar --}}
+  @guest
+    @include('components.1navbar')
+  @endguest
+  @auth
+    @include('components.2navbar')
+  @endauth
 
   @php
-    // รูปภาพ
+    // ---------------- Helper & Data shaping ----------------
     $imgs = is_string($cafe->images) ? (json_decode($cafe->images, true) ?: []) : (is_array($cafe->images) ? $cafe->images : []);
-    $thumbs = array_slice($imgs, 0, 8);
-    $featured = $thumbs[0] ?? null;
-
-    // helper array/string -> array
+    $featured = $imgs[0] ?? null;
+    $thumbs = array_slice($imgs, 0, 8); // ใช้ 8 ภาพแรกเป็นสไลด์/ทัมป์
     $toArray=function($v){
       if (is_array($v)) return array_values(array_filter($v,fn($x)=>trim((string)$x)!=''));
       if (is_string($v)){
@@ -59,7 +61,6 @@
       }
       return [];
     };
-
     $facilities=$toArray($cafe->facilities);
     $styles=$toArray($cafe->cafe_styles);
     $payments=$toArray($cafe->payment_methods);
@@ -68,111 +69,48 @@
     $hasParking=(int)($cafe->parking ?? 0)===1;
     $hasCC=(int)($cafe->credit_card ?? 0)===1;
 
+    // Rating summary
     $reviewCount = $reviews->count() ?? 0;
     $avgRating = $reviewCount ? round($reviews->avg('rating'),1) : null;
   @endphp
 
-  <!-- HERO: Collage Layout (ไม่มีสไลด์เดอร์) -->
+  <!-- HERO -->
   <header class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4">
     <div class="glass rounded-3xl shadow-xl border border-white/60 overflow-hidden">
-      <div class="relative p-2 sm:p-3">
-        @php
-          $side1 = $thumbs[1] ?? null;
-          $side2 = $thumbs[2] ?? null;
-        @endphp
-
-        <!-- Desktop/Tablet -->
-        <div class="hidden sm:grid grid-cols-3 gap-2 sm:gap-3 h-[300px] lg:h-[420px]">
-          <!-- รูปใหญ่ซ้าย -->
-          <div class="col-span-2 rounded-2xl overflow-hidden shadow-lg">
-            @if($featured)
-              <img src="{{ asset('storage/'.$featured) }}" alt="ภาพหลัก {{ $cafe->cafe_name }}"
-                   class="w-full h-full object-cover cursor-pointer"
-                   loading="lazy" decoding="async"
-                   @click="lightboxSrc='{{ asset('storage/'.$featured) }}'; lightbox=true">
-            @else
-              <div class="w-full h-full bg-slate-100 flex items-center justify-center">
-                <i class="fa-regular fa-image text-4xl text-slate-400"></i>
+      <!-- Hero Gallery with Swiper -->
+      <div class="relative">
+        <div class="swiper mySwiper h-[260px] sm:h-[360px] lg:h-[460px]">
+          <div class="swiper-wrapper">
+            @forelse($thumbs as $t)
+              <div class="swiper-slide">
+                <img src="{{ asset('storage/'.$t) }}" alt="ภาพ {{ $cafe->cafe_name }}"
+                     class="w-full h-full object-cover cursor-pointer"
+                     @click="lightboxSrc='{{ asset('storage/'.$t) }}'; lightbox=true">
               </div>
-            @endif
-          </div>
-
-          <!-- คอลัมน์ขวา: สองรูปซ้อน -->
-          <div class="grid grid-rows-2 gap-2 sm:gap-3">
-            <div class="rounded-2xl overflow-hidden shadow">
-              @if($side1)
-                <img src="{{ asset('storage/'.$side1) }}" alt="ภาพเสริม 1"
-                     class="w-full h-full object-cover cursor-pointer"
-                     loading="lazy" decoding="async"
-                     @click="lightboxSrc='{{ asset('storage/'.$side1) }}'; lightbox=true">
-              @else
-                <div class="w-full h-full bg-slate-100 flex items-center justify-center">
-                  <i class="fa-regular fa-image text-2xl text-slate-400"></i>
+            @empty
+              <div class="swiper-slide bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                <div class="text-center">
+                  <i class="fa-regular fa-image text-4xl text-slate-400"></i>
+                  <p class="mt-2 text-slate-500">ยังไม่มีรูปภาพ</p>
                 </div>
-              @endif
-            </div>
-            <div class="rounded-2xl overflow-hidden shadow">
-              @if($side2)
-                <img src="{{ asset('storage/'.$side2) }}" alt="ภาพเสริม 2"
-                     class="w-full h-full object-cover cursor-pointer"
-                     loading="lazy" decoding="async"
-                     @click="lightboxSrc='{{ asset('storage/'.$side2) }}'; lightbox=true">
-              @else
-                <div class="w-full h-full bg-slate-100 flex items-center justify-center">
-                  <i class="fa-regular fa-image text-2xl text-slate-400"></i>
-                </div>
-              @endif
-            </div>
+              </div>
+            @endforelse
           </div>
+          <div class="swiper-pagination"></div>
+          <div class="swiper-button-prev"></div>
+          <div class="swiper-button-next"></div>
         </div>
 
-        <!-- Mobile -->
-        <div class="sm:hidden space-y-2">
-          <div class="h-[220px] rounded-2xl overflow-hidden shadow-lg">
-            @if($featured)
-              <img src="{{ asset('storage/'.$featured) }}" alt="ภาพหลัก {{ $cafe->cafe_name }}"
-                   class="w-full h-full object-cover cursor-pointer"
-                   loading="lazy" decoding="async"
-                   @click="lightboxSrc='{{ asset('storage/'.$featured) }}'; lightbox=true">
-            @else
-              <div class="w-full h-full bg-slate-100 flex items-center justify-center rounded-2xl">
-                <i class="fa-regular fa-image text-3xl text-slate-400"></i>
-              </div>
-            @endif
-          </div>
-
-          @if(count($thumbs) > 1)
-            <div class="flex gap-2 overflow-x-auto no-scrollbar">
-              @foreach(array_slice($thumbs,1,8) as $t)
-                <div class="min-w-[96px] h-[72px] rounded-xl overflow-hidden border border-white/70 flex-shrink-0">
-                  <img src="{{ asset('storage/'.$t) }}" alt="thumb"
-                       class="w-full h-full object-cover cursor-pointer"
-                       loading="lazy" decoding="async"
-                       @click="lightboxSrc='{{ asset('storage/'.$t) }}'; lightbox=true">
-                </div>
-              @endforeach
-            </div>
-          @endif
-        </div>
-
-        <!-- Badges -->
-        <div class="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2 pointer-events-none">
+        <!-- Quick Badges -->
+        <div class="absolute bottom-4 left-4 right-4 flex flex-wrap gap-2">
           @if(!empty($cafe->is_new_opening))
-            <span class="chip bg-amber-100/90 border-amber-200 text-amber-800 pointer-events-auto">
-              <i class="fa-solid fa-bolt"></i> เปิดใหม่
-            </span>
+          <span class="chip bg-amber-100/90 border-amber-200 text-amber-800"><i class="fa-solid fa-bolt"></i> เปิดใหม่</span>
           @endif
           @if(!empty($cafe->price_range))
-            <span class="chip bg-cyan-50/90 border-cyan-200 text-cyan-700 pointer-events-auto">
-              <i class="fa-solid fa-tags"></i> {{ $cafe->price_range }}
-            </span>
+          <span class="chip bg-cyan-50/90 border-cyan-200 text-cyan-700"><i class="fa-solid fa-tags"></i> {{ $cafe->price_range }}</span>
           @endif
-          <span class="chip {{ $hasParking?'bg-emerald-50/90 border-emerald-200 text-emerald-700':'bg-slate-100/90 border-slate-300 text-slate-600' }} pointer-events-auto">
-            <i class="fa-solid fa-square-parking"></i> จอดรถ {{ $hasParking?'ได้':'-' }}
-          </span>
-          <span class="chip {{ $hasCC?'bg-emerald-50/90 border-emerald-200 text-emerald-700':'bg-slate-100/90 border-slate-300 text-slate-600' }} pointer-events-auto">
-            <i class="fa-regular fa-credit-card"></i> บัตรเครดิต {{ $hasCC?'รองรับ':'-' }}
-          </span>
+          <span class="chip {{ $hasParking?'bg-emerald-50/90 border-emerald-200 text-emerald-700':'bg-slate-100/90 border-slate-300 text-slate-600' }}"><i class="fa-solid fa-square-parking"></i> จอดรถ {{ $hasParking?'ได้':'-' }}</span>
+          <span class="chip {{ $hasCC?'bg-emerald-50/90 border-emerald-200 text-emerald-700':'bg-slate-100/90 border-slate-300 text-slate-600' }}"><i class="fa-regular fa-credit-card"></i> บัตรเครดิต {{ $hasCC?'รองรับ':'-' }}</span>
         </div>
       </div>
 
@@ -180,7 +118,7 @@
       <div class="p-6 sm:p-8">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-900">
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
               {{ $cafe->cafe_name }}
             </h1>
             @if(!empty($cafe->place_name))
@@ -202,6 +140,7 @@
           </div>
         </div>
 
+        <!-- Rating summary -->
         <div class="mt-4 flex flex-wrap items-center gap-3">
           @if($avgRating)
             <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
@@ -225,13 +164,19 @@
         <div class="border-b border-slate-200 flex gap-6 text-slate-600">
           <button class="py-3 -mb-px border-b-2"
                   :class="tab==='info' ? 'border-cyan-500 text-cyan-700 font-semibold' : 'border-transparent hover:text-slate-800'"
-                  @click="tab='info'">ข้อมูลคาเฟ่</button>
+                  @click="tab='info'">
+            ข้อมูลคาเฟ่
+          </button>
           <button class="py-3 -mb-px border-b-2"
                   :class="tab==='reviews' ? 'border-cyan-500 text-cyan-700 font-semibold' : 'border-transparent hover:text-slate-800'"
-                  @click="tab='reviews'">รีวิวผู้ใช้ ({{ $reviewCount }})</button>
+                  @click="tab='reviews'">
+            รีวิวผู้ใช้ ({{ $reviewCount }})
+          </button>
           <button class="py-3 -mb-px border-b-2"
                   :class="tab==='map' ? 'border-cyan-500 text-cyan-700 font-semibold' : 'border-transparent hover:text-slate-800'"
-                  @click="tab='map'">แผนที่</button>
+                  @click="tab='map'">
+            แผนที่
+          </button>
         </div>
       </div>
     </div>
@@ -240,6 +185,7 @@
   <!-- BODY -->
   <main class="py-8">
     <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-7 px-4 sm:px-6 lg:px-8">
+
       <!-- LEFT -->
       <div class="lg:col-span-2 space-y-7">
         <!-- INFO TAB -->
@@ -328,6 +274,7 @@
               <span><strong>LINE:</strong> {{ $cafe->line_id ?? '-' }}</span>
             </div>
 
+            {{-- เวลาทำการ --}}
             <div class="flex items-start md:col-span-2">
               <i class="fa-solid fa-clock text-cyan-500 w-5 mt-1 mr-3 shrink-0"></i>
               <span>
@@ -348,6 +295,7 @@
             </div>
           </div>
 
+          {{-- รายละเอียด --}}
           @if($desc !== '')
           <div class="mt-6 pt-6 border-t border-slate-200">
             <h3 class="text-lg font-semibold mb-2 flex items-center">
@@ -357,6 +305,7 @@
           </div>
           @endif
 
+          {{-- แท็กหมวดต่าง ๆ --}}
           @if($facilities)
             <div class="mt-6 pt-6 border-t border-slate-200">
               <h3 class="text-lg font-semibold mb-3 flex items-center"><i class="fa-solid fa-wifi mr-2 text-cyan-500"></i> สิ่งอำนวยความสะดวก</h3>
@@ -450,13 +399,13 @@
                     $revImages = is_string($review->images) ? (json_decode($review->images,true) ?: []) : (is_array($review->images) ? $review->images : []);
                   @endphp
                   @if($revImages)
-                    <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                    <div class="mt-4 grid grid-cols-3 sm:grid-cols-4 gap-2">
                       @foreach($revImages as $image)
                         <div class="aspect-square rounded-md overflow-hidden border border-white/70">
                           <img src="{{ asset('storage/'.$image) }}"
                                alt="รูปรีวิวของ {{ $review->user_name ?? 'ผู้ใช้' }}"
                                class="w-full h-full object-cover transition-transform duration-300 hover:scale-105 cursor-pointer"
-                               loading="lazy" decoding="async"
+                               loading="lazy"
                                @click="lightboxSrc='{{ asset('storage/'.$image) }}'; lightbox=true">
                         </div>
                       @endforeach
@@ -471,12 +420,13 @@
 
       <!-- RIGHT -->
       <aside class="space-y-7 lg:sticky lg:top-24 h-max">
+        <!-- MAP TAB (also always visible card for quick open) -->
         <section :class="tab==='map' ? 'ring-2 ring-amber-300' : ''"
                  class="glass rounded-3xl shadow-xl border border-white/60 p-6">
           <h3 class="text-xl font-bold mb-4 flex items-center">
             <i class="fa-solid fa-map-location-dot text-amber-500 mr-2"></i> แผนที่
           </h3>
-          <div id="map" class="w-full h-[300px] rounded-xl overflow-hidden shadow-lg"></div>
+          <div id="map" class="w-full h-[320px] rounded-xl overflow-hidden shadow-lg"></div>
           @if(!empty($cafe->lat) && !empty($cafe->lng))
             <a href="https://www.google.com/maps/search/?api=1&query={{ $cafe->lat }},{{ $cafe->lng }}"
                target="_blank" rel="noopener"
@@ -486,6 +436,7 @@
           @endif
         </section>
 
+        <!-- QUICK CONTACT -->
         <section class="glass rounded-3xl shadow-xl border border-white/60 p-6">
           <h3 class="text-xl font-bold mb-4 flex items-center">
             <i class="fa-solid fa-bolt text-emerald-600 mr-2"></i> ด่วน & ติดต่อ
@@ -505,7 +456,7 @@
             </a>
             @auth
             <a href="{{ route('user.reviews.create', ['cafe_id' => $cafe->cafe_id ?? $cafe->id]) }}"
-               class="px-4 py-3 rounded-xl bg-amber-500 text-white text-center font-semibold hover:bg-amber-600">
+               class="px-4 py-3 rounded-xl bg-amber-500 text-white text-center font-semibold shadow hover:bg-amber-600">
               <i class="fa-solid fa-pen-to-square"></i> รีวิว
             </a>
             @endauth
@@ -515,7 +466,7 @@
     </div>
   </main>
 
-  <!-- MOBILE STICKY BAR -->
+  {{-- MOBILE STICKY BAR --}}
   <div class="fixed bottom-3 left-3 right-3 z-40 lg:hidden">
     <div class="glass rounded-2xl shadow-2xl border border-white/60 p-2 grid grid-cols-4 gap-2">
       <a href="{{ !empty($cafe->phone) ? 'tel:'.preg_replace('/\s+/', '', $cafe->phone) : '#' }}"
@@ -537,8 +488,9 @@
     </div>
   </div>
 
-  <!-- LIGHTBOX -->
-  <div x-show="lightbox" x-cloak x-transition.opacity
+  {{-- LIGHTBOX --}}
+  <div x-show="lightbox" x-cloak
+       x-transition.opacity
        class="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
        @click.self="lightbox=false">
     <button class="absolute top-4 right-4 w-12 h-12 rounded-full bg-white/10 text-white hover:bg-white/20"
@@ -565,6 +517,22 @@
       if (hasPos) L.marker([lat, lng]).addTo(map).bindPopup(`{{ addslashes($cafe->cafe_name ?? 'ตำแหน่ง') }}`);
       setTimeout(() => map.invalidateSize(), 250);
     })();
+  </script>
+
+  <!-- SWIPER INIT -->
+  <script>
+    new Swiper('.mySwiper', {
+      loop: true,
+      slidesPerView: 1,
+      spaceBetween: 8,
+      pagination: { el: '.swiper-pagination', clickable: true },
+      navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+      autoplay: { delay: 3500, disableOnInteraction: false },
+      breakpoints: {
+        640: { slidesPerView: 1 },
+        1024: { slidesPerView: 1 }
+      }
+    });
   </script>
 </body>
 </html>
