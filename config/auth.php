@@ -9,40 +9,40 @@ return [
 
     'guards' => [
         'web' => [
-            'driver' => 'session',
-            'provider' => 'users',
+            'driver'  => 'session',
+            'provider'=> 'users',
         ],
 
         'admin' => [
-            'driver' => 'session',
-            'provider' => 'admins',
+            'driver'  => 'session',
+            'provider'=> 'admins',
         ],
     ],
 
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => App\Models\User::class,
+            'model'  => App\Models\User::class,
         ],
 
         'admins' => [
             'driver' => 'eloquent',
-            'model' => App\Models\AdminID::class,
+            'model'  => App\Models\AdminID::class,
         ],
     ],
 
     'passwords' => [
         'users' => [
             'provider' => 'users',
-            'table' => 'password_resets',
-            'expire' => 60,
+            'table'    => 'password_resets',
+            'expire'   => 60,
             'throttle' => 60,
         ],
 
         'admins' => [
             'provider' => 'admins',
-            'table' => 'admin_password_resets',
-            'expire' => 60,
+            'table'    => 'admin_password_resets',
+            'expire'   => 60,
             'throttle' => 60,
         ],
     ],
