@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Swiper (Hero & Thumbs) -->
+  <!-- Swiper -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css"/>
   <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
 
@@ -39,19 +39,12 @@
       x-data="{ tab:'info', lightbox:false, lightboxSrc:'', copied:false }"
       x-init="setTimeout(()=>copied=false,2000)">
 
-  {{-- Navbar --}}
-  @guest
-    @include('components.1navbar')
-  @endguest
-  @auth
-    @include('components.2navbar')
-  @endauth
+  @guest @include('components.1navbar') @endguest
+  @auth  @include('components.2navbar') @endauth
 
   @php
-    // ---------------- Helper & Data shaping ----------------
     $imgs = is_string($cafe->images) ? (json_decode($cafe->images, true) ?: []) : (is_array($cafe->images) ? $cafe->images : []);
-    $featured = $imgs[0] ?? null;
-    $thumbs = array_slice($imgs, 0, 8); // ใช้ 8 ภาพแรกเป็นสไลด์/ทัมป์
+    $thumbs = array_slice($imgs, 0, 8);
     $toArray=function($v){
       if (is_array($v)) return array_values(array_filter($v,fn($x)=>trim((string)$x)!=''));
       if (is_string($v)){
@@ -69,31 +62,25 @@
     $hasParking=(int)($cafe->parking ?? 0)===1;
     $hasCC=(int)($cafe->credit_card ?? 0)===1;
 
-    // Rating summary
     $reviewCount = $reviews->count() ?? 0;
     $avgRating = $reviewCount ? round($reviews->avg('rating'),1) : null;
   @endphp
 
-  <!-- BREADCRUMB -->
-  <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-    <ol class="flex items-center gap-2 text-sm text-slate-500">
-      <li><a href="{{ route('welcome') }}" class="hover:text-slate-700"><i class="fa-solid fa-house"></i> หน้าแรก</a></li>
-      <li class="opacity-50">/</li>
-      <li class="truncate" title="{{ $cafe->cafe_name }}">{{ $cafe->cafe_name }}</li>
-    </ol>
-  </nav>
-
   <!-- HERO -->
   <header class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4">
     <div class="glass rounded-3xl shadow-xl border border-white/60 overflow-hidden">
-      <!-- Hero Gallery with Swiper -->
+      <!-- Hero Gallery (ขนาดใหม่: เตี้ยลง + คงอัตราส่วนภาพ) -->
       <div class="relative">
-        <div class="swiper mySwiper h-[260px] sm:h-[360px] lg:h-[460px]">
+        <!-- ใช้ aspect-ratio + จำกัดความสูง -->
+        <div class="swiper mySwiper max-h-[190px] aspect-[4/3] sm:max-h-[240px] sm:aspect-[16/10] lg:max-h-[300px] lg:aspect-[16/9]">
           <div class="swiper-wrapper">
             @forelse($thumbs as $t)
               <div class="swiper-slide">
                 <img src="{{ asset('storage/'.$t) }}" alt="ภาพ {{ $cafe->cafe_name }}"
                      class="w-full h-full object-cover cursor-pointer"
+                     loading="lazy"
+                     decoding="async"
+                     fetchpriority="low"
                      @click="lightboxSrc='{{ asset('storage/'.$t) }}'; lightbox=true">
               </div>
             @empty
@@ -110,13 +97,13 @@
           <div class="swiper-button-next"></div>
         </div>
 
-        <!-- Quick Badges -->
-        <div class="absolute bottom-4 left-4 right-4 flex flex-wrap gap-2">
+        <!-- Badges -->
+        <div class="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
           @if(!empty($cafe->is_new_opening))
-          <span class="chip bg-amber-100/90 border-amber-200 text-amber-800"><i class="fa-solid fa-bolt"></i> เปิดใหม่</span>
+            <span class="chip bg-amber-100/90 border-amber-200 text-amber-800"><i class="fa-solid fa-bolt"></i> เปิดใหม่</span>
           @endif
           @if(!empty($cafe->price_range))
-          <span class="chip bg-cyan-50/90 border-cyan-200 text-cyan-700"><i class="fa-solid fa-tags"></i> {{ $cafe->price_range }}</span>
+            <span class="chip bg-cyan-50/90 border-cyan-200 text-cyan-700"><i class="fa-solid fa-tags"></i> {{ $cafe->price_range }}</span>
           @endif
           <span class="chip {{ $hasParking?'bg-emerald-50/90 border-emerald-200 text-emerald-700':'bg-slate-100/90 border-slate-300 text-slate-600' }}"><i class="fa-solid fa-square-parking"></i> จอดรถ {{ $hasParking?'ได้':'-' }}</span>
           <span class="chip {{ $hasCC?'bg-emerald-50/90 border-emerald-200 text-emerald-700':'bg-slate-100/90 border-slate-300 text-slate-600' }}"><i class="fa-regular fa-credit-card"></i> บัตรเครดิต {{ $hasCC?'รองรับ':'-' }}</span>
@@ -127,7 +114,7 @@
       <div class="p-6 sm:p-8">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-900">
               {{ $cafe->cafe_name }}
             </h1>
             @if(!empty($cafe->place_name))
@@ -173,19 +160,13 @@
         <div class="border-b border-slate-200 flex gap-6 text-slate-600">
           <button class="py-3 -mb-px border-b-2"
                   :class="tab==='info' ? 'border-cyan-500 text-cyan-700 font-semibold' : 'border-transparent hover:text-slate-800'"
-                  @click="tab='info'">
-            ข้อมูลคาเฟ่
-          </button>
+                  @click="tab='info'">ข้อมูลคาเฟ่</button>
           <button class="py-3 -mb-px border-b-2"
                   :class="tab==='reviews' ? 'border-cyan-500 text-cyan-700 font-semibold' : 'border-transparent hover:text-slate-800'"
-                  @click="tab='reviews'">
-            รีวิวผู้ใช้ ({{ $reviewCount }})
-          </button>
+                  @click="tab='reviews'">รีวิวผู้ใช้ ({{ $reviewCount }})</button>
           <button class="py-3 -mb-px border-b-2"
                   :class="tab==='map' ? 'border-cyan-500 text-cyan-700 font-semibold' : 'border-transparent hover:text-slate-800'"
-                  @click="tab='map'">
-            แผนที่
-          </button>
+                  @click="tab='map'">แผนที่</button>
         </div>
       </div>
     </div>
@@ -194,7 +175,6 @@
   <!-- BODY -->
   <main class="py-8">
     <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-7 px-4 sm:px-6 lg:px-8">
-
       <!-- LEFT -->
       <div class="lg:col-span-2 space-y-7">
         <!-- INFO TAB -->
@@ -283,7 +263,6 @@
               <span><strong>LINE:</strong> {{ $cafe->line_id ?? '-' }}</span>
             </div>
 
-            {{-- เวลาทำการ --}}
             <div class="flex items-start md:col-span-2">
               <i class="fa-solid fa-clock text-cyan-500 w-5 mt-1 mr-3 shrink-0"></i>
               <span>
@@ -304,7 +283,6 @@
             </div>
           </div>
 
-          {{-- รายละเอียด --}}
           @if($desc !== '')
           <div class="mt-6 pt-6 border-t border-slate-200">
             <h3 class="text-lg font-semibold mb-2 flex items-center">
@@ -314,7 +292,6 @@
           </div>
           @endif
 
-          {{-- แท็กหมวดต่าง ๆ --}}
           @if($facilities)
             <div class="mt-6 pt-6 border-t border-slate-200">
               <h3 class="text-lg font-semibold mb-3 flex items-center"><i class="fa-solid fa-wifi mr-2 text-cyan-500"></i> สิ่งอำนวยความสะดวก</h3>
@@ -408,13 +385,14 @@
                     $revImages = is_string($review->images) ? (json_decode($review->images,true) ?: []) : (is_array($review->images) ? $review->images : []);
                   @endphp
                   @if($revImages)
-                    <div class="mt-4 grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    <!-- ย่อรูปรีวิว: แถวละ 4 ในจอใหญ่ / 3 ในจอกลาง / 2 ในจอเล็ก -->
+                    <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                       @foreach($revImages as $image)
                         <div class="aspect-square rounded-md overflow-hidden border border-white/70">
                           <img src="{{ asset('storage/'.$image) }}"
                                alt="รูปรีวิวของ {{ $review->user_name ?? 'ผู้ใช้' }}"
                                class="w-full h-full object-cover transition-transform duration-300 hover:scale-105 cursor-pointer"
-                               loading="lazy"
+                               loading="lazy" decoding="async" fetchpriority="low"
                                @click="lightboxSrc='{{ asset('storage/'.$image) }}'; lightbox=true">
                         </div>
                       @endforeach
@@ -429,13 +407,12 @@
 
       <!-- RIGHT -->
       <aside class="space-y-7 lg:sticky lg:top-24 h-max">
-        <!-- MAP TAB (also always visible card for quick open) -->
         <section :class="tab==='map' ? 'ring-2 ring-amber-300' : ''"
                  class="glass rounded-3xl shadow-xl border border-white/60 p-6">
           <h3 class="text-xl font-bold mb-4 flex items-center">
             <i class="fa-solid fa-map-location-dot text-amber-500 mr-2"></i> แผนที่
           </h3>
-          <div id="map" class="w-full h-[320px] rounded-xl overflow-hidden shadow-lg"></div>
+          <div id="map" class="w-full h-[300px] rounded-xl overflow-hidden shadow-lg"></div>
           @if(!empty($cafe->lat) && !empty($cafe->lng))
             <a href="https://www.google.com/maps/search/?api=1&query={{ $cafe->lat }},{{ $cafe->lng }}"
                target="_blank" rel="noopener"
@@ -445,7 +422,6 @@
           @endif
         </section>
 
-        <!-- QUICK CONTACT -->
         <section class="glass rounded-3xl shadow-xl border border-white/60 p-6">
           <h3 class="text-xl font-bold mb-4 flex items-center">
             <i class="fa-solid fa-bolt text-emerald-600 mr-2"></i> ด่วน & ติดต่อ
@@ -465,7 +441,7 @@
             </a>
             @auth
             <a href="{{ route('user.reviews.create', ['cafe_id' => $cafe->cafe_id ?? $cafe->id]) }}"
-               class="px-4 py-3 rounded-xl bg-amber-500 text-white text-center font-semibold shadow hover:bg-amber-600">
+               class="px-4 py-3 rounded-xl bg-amber-500 text-white text-center font-semibold hover:bg-amber-600">
               <i class="fa-solid fa-pen-to-square"></i> รีวิว
             </a>
             @endauth
@@ -475,7 +451,7 @@
     </div>
   </main>
 
-  {{-- MOBILE STICKY BAR --}}
+  <!-- MOBILE STICKY BAR -->
   <div class="fixed bottom-3 left-3 right-3 z-40 lg:hidden">
     <div class="glass rounded-2xl shadow-2xl border border-white/60 p-2 grid grid-cols-4 gap-2">
       <a href="{{ !empty($cafe->phone) ? 'tel:'.preg_replace('/\s+/', '', $cafe->phone) : '#' }}"
@@ -497,9 +473,8 @@
     </div>
   </div>
 
-  {{-- LIGHTBOX --}}
-  <div x-show="lightbox" x-cloak
-       x-transition.opacity
+  <!-- LIGHTBOX -->
+  <div x-show="lightbox" x-cloak x-transition.opacity
        class="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
        @click.self="lightbox=false">
     <button class="absolute top-4 right-4 w-12 h-12 rounded-full bg-white/10 text-white hover:bg-white/20"
@@ -534,11 +509,12 @@
       loop: true,
       slidesPerView: 1,
       spaceBetween: 8,
+      autoHeight: false,           // คงความสูงตามที่กำหนด
       pagination: { el: '.swiper-pagination', clickable: true },
       navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
       autoplay: { delay: 3500, disableOnInteraction: false },
       breakpoints: {
-        640: { slidesPerView: 1 },
+        640:  { slidesPerView: 1 },
         1024: { slidesPerView: 1 }
       }
     });
