@@ -24,15 +24,12 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
-    body{
-      font-family:'Kanit',sans-serif;
-      background:linear-gradient(180deg,#f8fafc 0%,#f1f5f9 100%);
-    }
+    body{font-family:'Kanit',sans-serif;background:linear-gradient(180deg,#fafafa 0%,#f3f4f6 100%)}
     [x-cloak]{display:none!important}
-    .card{
-      @apply bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-100;
-    }
-    .chip{ @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm; }
+    .card{@apply bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-200;}
+    .chip{@apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm;}
+    .soft-shadow{@apply shadow-[0_10px_30px_rgba(2,6,23,0.08)];}
+    .thumb-mask{mask-image:linear-gradient(to bottom, rgba(0,0,0,1), rgba(0,0,0,.85));}
   </style>
 </head>
 <body class="min-h-screen flex flex-col text-slate-800" x-data="{ lightboxOpen:false, lightboxSrc:'' }">
@@ -45,44 +42,76 @@
     @include('components.2navbar')
   @endauth
 
-  <!-- Hero -->
-  <header class="relative">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-      <div class="mt-6 rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-amber-50 to-cyan-50 border border-slate-200 shadow-lg">
-        <h1 class="text-3xl sm:text-4xl font-bold text-slate-900 flex flex-wrap items-center gap-3">
-          {{ $cafe->cafe_name }}
-          @if(!empty($cafe->is_new_opening))
-            <span class="chip bg-amber-100 text-amber-800"><i class="fa-solid fa-bolt"></i> เปิดใหม่</span>
-          @endif
-        </h1>
-        @if(!empty($cafe->place_name))
-          <p class="text-slate-600 mt-2 text-lg">{{ $cafe->place_name }}</p>
-        @endif>
+  @php
+    $cafeImages = is_string($cafe->images) ? (json_decode($cafe->images,true) ?: []) : (is_array($cafe->images) ? $cafe->images : []);
+    $featured   = $cafeImages[0] ?? null;
+    $thumbs     = array_slice($cafeImages, 1, 4);
+  @endphp
 
-        <!-- แถบชิปสรุป -->
-        <div class="mt-4 flex flex-wrap gap-2">
-          @php $hasParking = (int)($cafe->parking ?? 0) === 1; @endphp
-          <span class="chip {{ $hasParking ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600' }}">
-            <i class="fa-solid fa-square-parking"></i> ที่จอดรถ: {{ $hasParking ? 'มี' : 'ไม่มี/ไม่ระบุ' }}
-          </span>
-          @php $hasCC = (int)($cafe->credit_card ?? 0) === 1; @endphp
-          <span class="chip {{ $hasCC ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600' }}">
-            <i class="fa-regular fa-credit-card"></i> บัตรเครดิต: {{ $hasCC ? 'รองรับ' : 'ไม่รองรับ/ไม่ระบุ' }}
-          </span>
+  <!-- Header -->
+  <header class="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 mt-6">
+    <div class="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-amber-50 via-white to-cyan-50 border border-slate-200 soft-shadow">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
+            {{ $cafe->cafe_name }}
+            @if(!empty($cafe->is_new_opening))
+              <span class="chip bg-amber-100 text-amber-800 align-middle ml-2"><i class="fa-solid fa-bolt"></i> เปิดใหม่</span>
+            @endif
+          </h1>
+          @if(!empty($cafe->place_name))
+            <p class="text-slate-600 mt-1 text-lg">{{ $cafe->place_name }}</p>
+          @endif
+        </div>
+        <!-- ชิปสรุป -->
+        <div class="flex flex-wrap gap-2">
+          @php $hasParking=(int)($cafe->parking ?? 0)===1; $hasCC=(int)($cafe->credit_card ?? 0)===1; @endphp
+          <span class="chip {{ $hasParking ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600' }}"><i class="fa-solid fa-square-parking"></i> ที่จอดรถ: {{ $hasParking ? 'มี' : 'ไม่มี/ไม่ระบุ' }}</span>
+          <span class="chip {{ $hasCC ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600' }}"><i class="fa-regular fa-credit-card"></i> บัตรเครดิต: {{ $hasCC ? 'รองรับ' : 'ไม่รองรับ/ไม่ระบุ' }}</span>
           @if(!empty($cafe->price_range))
-            <span class="chip bg-cyan-50 text-cyan-700 border border-cyan-200">
-              <i class="fa-solid fa-tags"></i> ช่วงราคา: {{ $cafe->price_range }}
-            </span>
+            <span class="chip bg-cyan-50 text-cyan-700 border border-cyan-200"><i class="fa-solid fa-tags"></i> {{ $cafe->price_range }}</span>
           @endif
         </div>
       </div>
+
+      {{-- HERO GALLERY ใต้หัวเรื่อง --}}
+      @if($featured)
+        <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-3">
+          <!-- ภาพใหญ่ -->
+          <div class="lg:col-span-2 relative group overflow-hidden rounded-2xl soft-shadow">
+            <img src="{{ asset('storage/'.$featured) }}"
+                 alt="ภาพ {{ $cafe->cafe_name }}"
+                 class="w-full h-[280px] sm:h-[360px] lg:h-[420px] object-cover transition-transform duration-500 group-hover:scale-105 cursor-pointer"
+                 @click="lightboxSrc='{{ asset('storage/'.$featured) }}'; lightboxOpen=true">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/35 via-black/5 to-transparent pointer-events-none"></div>
+            @if(count($cafeImages)>5)
+              <div class="absolute bottom-3 right-3 chip bg-black/60 text-white backdrop-blur rounded-full">
+                <i class="fa-solid fa-images"></i> {{ count($cafeImages) }} รูป
+              </div>
+            @endif
+          </div>
+          <!-- ทัมบ์แนวตั้ง (เลื่อนในมือถือ) -->
+          <div class="grid grid-cols-4 lg:grid-cols-1 lg:grid-rows-4 gap-3 overflow-x-auto lg:overflow-visible py-1">
+            @forelse($thumbs as $t)
+              <div class="relative overflow-hidden rounded-xl min-w-[140px] lg:min-w-0 soft-shadow">
+                <img src="{{ asset('storage/'.$t) }}"
+                     alt="ภาพ {{ $cafe->cafe_name }}"
+                     class="thumb-mask w-full h-[120px] sm:h-[150px] lg:h-[95px] object-cover cursor-pointer transition-transform duration-300 hover:scale-105"
+                     @click="lightboxSrc='{{ asset('storage/'.$t) }}'; lightboxOpen=true">
+              </div>
+            @empty
+              <div class="rounded-xl border border-dashed border-slate-300 flex items-center justify-center text-slate-400">ไม่มีรูปเพิ่มเติม</div>
+            @endforelse
+          </div>
+        </div>
+      @endif
     </div>
   </header>
 
-  <main class="flex-grow py-6 sm:py-10">
+  <main class="flex-grow py-8">
     <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 px-4 sm:px-6 lg:px-8">
 
-      {{-- ซ้าย: รายละเอียด + แกลเลอรี --}}
+      {{-- ซ้าย: รายละเอียด --}}
       <div class="lg:col-span-2 space-y-6">
         <section class="card p-6 sm:p-8">
           <h2 class="text-xl font-bold mb-5 flex items-center gap-2 text-slate-900">
@@ -113,9 +142,8 @@
               <i class="fa-solid fa-globe text-cyan-500 w-5 mr-3 shrink-0"></i>
               <span><strong>เว็บไซต์:</strong>
                 @if(!empty($cafe->website))
-                  <a href="{{ $cafe->website }}" target="_blank" rel="noopener" class="text-cyan-600 hover:underline break-all">
-                    {{ $cafe->website }}
-                  </a>
+                  <a href="{{ $cafe->website }}" target="_blank" rel="noopener"
+                     class="text-cyan-600 hover:underline break-all">{{ $cafe->website }}</a>
                 @else - @endif
               </span>
             </div>
@@ -126,7 +154,7 @@
                 @if(!empty($cafe->facebook_page))
                   <a href="{{ str_starts_with($cafe->facebook_page,'http') ? $cafe->facebook_page : 'https://facebook.com/'.$cafe->facebook_page }}"
                      target="_blank" rel="noopener" class="text-cyan-600 hover:underline break-all">
-                     {{ $cafe->facebook_page }}
+                    {{ $cafe->facebook_page }}
                   </a>
                 @else - @endif
               </span>
@@ -138,7 +166,7 @@
                 @if(!empty($cafe->instagram_page))
                   <a href="{{ str_starts_with($cafe->instagram_page,'http') ? $cafe->instagram_page : 'https://instagram.com/'.$cafe->instagram_page }}"
                      target="_blank" rel="noopener" class="text-cyan-600 hover:underline break-all">
-                     {{ $cafe->instagram_page }}
+                    {{ $cafe->instagram_page }}
                   </a>
                 @else - @endif
               </span>
@@ -170,57 +198,48 @@
             </div>
           </div>
 
-          {{-- แสดง "รายละเอียดเพิ่มเติม" เฉพาะเมื่อมีข้อความ --}}
+          {{-- รายละเอียดเพิ่มเติม แสดงเมื่อมีเท่านั้น --}}
           @php $desc = trim((string)($cafe->description ?? '')); @endphp
           @if($desc !== '')
             <div class="mt-6 pt-6 border-t border-slate-200">
               <h3 class="text-lg font-semibold mb-2 flex items-center">
                 <i class="fa-solid fa-circle-info mr-2 text-cyan-500"></i> รายละเอียดเพิ่มเติม
               </h3>
-              <p class="whitespace-pre-line text-slate-600 leading-relaxed">{{ $desc }}</p>
+              <p class="whitespace-pre-line text-slate-700 leading-relaxed">{{ $desc }}</p>
             </div>
           @endif
 
-          {{-- แปลงอาเรย์ --}}
+          {{-- แท็กต่าง ๆ --}}
           @php
-            $toArray = function($data){
-              if (is_null($data)) return [];
-              if (is_array($data)) return array_values(array_filter($data, fn($v)=>trim((string)$v) !== ''));
-              if (is_string($data)) {
-                $j = json_decode($data,true);
-                if (json_last_error()===JSON_ERROR_NONE && is_array($j)) return array_values(array_filter($j, fn($v)=>trim((string)$v) !== ''));
-                return array_values(array_filter(array_map('trim', explode(',', $data)), fn($v)=>$v!==''));
+            $toArray=function($v){
+              if (is_array($v)) return array_values(array_filter($v,fn($x)=>trim((string)$x)!=''));
+              if (is_string($v)){
+                $j=json_decode($v,true);
+                if(json_last_error()===JSON_ERROR_NONE && is_array($j)) return array_values(array_filter($j,fn($x)=>trim((string)$x)!=''));
+                return array_values(array_filter(array_map('trim',explode(',',$v)),fn($x)=>$x!==''));
               }
               return [];
             };
-            $facilities     = $toArray($cafe->facilities);
-            $cafeStyles     = $toArray($cafe->cafe_styles);
-            $paymentMethods = $toArray($cafe->payment_methods);
-            $otherServices  = $toArray($cafe->other_services);
+            $facilities=$toArray($cafe->facilities);
+            $styles=$toArray($cafe->cafe_styles);
+            $payments=$toArray($cafe->payment_methods);
+            $services=$toArray($cafe->other_services);
           @endphp
 
-          @if(!empty($facilities))
+          @if($facilities)
             <div class="mt-6 pt-6 border-t border-slate-200">
-              <h3 class="text-lg font-semibold mb-3 flex items-center">
-                <i class="fa-solid fa-wifi mr-2 text-cyan-500"></i> สิ่งอำนวยความสะดวก
-              </h3>
+              <h3 class="text-lg font-semibold mb-3 flex items-center"><i class="fa-solid fa-wifi mr-2 text-cyan-500"></i> สิ่งอำนวยความสะดวก</h3>
               <div class="flex flex-wrap gap-2">
-                @foreach($facilities as $item)
-                  <span class="chip bg-cyan-100 text-cyan-800">{{ $item }}</span>
-                @endforeach
+                @foreach($facilities as $i)<span class="chip bg-cyan-100 text-cyan-800">{{ $i }}</span>@endforeach
               </div>
             </div>
           @endif
 
-          @if(!empty($cafeStyles))
+          @if($styles)
             <div class="mt-6 pt-6 border-t border-slate-200">
-              <h3 class="text-lg font-semibold mb-3 flex items-center">
-                <i class="fa-solid fa-palette mr-2 text-purple-500"></i> สไตล์คาเฟ่
-              </h3>
+              <h3 class="text-lg font-semibold mb-3 flex items-center"><i class="fa-solid fa-palette mr-2 text-purple-500"></i> สไตล์คาเฟ่</h3>
               <div class="flex flex-wrap gap-2">
-                @foreach($cafeStyles as $item)
-                  <span class="chip bg-purple-100 text-purple-800">{{ $item }}</span>
-                @endforeach
+                @foreach($styles as $i)<span class="chip bg-purple-100 text-purple-800">{{ $i }}</span>@endforeach
               </div>
               @if(!empty($cafe->other_style))
                 <div class="mt-3 text-slate-700"><strong>สไตล์อื่นๆ:</strong> {{ $cafe->other_style }}</div>
@@ -228,52 +247,36 @@
             </div>
           @endif
 
-          @if(!empty($paymentMethods))
+          @if($payments)
             <div class="mt-6 pt-6 border-t border-slate-200">
-              <h3 class="text-lg font-semibold mb-3 flex items-center">
-                <i class="fa-regular fa-credit-card mr-2 text-green-500"></i> ช่องทางชำระเงิน
-              </h3>
+              <h3 class="text-lg font-semibold mb-3 flex items-center"><i class="fa-regular fa-credit-card mr-2 text-green-500"></i> ช่องทางชำระเงิน</h3>
               <div class="flex flex-wrap gap-2">
-                @foreach($paymentMethods as $item)
-                  <span class="chip bg-green-100 text-green-800">{{ $item }}</span>
-                @endforeach
+                @foreach($payments as $i)<span class="chip bg-green-100 text-green-800">{{ $i }}</span>@endforeach
               </div>
             </div>
           @endif
 
-          @if(!empty($otherServices))
+          @if($services)
             <div class="mt-6 pt-6 border-t border-slate-200">
-              <h3 class="text-lg font-semibold mb-3 flex items-center">
-                <i class="fa-solid fa-bell-concierge mr-2 text-indigo-500"></i> บริการเพิ่มเติม
-              </h3>
+              <h3 class="text-lg font-semibold mb-3 flex items-center"><i class="fa-solid fa-bell-concierge mr-2 text-indigo-500"></i> บริการเพิ่มเติม</h3>
               <div class="flex flex-wrap gap-2">
-                @foreach($otherServices as $item)
-                  <span class="chip bg-indigo-100 text-indigo-800">{{ $item }}</span>
-                @endforeach
+                @foreach($services as $i)<span class="chip bg-indigo-100 text-indigo-800">{{ $i }}</span>@endforeach
               </div>
             </div>
           @endif
         </section>
 
-        {{-- แกลเลอรี --}}
-        @php
-          $cafeImages = is_string($cafe->images) ? (json_decode($cafe->images,true) ?: []) : (is_array($cafe->images) ? $cafe->images : []);
-        @endphp
-        @if(!empty($cafeImages))
+        {{-- แกลเลอรีเพิ่มเติม (ถ้ามีรูปเกิน 5) --}}
+        @if(count($cafeImages) > 5)
           <section class="card p-6 sm:p-8">
-            <h2 class="text-xl font-bold mb-5 flex items-center gap-2">
-              <i class="fa-solid fa-images text-amber-500"></i> แกลเลอรี
-            </h2>
+            <h2 class="text-xl font-bold mb-5 flex items-center gap-2"><i class="fa-solid fa-images text-amber-500"></i> แกลเลอรีเพิ่มเติม</h2>
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              @foreach($cafeImages as $img)
-                <div class="aspect-square rounded-lg overflow-hidden border border-slate-200 group">
-                  <img
-                    src="{{ asset('storage/'.$img) }}"
-                    alt="ภาพของ {{ $cafe->cafe_name }}"
-                    class="w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-110"
-                    loading="lazy"
-                    @click="lightboxSrc='{{ asset('storage/'.$img) }}'; lightboxOpen=true"
-                  >
+              @foreach(array_slice($cafeImages,5) as $img)
+                <div class="aspect-square rounded-lg overflow-hidden border border-slate-200 group soft-shadow">
+                  <img src="{{ asset('storage/'.$img) }}" alt="ภาพ {{ $cafe->cafe_name }}"
+                       class="w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-110"
+                       loading="lazy"
+                       @click="lightboxSrc='{{ asset('storage/'.$img) }}'; lightboxOpen=true">
                 </div>
               @endforeach
             </div>
@@ -287,8 +290,7 @@
           <h3 class="text-xl font-bold mb-4 flex items-center">
             <i class="fa-solid fa-map-location-dot text-amber-500 mr-2"></i> แผนที่
           </h3>
-          <div id="map" class="w-full h-[320px] rounded-xl overflow-hidden"></div>
-
+          <div id="map" class="w-full h-[320px] rounded-xl overflow-hidden soft-shadow"></div>
           @if(!empty($cafe->lat) && !empty($cafe->lng))
             <a href="https://www.google.com/maps/search/?api=1&query={{ $cafe->lat }},{{ $cafe->lng }}"
                target="_blank" rel="noopener"
@@ -300,9 +302,7 @@
 
         <section class="card p-6 sm:p-8">
           <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold flex items-center gap-2">
-              <i class="fa-solid fa-star text-amber-500"></i> รีวิวจากผู้ใช้
-            </h2>
+            <h2 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-star text-amber-500"></i> รีวิวจากผู้ใช้</h2>
             @auth
               <a href="{{ route('user.reviews.create', ['cafe_id' => $cafe->cafe_id ?? $cafe->id]) }}"
                  class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow">
@@ -336,11 +336,10 @@
                   @if(!empty($review->content))
                     <p class="mt-1 text-slate-700 whitespace-pre-line leading-relaxed">{{ $review->content }}</p>
                   @endif
-
                   @php
                     $revImages = is_string($review->images) ? (json_decode($review->images,true) ?: []) : (is_array($review->images) ? $review->images : []);
                   @endphp
-                  @if(!empty($revImages))
+                  @if($revImages)
                     <div class="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-3 lg:grid-cols-4 gap-2">
                       @foreach($revImages as $image)
                         <div class="aspect-square overflow-hidden rounded-md border border-slate-200 group">
