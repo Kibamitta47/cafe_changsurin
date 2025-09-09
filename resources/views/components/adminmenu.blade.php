@@ -87,7 +87,7 @@
             <div class="menu-list">
                 <!-- FIX 1: แก้ไขเงื่อนไข active state จาก 'home.admin' เป็น 'admin.home' -->
                 <div class="menu-item @if(request()->routeIs('admin.home' )) active @endif">
-                    <a href="{{ route('admin.home') }}"><i class="fas fa-tachometer-alt icon"></i> Dashboard</a>
+                    <a href="{{ route('admin.home') }}"><i class="fas fa-tachometer-alt icon"></i> สถิติและรายงาน</a>
                 </div>
                 <div class="menu-item @if(request()->routeIs('admin.cafe.create')) active @endif">
                     <a href="{{ route('admin.cafe.create') }}"><i class="fas fa-plus-circle icon"></i> เพิ่มคาเฟ่ใหม่</a>
