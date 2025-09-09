@@ -14,102 +14,32 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
   <style>
     .form-check-label { font-weight: 600; color: #333; }
-
-    :root {
-      --primary-blue: #3b82f6;
-      --dark-blue: #2563eb;
-      --red-error: #dc2626;
-      --red-dark: #b91c1c;
-      --gray-light: #e5e7eb;
-      --gray-text: #333;
-      --white: #ffffff;
-      --shadow-light: rgba(0, 0, 0, 0.08);
-      --transition-ease: all 0.3s ease-in-out;
-    }
-
-    body {
-      font-family: 'Sarabun', 'Inter', sans-serif;
-      background-color: #f0f2f5;
-      color: #333;
-      padding-top: 20px;
-      padding-bottom: 20px;
-      transition: padding-left 0.3s ease;
-    }
-    body.sidebar-open { padding-left: 250px; }
-
-    .container.mt-5.mb-5 {
-      background-color: var(--white);
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-      padding: 40px;
-    }
-
-    h2 {
-      color: var(--dark-blue);
-      border-bottom: 2px solid var(--gray-light);
-      padding-bottom: 15px;
-      margin-bottom: 30px;
-      font-weight: 700;
-    }
-
-    .form-label { font-weight: 600; color: #555; margin-bottom: 8px; }
-
-    .form-control, .form-select, .input-group-text {
-      border-radius: 8px;
-      border-color: #ced4da;
-    }
-
-    .form-control:focus, .form-select:focus {
-      box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
-      border-color: var(--primary-blue);
-    }
-
-    .form-check-inline { margin-right: 1.5rem; margin-bottom: 0.5rem; }
-
-    .btn-check + .btn { border-radius: 8px; padding: 8px 15px; font-size: 0.95rem; }
-
-    #map {
-      height: 400px;
-      margin-bottom: 1.5rem;
-      border-radius: 8px;
-      border: 1px solid #dee2e6;
-    }
-    .leaflet-container { background: #e9ecef; border-radius: 8px; }
-
-    .d-flex.justify-content-end.gap-2.mt-3 {
-      padding-top: 20px;
-      border-top: 1px solid var(--gray-light);
-      margin-top: 30px !important;
-    }
-    .btn-primary {
-      background-color: var(--primary-blue);
-      border-color: var(--primary-blue);
-      font-weight: 600;
-      padding: 10px 25px;
-      border-radius: 8px;
-      transition: background-color 0.2s, transform 0.2s;
-    }
-    .btn-primary:hover { background-color: var(--dark-blue); border-color: var(--dark-blue); transform: translateY(-1px); }
-    .btn-secondary {
-      background-color: #6c757d;
-      border-color: #6c757d;
-      font-weight: 600;
-      padding: 10px 25px;
-      border-radius: 8px;
-      transition: background-color 0.2s, transform 0.2s;
-    }
-    .btn-secondary:hover { background-color: #5c636a; border-color: #5c636a; transform: translateY(-1px); }
-
-    .form-text { font-size: 0.875em; color: #6c757d; margin-top: 5px; }
-
-    @media (max-width: 768px) {
-      body.sidebar-open { padding-left: 0; }
-      .container.mt-5.mb-5 { padding: 20px; margin-top: 20px !important; margin-bottom: 20px !important; }
-      h2 { font-size: 1.5rem; margin-bottom: 20px; }
-      .btn-check + .btn { display: block; width: 100%; margin-right: 0 !important; margin-bottom: 0.5rem !important; }
-      .d-flex.justify-content-end.gap-2.mt-3 { flex-direction: column; align-items: stretch; }
-      .d-flex.justify-content-end.gap-2.mt-3 .btn { width: 100%; }
-      #map { height: 300px; }
+    :root { --primary-blue:#3b82f6; --dark-blue:#2563eb; --red-error:#dc2626; --red-dark:#b91c1c; --gray-light:#e5e7eb; --gray-text:#333; --white:#fff; --shadow-light:rgba(0,0,0,.08); --transition-ease:all .3s; }
+    body { font-family:'Sarabun','Inter',sans-serif; background:#f0f2f5; color:#333; padding:20px 0; transition:padding-left .3s; }
+    body.sidebar-open { padding-left:250px; }
+    .container.mt-5.mb-5 { background:#fff; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,.05); padding:40px; }
+    h2 { color:var(--dark-blue); border-bottom:2px solid var(--gray-light); padding-bottom:15px; margin-bottom:30px; font-weight:700; }
+    .form-label { font-weight:600; color:#555; margin-bottom:8px; }
+    .form-control,.form-select,.input-group-text { border-radius:8px; border-color:#ced4da; }
+    .form-control:focus,.form-select:focus { box-shadow:0 0 0 .25rem rgba(59,130,246,.25); border-color:var(--primary-blue); }
+    .form-check-inline { margin-right:1.5rem; margin-bottom:.5rem; }
+    .btn-check + .btn { border-radius:8px; padding:8px 15px; font-size:.95rem; }
+    #map { height:400px; margin-bottom:1.5rem; border-radius:8px; border:1px solid #dee2e6; }
+    .leaflet-container { background:#e9ecef; border-radius:8px; }
+    .d-flex.justify-content-end.gap-2.mt-3 { padding-top:20px; border-top:1px solid var(--gray-light); margin-top:30px!important; }
+    .btn-primary { background:var(--primary-blue); border-color:var(--primary-blue); font-weight:600; padding:10px 25px; border-radius:8px; transition:background-color .2s, transform .2s; }
+    .btn-primary:hover { background:var(--dark-blue); border-color:var(--dark-blue); transform:translateY(-1px); }
+    .btn-secondary { background:#6c757d; border-color:#6c757d; font-weight:600; padding:10px 25px; border-radius:8px; transition:background-color .2s, transform .2s; }
+    .btn-secondary:hover { background:#5c636a; border-color:#5c636a; transform:translateY(-1px); }
+    .form-text { font-size:.875em; color:#6c757d; margin-top:5px; }
+    @media (max-width:768px){
+      body.sidebar-open{padding-left:0}
+      .container.mt-5.mb-5{padding:20px; margin:20px 0!important}
+      h2{font-size:1.5rem; margin-bottom:20px}
+      .btn-check + .btn{display:block; width:100%; margin-bottom:.5rem!important}
+      .d-flex.justify-content-end.gap-2.mt-3{flex-direction:column; align-items:stretch}
+      .d-flex.justify-content-end.gap-2.mt-3 .btn{width:100%}
+      #map{height:300px}
     }
   </style>
 </head>
@@ -131,9 +61,9 @@
   <div class="alert alert-danger alert-dismissible fade show" role="alert">
     <strong>ข้อผิดพลาด!</strong> กรุณาตรวจสอบข้อมูลที่กรอก:
     <ul>
-        @foreach ($errors->all() as $error)
-            <li>{{ $error }}</li>
-        @endforeach
+      @foreach ($errors->all() as $error)
+        <li>{{ $error }}</li>
+      @endforeach
     </ul>
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
@@ -401,7 +331,7 @@
     </div>
 
     <div class="d-flex justify-content-end gap-2 mt-3">
-      <a href="/home-admin" class="btn btn-secondary d-flex align-items-center">
+      <a href="{{ route('admin.cafe.index') }}" class="btn btn-secondary d-flex align-items-center">
         <i class="fas fa-times me-1"></i> ยกเลิก
       </a>
       <button type="submit" class="btn btn-primary px-4" id="submitBtn">
@@ -416,149 +346,114 @@
 <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  // ========= ค่าควบคุมอัปโหลด/บีบอัด =========
+/* =========================
+ * บีบอัดรูปก่อนอัปโหลด (แทนไฟล์ใน input แล้ว submit ตามปกติ)
+ * ข้อกำหนด: ≤5 ไฟล์, ~1.5MB/ไฟล์ (ไม่เกิน 5MB), รวม ≤20MB, ด้านยาวสุด 1600px
+ * ========================= */
+document.addEventListener('DOMContentLoaded', () => {
   const MAX_FILES = 5;
-  const MAX_PER_FILE = 5 * 1024 * 1024;       // 5MB/ไฟล์ (หลังบีบอัด)
-  const TARGET_PER_FILE = 1.5 * 1024 * 1024;  // เป้าหมาย ~1.5MB/ไฟล์
-  const MAX_TOTAL = 20 * 1024 * 1024;         // รวมทั้งหมด ≤ 20MB
-  const MAX_DIM = 1600;                       // ด้านยาวสุด 1600px
+  const TARGET_BYTES = 1.5 * 1024 * 1024; // เป้าหมาย
+  const MAX_BYTES = 5 * 1024 * 1024;      // เพดานไฟล์เดียว
+  const MAX_TOTAL = 20 * 1024 * 1024;     // เพดานรวม
+  const MAX_DIM = 1600;
 
-  const imageInput = document.getElementById('images');
-  const cafeForm = document.getElementById('cafeForm');
-  const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
-  const submitBtn = document.getElementById('submitBtn');
+  const input = document.getElementById('images');
+  const form  = document.getElementById('cafeForm');
 
-  // เตือนจำนวนไฟล์
-  imageInput?.addEventListener('change', () => {
-    if (imageInput.files.length > MAX_FILES) {
+  input.addEventListener('change', async () => {
+    if (input.files.length > MAX_FILES) {
       alert('เลือกได้สูงสุด 5 รูปภาพเท่านั้น');
-      imageInput.value = '';
+      input.value = '';
+      return;
     }
-    for (const f of imageInput.files) {
-      if (f.size > 50 * 1024 * 1024) {
-        alert(`ไฟล์ ${f.name} ใหญ่เกิน 50MB ไม่รองรับ`);
-        imageInput.value = '';
-        return;
+    await compressAndReplace();
+  });
+
+  form.addEventListener('submit', async (e) => {
+    if (input.files.length > 0) {
+      // อัดอีกรอบ (เผื่อผู้ใช้ยังไม่ได้เปลี่ยนไฟล์หลังเตือน)
+      await compressAndReplace();
+      // ตรวจรวม
+      const total = Array.from(input.files).reduce((s,f)=>s+f.size,0);
+      if (total > MAX_TOTAL) {
+        e.preventDefault();
+        alert('ขนาดไฟล์รวมเกิน 20MB กรุณาลดจำนวนหรือขนาดรูป');
       }
     }
   });
 
-  // ดัก submit -> บีบอัดรูป + ส่งด้วย fetch
-  cafeForm.addEventListener('submit', async function(e) {
-    // ตรวจพิกัดก่อน
-    if (!duplicateCoordsWarning.classList.contains('d-none') ||
-        !outOfBoundsWarning.classList.contains('d-none')) {
-      e.preventDefault();
-      alert('โปรดแก้ไขข้อผิดพลาดเกี่ยวกับพิกัดก่อนบันทึกข้อมูล');
-      return;
-    }
+  async function compressAndReplace() {
+    const files = Array.from(input.files);
+    if (!files.length) return;
 
-    // หากไม่มีรูปให้ส่งแบบปกติ
-    if (!imageInput || imageInput.files.length === 0) return;
-
-    e.preventDefault();
-
-    if (imageInput.files.length > MAX_FILES) {
-      alert('กรุณาอัปโหลดรูปภาพไม่เกิน 5 รูปเท่านั้น');
-      return;
-    }
-
-    // บีบอัดทุกรูป
-    const files = Array.from(imageInput.files);
-    const compressed = [];
-    let totalAfter = 0;
-
+    const dt = new DataTransfer();
     for (const file of files) {
-      const out = await compressImage(file, {maxDim: MAX_DIM, targetBytes: TARGET_PER_FILE});
-      compressed.push(out);
-      totalAfter += out.blob.size;
-
-      if (out.blob.size > MAX_PER_FILE) {
-        alert(`ไฟล์ ${file.name} หลังบีบอัดยังเกิน 5MB กรุณาเลือกรูปที่เล็กกว่านี้`);
+      const out = await compressImage(file, { maxDim: MAX_DIM, targetBytes: TARGET_BYTES });
+      if (out.size > MAX_BYTES) {
+        alert(`ไฟล์ ${file.name} หลังบีบอัดยังเกิน 5MB กรุณาเลือกรูปที่เล็กลง`);
+        input.value = '';
         return;
       }
+      dt.items.add(out);
     }
+    input.files = dt.files;
+  }
 
-    if (totalAfter > MAX_TOTAL) {
-      alert('ขนาดไฟล์รวมหลังบีบอัดเกิน 20MB กรุณาลดจำนวน/ขนาดรูป');
-      return;
-    }
+  async function compressImage(file, { maxDim=1600, targetBytes=1.5*1024*1024 } = {}) {
+    const bmp = await readBitmap(file);
+    const { width, height } = fitContain(bmp.width, bmp.height, maxDim);
 
-    // สร้าง FormData ใหม่จากฟอร์ม แล้วแทนรูปด้วยไฟล์ที่บีบอัด
-    const fd = new FormData(cafeForm);
-    fd.delete('images[]');
-    compressed.forEach((it, idx) => {
-      const safeName = (files[idx].name.replace(/\.[^.]+$/, '') || 'image') + '-compressed.jpg';
-      fd.append('images[]', it.blob, safeName);
-    });
-
-    // ส่งด้วย fetch (ใช้ POST เสมอ; ถ้าแก้ไข ฟิลด์ _method=PUT จะถูกแนบอยู่แล้ว)
-    const action = cafeForm.getAttribute('action');
-
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังบันทึก...';
-
-    try {
-      const res = await fetch(action, {
-        method: 'POST',
-        headers: { 'X-CSRF-TOKEN': csrf },
-        body: fd,
-        redirect: 'follow'
-      });
-
-      if (res.redirected) { window.location.href = res.url; return; }
-      if (res.ok) {
-        try {
-          const data = await res.json();
-          if (data?.redirect) { window.location.href = data.redirect; return; }
-        } catch {}
-        window.location.reload();
-      } else {
-        const text = await res.text();
-        console.error('Upload failed:', res.status, text);
-        alert('บันทึกไม่สำเร็จ กรุณาลองใหม่หรือเลือกรูปที่เล็กลง');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('มีข้อผิดพลาดระหว่างอัปโหลด');
-    } finally {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = '<i class="fas fa-save me-1"></i> บันทึกข้อมูล';
-    }
-  });
-
-  // ฟังก์ชันบีบอัดรูป
-  async function compressImage(file, {maxDim=1600, targetBytes=1.5*1024*1024} = {}) {
-    const bitmap = await readImageBitmap(file);
-    const {width, height} = fitContain(bitmap.width, bitmap.height, maxDim);
     const canvas = document.createElement('canvas');
     canvas.width = width; canvas.height = height;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(bitmap, 0, 0, width, height);
-    let quality = 0.9;
-    let blob = await canvasToBlob(canvas, 'image/jpeg', quality);
-    const steps = [0.85,0.8,0.75,0.7,0.65,0.6];
-    for (const q of steps) {
-      if (blob.size <= targetBytes) break;
-      quality = q;
-      blob = await canvasToBlob(canvas, 'image/jpeg', quality);
+    ctx.drawImage(bmp, 0, 0, width, height);
+
+    let q = 0.9;
+    let blob = await toBlob(canvas, 'image/jpeg', q);
+    while (blob.size > targetBytes && q > 0.55) {
+      q -= 0.07;
+      blob = await toBlob(canvas, 'image/jpeg', q);
     }
-    return { blob };
+
+    const base = (file.name || 'image').replace(/\.[^.]+$/, '');
+    return new File([blob], `${base}.jpg`, { type:'image/jpeg', lastModified: Date.now() });
   }
-  function fitContain(w,h,max){ if(w<=max && h<=max) return {width:w,height:h}; const r=Math.min(max/w,max/h); return {width:Math.round(w*r), height:Math.round(h*r)}; }
-  function canvasToBlob(canvas, type, quality){ return new Promise(r => canvas.toBlob(b => r(b), type, quality)); }
-  async function readImageBitmap(file){
+
+  function fitContain(w,h,max){
+    if (w <= max && h <= max) return { width:w, height:h };
+    const r = Math.min(max/w, max/h);
+    return { width:Math.round(w*r), height:Math.round(h*r) };
+  }
+
+  function toBlob(canvas, type, quality){
+    return new Promise(res => canvas.toBlob(b => res(b), type, quality));
+  }
+
+  async function readBitmap(file){
     if ('createImageBitmap' in window) return await createImageBitmap(file);
     const dataUrl = await fileToDataURL(file);
-    const img = new Image(); img.decoding='async'; img.src=dataUrl; await img.decode();
-    const c=document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight;
-    c.getContext('2d').drawImage(img,0,0);
-    return { width:c.width, height:c.height, drawImage:(ctx,...args)=>ctx.drawImage(img,...args) };
+    const img = new Image(); img.decoding = 'async'; img.src = dataUrl; await img.decode();
+    const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0);
+    // ให้ interface เหมือน ImageBitmap สำหรับ drawImage
+    return { width:c.width, height:c.height, drawImage:(ctx2, ...args)=>ctx2.drawImage(img, ...args) };
   }
-  function fileToDataURL(file){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(file); }); }
 
-  // ========= แผนที่ =========
+  function fileToDataURL(file){
+    return new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => res(fr.result);
+      fr.onerror = rej;
+      fr.readAsDataURL(file);
+    });
+  }
+});
+</script>
+
+<script>
+/* ============ แผนที่ & ตรวจพิกัดซ้ำ (เหมือนเดิม) ============ */
+document.addEventListener('DOMContentLoaded', function () {
+  const submitBtn = document.getElementById('submitBtn');
   const latInput = document.getElementById('lat');
   const lngInput = document.getElementById('lng');
   const duplicateCoordsWarning = document.getElementById('duplicateCoordsWarning');
@@ -576,7 +471,7 @@ document.addEventListener('DOMContentLoaded', function () {
     attribution: '© OpenStreetMap contributors'
   }).addTo(map);
 
-  const geocoderControl = L.Control.geocoder({
+  L.Control.geocoder({
     geocoder: L.Control.Geocoder.nominatim(),
     defaultMarkGeocode: false,
     placeholder: 'ค้นหาสถานที่...',
