@@ -64,15 +64,6 @@
     $avgRating = $reviewCount ? round($reviews->avg('rating'),1) : null;
   @endphp
 
-  <!-- HEADER (เรียบ สะอาด) -->
-  <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5">
-    <nav class="text-sm text-slate-500">
-      <a href="{{ url('/') }}" class="hover:underline">หน้าแรก</a>
-      <span class="mx-2">/</span>
-      <a href="{{ route('cafes.index') }}" class="hover:underline">คาเฟ่</a>
-      <span class="mx-2">/</span>
-      <span class="text-slate-700 font-medium">{{ $cafe->cafe_name }}</span>
-    </nav>
 
     <div class="mt-4 card p-6">
       <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-5">
