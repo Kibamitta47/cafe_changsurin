@@ -57,7 +57,8 @@
       if (is_string($v)){
         $j=json_decode($v,true);
         if(json_last_error()===JSON_ERROR_NONE && is_array($j)) return array_values(array_filter($j,fn($x)=>trim((string)$x)!=''));
-        return array_values(array_filter(array_map('trim',explode(',',$v)),fn($x)=>$x!=='')); }
+        return array_values(array_filter(array_map('trim',explode(',',$v)),fn($x)=>$x!==''));
+      }
       return [];
     };
     $facilities=$toArray($cafe->facilities);
@@ -73,15 +74,21 @@
     $avgRating = $reviewCount ? round($reviews->avg('rating'),1) : null;
   @endphp
 
-  <!-- NOTE: Breadcrumb "หน้าแรก" ถูกลบทั้งบล็อก -->
+  <!-- BREADCRUMB -->
+  <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+    <ol class="flex items-center gap-2 text-sm text-slate-500">
+      <li><a href="{{ route('welcome') }}" class="hover:text-slate-700"><i class="fa-solid fa-house"></i> หน้าแรก</a></li>
+      <li class="opacity-50">/</li>
+      <li class="truncate" title="{{ $cafe->cafe_name }}">{{ $cafe->cafe_name }}</li>
+    </ol>
+  </nav>
 
   <!-- HERO -->
   <header class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4">
     <div class="glass rounded-3xl shadow-xl border border-white/60 overflow-hidden">
       <!-- Hero Gallery with Swiper -->
       <div class="relative">
-        <!-- ย่อความสูงรูปหลักลง -->
-        <div class="swiper mySwiper aspect-[16/9] max-h-[220px] sm:max-h-[260px] lg:max-h-[320px]">
+        <div class="swiper mySwiper h-[260px] sm:h-[360px] lg:h-[460px]">
           <div class="swiper-wrapper">
             @forelse($thumbs as $t)
               <div class="swiper-slide">
@@ -104,7 +111,7 @@
         </div>
 
         <!-- Quick Badges -->
-        <div class="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
+        <div class="absolute bottom-4 left-4 right-4 flex flex-wrap gap-2">
           @if(!empty($cafe->is_new_opening))
           <span class="chip bg-amber-100/90 border-amber-200 text-amber-800"><i class="fa-solid fa-bolt"></i> เปิดใหม่</span>
           @endif
@@ -116,7 +123,7 @@
         </div>
       </div>
 
-      <!-- Title + Rating (ตัดปุ่มออก) -->
+      <!-- Title + Rating + Action -->
       <div class="p-6 sm:p-8">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -128,7 +135,18 @@
             @endif
           </div>
 
-          <!-- ตัดปุ่มแชร์/เขียนรีวิวด้านขวาออก -->
+          <div class="flex items-center gap-3">
+            <button class="px-4 py-2 rounded-xl bg-white shadow border text-slate-700 hover:bg-slate-50"
+                    @click="navigator.share ? navigator.share({title:'{{ addslashes($cafe->cafe_name) }}', url: window.location.href}) : (async()=>{await navigator.clipboard.writeText(window.location.href); copied=true; setTimeout(()=>copied=false,1500)})()">
+              <i class="fa-solid fa-share-nodes"></i> แชร์
+            </button>
+            @auth
+              <a href="{{ route('user.reviews.create', ['cafe_id' => $cafe->cafe_id ?? $cafe->id]) }}"
+                 class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 shadow">
+                <i class="fa-solid fa-pen-to-square"></i> เขียนรีวิว
+              </a>
+            @endauth
+          </div>
         </div>
 
         <!-- Rating summary -->
@@ -146,6 +164,7 @@
           @else
             <div class="text-slate-500">ยังไม่มีรีวิว</div>
           @endif
+          <div x-show="copied" class="text-emerald-700 text-sm"><i class="fa-regular fa-circle-check"></i> คัดลอกลิงก์แล้ว</div>
         </div>
       </div>
 
@@ -191,15 +210,18 @@
               <div class="min-w-0">
                 <strong>ที่อยู่:</strong>
                 <p class="break-words">{{ $cafe->address }}</p>
-                @if(!empty($cafe->lat) && !empty($cafe->lng))
-                  <p class="mt-1 text-sm">
-                    <a class="text-cyan-600 hover:underline break-all"
-                       href="https://www.google.com/maps/search/?api=1&query={{ $cafe->lat }},{{ $cafe->lng }}"
-                       target="_blank" rel="noopener">
-                      เปิดดูบน Google Maps
-                    </a>
-                  </p>
-                @endif
+                <div class="mt-2 flex flex-wrap gap-2">
+                  <button class="px-3 py-1 rounded-lg bg-white border shadow text-slate-700 hover:bg-slate-50"
+                          @click="await navigator.clipboard.writeText(`{{ trim(preg_replace('/\s+/', ' ', $cafe->address)) }}`); copied=true; setTimeout(()=>copied=false,1500)">
+                    <i class="fa-regular fa-copy"></i> คัดลอกที่อยู่
+                  </button>
+                  @if(!empty($cafe->lat) && !empty($cafe->lng))
+                  <a class="px-3 py-1 rounded-lg bg-amber-500 text-white hover:bg-amber-600 shadow"
+                     href="https://www.google.com/maps/search/?api=1&query={{ $cafe->lat }},{{ $cafe->lng }}" target="_blank" rel="noopener">
+                    <i class="fa-brands fa-google"></i> เปิดใน Google Maps
+                  </a>
+                  @endif
+                </div>
               </div>
             </div>
 
@@ -453,7 +475,7 @@
     </div>
   </main>
 
-  {{-- MOBILE STICKY BAR (คงไว้ ถ้าอยากตัดแจ้งมาได้) --}}
+  {{-- MOBILE STICKY BAR --}}
   <div class="fixed bottom-3 left-3 right-3 z-40 lg:hidden">
     <div class="glass rounded-2xl shadow-2xl border border-white/60 p-2 grid grid-cols-4 gap-2">
       <a href="{{ !empty($cafe->phone) ? 'tel:'.preg_replace('/\s+/', '', $cafe->phone) : '#' }}"
