@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Swiper (Gallery) -->
+  <!-- Swiper (Hero & Thumbs) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css"/>
   <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
 
@@ -32,25 +32,32 @@
       linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)}
     [x-cloak]{display:none!important}
     .glass{backdrop-filter:blur(12px); background:rgba(255,255,255,.75)}
+    .chip{ @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm border; }
   </style>
 </head>
-<body class="min-h-screen text-slate-800" x-data="{ tab:'info', lightbox:false, lightboxSrc:'' }">
+<body class="min-h-screen text-slate-800"
+      x-data="{ tab:'info', lightbox:false, lightboxSrc:'', copied:false }"
+      x-init="setTimeout(()=>copied=false,2000)">
 
-  {{-- Navbar (เดิม) --}}
-  @guest @include('components.1navbar') @endguest
-  @auth  @include('components.2navbar') @endauth
+  {{-- Navbar --}}
+  @guest
+    @include('components.1navbar')
+  @endguest
+  @auth
+    @include('components.2navbar')
+  @endauth
 
   @php
+    // ---------------- Helper & Data shaping ----------------
     $imgs = is_string($cafe->images) ? (json_decode($cafe->images, true) ?: []) : (is_array($cafe->images) ? $cafe->images : []);
-    $thumbs = array_slice($imgs, 0, 8);
-
+    $featured = $imgs[0] ?? null;
+    $thumbs = array_slice($imgs, 0, 8); // ใช้ 8 ภาพแรกเป็นสไลด์/ทัมป์
     $toArray=function($v){
       if (is_array($v)) return array_values(array_filter($v,fn($x)=>trim((string)$x)!=''));
       if (is_string($v)){
         $j=json_decode($v,true);
         if(json_last_error()===JSON_ERROR_NONE && is_array($j)) return array_values(array_filter($j,fn($x)=>trim((string)$x)!=''));
-        return array_values(array_filter(array_map('trim',explode(',',$v)),fn($x)=>$x!==''));
-      }
+        return array_values(array_filter(array_map('trim',explode(',',$v)),fn($x)=>$x!=='')); }
       return [];
     };
     $facilities=$toArray($cafe->facilities);
@@ -61,15 +68,20 @@
     $hasParking=(int)($cafe->parking ?? 0)===1;
     $hasCC=(int)($cafe->credit_card ?? 0)===1;
 
+    // Rating summary
     $reviewCount = $reviews->count() ?? 0;
     $avgRating = $reviewCount ? round($reviews->avg('rating'),1) : null;
   @endphp
 
-  <!-- HERO (ย่อความสูง & ใช้สัดส่วน 16:9) -->
-  <header class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6">
+  <!-- NOTE: Breadcrumb "หน้าแรก" ถูกลบทั้งบล็อก -->
+
+  <!-- HERO -->
+  <header class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4">
     <div class="glass rounded-3xl shadow-xl border border-white/60 overflow-hidden">
+      <!-- Hero Gallery with Swiper -->
       <div class="relative">
-        <div class="swiper mySwiper aspect-[16/9] max-h-[380px]">
+        <!-- ย่อความสูงรูปหลักลง -->
+        <div class="swiper mySwiper aspect-[16/9] max-h-[220px] sm:max-h-[260px] lg:max-h-[320px]">
           <div class="swiper-wrapper">
             @forelse($thumbs as $t)
               <div class="swiper-slide">
@@ -87,62 +99,74 @@
             @endforelse
           </div>
           <div class="swiper-pagination"></div>
-          <!-- ลูกศรเอาออกเพื่อความเรียบ -->
+          <div class="swiper-button-prev"></div>
+          <div class="swiper-button-next"></div>
         </div>
 
-        <!-- Badge เล็กๆ (ไม่ใช่ปุ่ม) -->
-        <div class="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2 text-xs">
+        <!-- Quick Badges -->
+        <div class="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
           @if(!empty($cafe->is_new_opening))
-            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100/90 text-amber-800 border border-amber-200">
-              <i class="fa-solid fa-bolt"></i> เปิดใหม่
-            </span>
+          <span class="chip bg-amber-100/90 border-amber-200 text-amber-800"><i class="fa-solid fa-bolt"></i> เปิดใหม่</span>
           @endif
           @if(!empty($cafe->price_range))
-            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-cyan-50/90 text-cyan-700 border border-cyan-200">
-              <i class="fa-solid fa-tags"></i> {{ $cafe->price_range }}
-            </span>
+          <span class="chip bg-cyan-50/90 border-cyan-200 text-cyan-700"><i class="fa-solid fa-tags"></i> {{ $cafe->price_range }}</span>
           @endif
-          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full {{ $hasParking?'bg-emerald-50/90 text-emerald-700 border border-emerald-200':'bg-slate-100/90 text-slate-600 border' }}">
-            <i class="fa-solid fa-square-parking"></i> จอดรถ {{ $hasParking?'ได้':'-' }}
-          </span>
-          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full {{ $hasCC?'bg-emerald-50/90 text-emerald-700 border border-emerald-200':'bg-slate-100/90 text-slate-600 border' }}">
-            <i class="fa-regular fa-credit-card"></i> บัตรเครดิต {{ $hasCC?'รองรับ':'-' }}
-          </span>
+          <span class="chip {{ $hasParking?'bg-emerald-50/90 border-emerald-200 text-emerald-700':'bg-slate-100/90 border-slate-300 text-slate-600' }}"><i class="fa-solid fa-square-parking"></i> จอดรถ {{ $hasParking?'ได้':'-' }}</span>
+          <span class="chip {{ $hasCC?'bg-emerald-50/90 border-emerald-200 text-emerald-700':'bg-slate-100/90 border-slate-300 text-slate-600' }}"><i class="fa-regular fa-credit-card"></i> บัตรเครดิต {{ $hasCC?'รองรับ':'-' }}</span>
         </div>
       </div>
 
-      <!-- ชื่อ & คะแนนแบบเรียบ -->
+      <!-- Title + Rating (ตัดปุ่มออก) -->
       <div class="p-6 sm:p-8">
-        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
-          {{ $cafe->cafe_name }}
-        </h1>
-        @if(!empty($cafe->place_name))
-          <p class="text-slate-600 mt-1">{{ $cafe->place_name }}</p>
-        @endif>
-
-        @if($avgRating)
-          <div class="mt-3 text-slate-700">
-            <span class="font-bold">{{ number_format($avgRating,1) }}</span>
-            @for($i=1;$i<=5;$i++)
-              <i class="fa-solid fa-star {{ $i <= floor($avgRating) ? 'text-amber-500' : 'text-slate-300' }}"></i>
-            @endfor
-            <span class="text-sm text-slate-500">จาก {{ $reviewCount }} รีวิว</span>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
+              {{ $cafe->cafe_name }}
+            </h1>
+            @if(!empty($cafe->place_name))
+              <p class="text-slate-600 mt-1">{{ $cafe->place_name }}</p>
+            @endif
           </div>
-        @endif
+
+          <!-- ตัดปุ่มแชร์/เขียนรีวิวด้านขวาออก -->
+        </div>
+
+        <!-- Rating summary -->
+        <div class="mt-4 flex flex-wrap items-center gap-3">
+          @if($avgRating)
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+              <span class="font-bold text-lg">{{ number_format($avgRating,1) }}</span>
+              <span>
+                @for($i=1;$i<=5;$i++)
+                  <i class="fa-solid fa-star {{ $i <= floor($avgRating) ? 'text-amber-500' : 'text-slate-300' }}"></i>
+                @endfor
+              </span>
+              <span class="text-sm text-slate-600">จาก {{ $reviewCount }} รีวิว</span>
+            </div>
+          @else
+            <div class="text-slate-500">ยังไม่มีรีวิว</div>
+          @endif
+        </div>
       </div>
 
-      <!-- Tabs (ปุ่มระบบภายในหน้า – ยังจำเป็นสำหรับสลับเนื้อหา) -->
-      <div class="px-6 sm:px-8 pb-2">
+      <!-- Tabs -->
+      <div class="px-6 sm:px-8">
         <div class="border-b border-slate-200 flex gap-6 text-slate-600">
           <button class="py-3 -mb-px border-b-2"
                   :class="tab==='info' ? 'border-cyan-500 text-cyan-700 font-semibold' : 'border-transparent hover:text-slate-800'"
-                  @click="tab='info'">ข้อมูลคาเฟ่</button>
+                  @click="tab='info'">
+            ข้อมูลคาเฟ่
+          </button>
           <button class="py-3 -mb-px border-b-2"
                   :class="tab==='reviews' ? 'border-cyan-500 text-cyan-700 font-semibold' : 'border-transparent hover:text-slate-800'"
-                  @click="tab='reviews'">รีวิวผู้ใช้ ({{ $reviewCount }})</button>
+                  @click="tab='reviews'">
+            รีวิวผู้ใช้ ({{ $reviewCount }})
+          </button>
           <button class="py-3 -mb-px border-b-2"
                   :class="tab==='map' ? 'border-cyan-500 text-cyan-700 font-semibold' : 'border-transparent hover:text-slate-800'"
-                  @click="tab='map'">แผนที่</button>
+                  @click="tab='map'">
+            แผนที่
+          </button>
         </div>
       </div>
     </div>
@@ -154,8 +178,7 @@
 
       <!-- LEFT -->
       <div class="lg:col-span-2 space-y-7">
-
-        <!-- INFO -->
+        <!-- INFO TAB -->
         <section x-show="tab==='info'" x-cloak
                  class="glass rounded-3xl shadow-xl border border-white/60 p-6 sm:p-8">
           <h2 class="text-xl font-bold mb-5 flex items-center gap-2 text-slate-900">
@@ -182,7 +205,11 @@
 
             <div class="flex items-center">
               <i class="fa-solid fa-phone text-cyan-500 w-5 mr-3 shrink-0"></i>
-              <span><strong>โทรศัพท์:</strong> {{ $cafe->phone ?? '-' }}</span>
+              <span><strong>โทรศัพท์:</strong>
+                @if(!empty($cafe->phone))
+                  <a href="tel:{{ preg_replace('/\s+/', '', $cafe->phone) }}" class="text-cyan-600 hover:underline">{{ $cafe->phone }}</a>
+                @else - @endif
+              </span>
             </div>
 
             <div class="flex items-center">
@@ -314,12 +341,20 @@
           @endif
         </section>
 
-        <!-- REVIEWS -->
+        <!-- REVIEWS TAB -->
         <section x-show="tab==='reviews'" x-cloak
                  class="glass rounded-3xl shadow-xl border border-white/60 p-6 sm:p-8">
-          <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
-            <i class="fa-solid fa-star text-amber-500"></i> รีวิวจากผู้ใช้
-          </h2>
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold flex items-center gap-2">
+              <i class="fa-solid fa-star text-amber-500"></i> รีวิวจากผู้ใช้
+            </h2>
+            @auth
+              <a href="{{ route('user.reviews.create', ['cafe_id' => $cafe->cafe_id ?? $cafe->id]) }}"
+                 class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow">
+                <i class="fa-solid fa-pen-to-square"></i> เขียนรีวิว
+              </a>
+            @endauth
+          </div>
 
           @if($reviews->isEmpty())
             <div class="text-center py-12 rounded-xl border border-dashed border-slate-300 bg-white/60">
@@ -372,18 +407,73 @@
 
       <!-- RIGHT -->
       <aside class="space-y-7 lg:sticky lg:top-24 h-max">
-        <!-- MAP -->
+        <!-- MAP TAB (also always visible card for quick open) -->
         <section :class="tab==='map' ? 'ring-2 ring-amber-300' : ''"
                  class="glass rounded-3xl shadow-xl border border-white/60 p-6">
           <h3 class="text-xl font-bold mb-4 flex items-center">
             <i class="fa-solid fa-map-location-dot text-amber-500 mr-2"></i> แผนที่
           </h3>
-          <div id="map" class="w-full h-[280px] rounded-xl overflow-hidden shadow-lg"></div>
-          {{-- ปุ่มเปิด Maps เอาออก เหลือแค่ลิงก์ด้านบนในที่อยู่ --}}
+          <div id="map" class="w-full h-[320px] rounded-xl overflow-hidden shadow-lg"></div>
+          @if(!empty($cafe->lat) && !empty($cafe->lng))
+            <a href="https://www.google.com/maps/search/?api=1&query={{ $cafe->lat }},{{ $cafe->lng }}"
+               target="_blank" rel="noopener"
+               class="mt-4 inline-flex w-full justify-center items-center gap-2 px-4 py-3 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600 shadow-lg">
+              <i class="fa-brands fa-google"></i> เปิดด้วย Google Maps
+            </a>
+          @endif
+        </section>
+
+        <!-- QUICK CONTACT -->
+        <section class="glass rounded-3xl shadow-xl border border-white/60 p-6">
+          <h3 class="text-xl font-bold mb-4 flex items-center">
+            <i class="fa-solid fa-bolt text-emerald-600 mr-2"></i> ด่วน & ติดต่อ
+          </h3>
+          <div class="grid grid-cols-2 gap-3">
+            <a href="{{ !empty($cafe->phone) ? 'tel:'.preg_replace('/\s+/', '', $cafe->phone) : '#' }}"
+               class="px-4 py-3 rounded-xl bg-emerald-600 text-white text-center font-semibold shadow hover:bg-emerald-700 {{ empty($cafe->phone)?'pointer-events-none opacity-50':'' }}">
+              <i class="fa-solid fa-phone"></i> โทร
+            </a>
+            <button class="px-4 py-3 rounded-xl bg-white text-slate-700 border shadow hover:bg-slate-50"
+                    @click="navigator.share ? navigator.share({title:'{{ addslashes($cafe->cafe_name) }}', text:'ชวนไปคาเฟ่นี้กันไหม?', url: location.href}) : (async()=>{await navigator.clipboard.writeText(location.href); copied=true; setTimeout(()=>copied=false,1500)})()">
+              <i class="fa-solid fa-share-nodes"></i> แชร์
+            </button>
+            <a href="{{ !empty($cafe->website) ? $cafe->website : '#' }}" target="_blank" rel="noopener"
+               class="px-4 py-3 rounded-xl bg-cyan-600 text-white text-center font-semibold shadow hover:bg-cyan-700 {{ empty($cafe->website)?'pointer-events-none opacity-50':'' }}">
+              <i class="fa-solid fa-globe"></i> เว็บไซต์
+            </a>
+            @auth
+            <a href="{{ route('user.reviews.create', ['cafe_id' => $cafe->cafe_id ?? $cafe->id]) }}"
+               class="px-4 py-3 rounded-xl bg-amber-500 text-white text-center font-semibold shadow hover:bg-amber-600">
+              <i class="fa-solid fa-pen-to-square"></i> รีวิว
+            </a>
+            @endauth
+          </div>
         </section>
       </aside>
     </div>
   </main>
+
+  {{-- MOBILE STICKY BAR (คงไว้ ถ้าอยากตัดแจ้งมาได้) --}}
+  <div class="fixed bottom-3 left-3 right-3 z-40 lg:hidden">
+    <div class="glass rounded-2xl shadow-2xl border border-white/60 p-2 grid grid-cols-4 gap-2">
+      <a href="{{ !empty($cafe->phone) ? 'tel:'.preg_replace('/\s+/', '', $cafe->phone) : '#' }}"
+         class="flex flex-col items-center py-2 rounded-xl bg-white shadow border {{ empty($cafe->phone)?'pointer-events-none opacity-50':'' }}">
+        <i class="fa-solid fa-phone"></i><span class="text-xs mt-1">โทร</span>
+      </a>
+      <button class="flex flex-col items-center py-2 rounded-xl bg-white shadow border"
+              @click="tab='map'; window.scrollTo({top:0, behavior:'smooth'})">
+        <i class="fa-solid fa-map-location-dot"></i><span class="text-xs mt-1">แผนที่</span>
+      </button>
+      <button class="flex flex-col items-center py-2 rounded-xl bg-white shadow border"
+              @click="tab='reviews'; document.querySelector('main').scrollIntoView({behavior:'smooth'})">
+        <i class="fa-solid fa-star"></i><span class="text-xs mt-1">รีวิว</span>
+      </button>
+      <button class="flex flex-col items-center py-2 rounded-xl bg-amber-500 text-white shadow border border-amber-300"
+              @click="navigator.share ? navigator.share({title:'{{ addslashes($cafe->cafe_name) }}', url: location.href}) : (async()=>{await navigator.clipboard.writeText(location.href); copied=true; setTimeout(()=>copied=false,1500)})()">
+        <i class="fa-solid fa-share-nodes"></i><span class="text-xs mt-1">แชร์</span>
+      </button>
+    </div>
+  </div>
 
   {{-- LIGHTBOX --}}
   <div x-show="lightbox" x-cloak
@@ -416,14 +506,19 @@
     })();
   </script>
 
-  <!-- SWIPER INIT (ไม่มีลูกศร/auto-play ช้าๆ) -->
+  <!-- SWIPER INIT -->
   <script>
     new Swiper('.mySwiper', {
       loop: true,
       slidesPerView: 1,
-      spaceBetween: 6,
+      spaceBetween: 8,
       pagination: { el: '.swiper-pagination', clickable: true },
-      autoplay: { delay: 4200, disableOnInteraction: false },
+      navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+      autoplay: { delay: 3500, disableOnInteraction: false },
+      breakpoints: {
+        640: { slidesPerView: 1 },
+        1024: { slidesPerView: 1 }
+      }
     });
   </script>
 </body>
