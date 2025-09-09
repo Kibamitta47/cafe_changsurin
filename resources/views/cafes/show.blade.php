@@ -12,13 +12,16 @@
   <!-- Font Awesome -->
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-        integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
         crossorigin="anonymous" referrerpolicy="no-referrer" />
 
   <!-- Google Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+
+  <!-- Leaflet (แผนที่) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
     body { font-family:'Kanit',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,'Apple Color Emoji','Segoe UI Emoji'; }
@@ -27,7 +30,7 @@
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-800" x-data="{ lightbox:false, lightboxSrc:'' }">
 
-  {{-- ถ้ามี navbar ของโปรเจกต์ --}}
+  {{-- นำทางของโปรเจกต์ --}}
   @auth
     @include('components.2navbar')
   @else
@@ -36,99 +39,47 @@
 
   <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
 
-    {{-- HEADER --}}
-    <div class="mb-6 flex items-start justify-between gap-4">
-      <div>
-        <h1 class="text-3xl sm:text-4xl font-bold">
-          {{ $cafe->cafe_name ?? '-' }}
-          @if(!empty($cafe->is_new_opening))
-            <span class="align-middle ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
-              เปิดใหม่
-            </span>
+    {{-- HEADER สะอาดตา --}}
+    <header class="mb-6 rounded-2xl bg-white border px-5 py-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+          <h1 class="text-3xl sm:text-4xl font-bold tracking-tight">
+            {{ $cafe->cafe_name ?? '-' }}
+            @if(!empty($cafe->is_new_opening))
+              <span class="align-middle ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
+                เปิดใหม่
+              </span>
+            @endif
+          </h1>
+          @if(!empty($cafe->place_name))
+            <p class="text-slate-500 mt-1">{{ $cafe->place_name }}</p>
           @endif
-        </h1>
-        <p class="text-slate-500 mt-1">{{ $cafe->place_name ?? '' }}</p>
-      </div>
+        </div>
 
-      {{-- Status badge + ปุ่มกลับ --}}
-      <div class="flex items-center gap-2">
-        @php
-          $status = $cafe->status ?? 'inactive';
-          $statusMap = [
-            'active'   => ['bg'=>'bg-green-100', 'text'=>'text-green-800', 'label'=>'เผยแพร่'],
-            'inactive' => ['bg'=>'bg-slate-100','text'=>'text-slate-700','label'=>'ซ่อน'],
-            'pending'  => ['bg'=>'bg-amber-100','text'=>'text-amber-800','label'=>'รอตรวจ'],
-            'rejected' => ['bg'=>'bg-rose-100','text'=>'text-rose-800','label'=>'ไม่อนุมัติ'],
-          ];
-          $st = $statusMap[$status] ?? $statusMap['inactive'];
-        @endphp
-        <span class="px-3 py-1 rounded-full text-sm font-semibold {{ $st['bg'] }} {{ $st['text'] }}">
-          สถานะ: {{ $st['label'] }}
-        </span>
-
-        <a href="{{ route('admin.cafe.index') }}"
-           class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-slate-50 text-slate-700">
-          <i class="fa-solid fa-arrow-left"></i>
-          กลับสู่รายการ
-        </a>
+        @if(!empty($cafe->price_range))
+          <span class="inline-flex items-center gap-2 self-start md:self-auto px-3 py-1 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200">
+            <i class="fa-solid fa-tags"></i> ช่วงราคา: <strong class="ml-1">{{ $cafe->price_range }}</strong>
+          </span>
+        @endif
       </div>
-    </div>
-
-    {{-- META IDs --}}
-    <div class="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <div class="bg-white rounded-xl border p-4">
-        <div class="text-xs text-slate-500">User ID</div>
-        <div class="font-semibold">{{ $cafe->user_id ?? '-' }}</div>
-      </div>
-      <div class="bg-white rounded-xl border p-4">
-        <div class="text-xs text-slate-500">Admin ID</div>
-        <div class="font-semibold">{{ $cafe->admin_id ?? '-' }}</div>
-      </div>
-      <div class="bg-white rounded-xl border p-4">
-        <div class="text-xs text-slate-500">Cafe Primary Key</div>
-        <div class="font-semibold">{{ $cafe->id ?? ($cafe->cafe_id ?? '-') }}</div>
-      </div>
-    </div>
+    </header>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-      {{-- LEFT: ข้อมูลหลัก + แกลเลอรี --}}
-      <div class="lg:col-span-2 space-y-6">
+      {{-- LEFT: ข้อมูล + แกลเลอรี --}}
+      <section class="lg:col-span-2 space-y-6">
 
-        {{-- การ์ดข้อมูลหลักทั้งหมด --}}
-        <section class="bg-white rounded-2xl border p-6">
+        {{-- การ์ดข้อมูลหลัก --}}
+        <div class="bg-white rounded-2xl border p-6">
           <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
             <i class="fa-solid fa-circle-info text-cyan-500"></i> ข้อมูลคาเฟ่
           </h2>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-
-            {{-- ชื่อ/สถานที่/ที่อยู่ --}}
-            <div class="md:col-span-2">
-              <div class="text-sm text-slate-500">ชื่อคาเฟ่</div>
-              <div class="font-semibold">{{ $cafe->cafe_name ?? '-' }}</div>
-            </div>
-            <div>
-              <div class="text-sm text-slate-500">ชื่อสถานที่</div>
-              <div class="font-semibold">{{ $cafe->place_name ?? '-' }}</div>
-            </div>
-            <div>
-              <div class="text-sm text-slate-500">ช่วงราคา</div>
-              <div class="font-semibold">{{ $cafe->price_range ?? '-' }}</div>
-            </div>
+            {{-- ที่อยู่ --}}
             <div class="md:col-span-2">
               <div class="text-sm text-slate-500">ที่อยู่</div>
               <div class="font-semibold leading-relaxed">{{ $cafe->address ?? '-' }}</div>
-            </div>
-
-            {{-- พิกัด --}}
-            <div>
-              <div class="text-sm text-slate-500">Latitude</div>
-              <div class="font-semibold">{{ $cafe->lat ?? '-' }}</div>
-            </div>
-            <div>
-              <div class="text-sm text-slate-500">Longitude</div>
-              <div class="font-semibold">{{ $cafe->lng ?? '-' }}</div>
             </div>
 
             {{-- ติดต่อ --}}
@@ -141,8 +92,7 @@
               <div class="font-semibold">
                 @if(!empty($cafe->email))
                   <a href="mailto:{{ $cafe->email }}" class="text-cyan-600 hover:underline">{{ $cafe->email }}</a>
-                @else -
-                @endif
+                @else - @endif
               </div>
             </div>
 
@@ -153,8 +103,7 @@
                   <a href="{{ $cafe->website }}" target="_blank" rel="noopener" class="text-cyan-600 hover:underline">
                     {{ $cafe->website }}
                   </a>
-                @else -
-                @endif
+                @else - @endif
               </div>
             </div>
 
@@ -167,8 +116,7 @@
                      target="_blank" rel="noopener" class="text-cyan-600 hover:underline">
                     {{ $cafe->facebook_page }}
                   </a>
-                @else -
-                @endif
+                @else - @endif
               </div>
             </div>
             <div>
@@ -179,8 +127,7 @@
                      target="_blank" rel="noopener" class="text-cyan-600 hover:underline">
                     {{ $cafe->instagram_page }}
                   </a>
-                @else -
-                @endif
+                @else - @endif
               </div>
             </div>
             <div class="md:col-span-2">
@@ -210,7 +157,7 @@
               <div class="font-semibold">{{ $close ?? '-' }}</div>
             </div>
 
-            {{-- ค่าความสะดวก/การชำระเงิน/บริการ/สไตล์/อื่น ๆ --}}
+            {{-- Methods/Facilities/Services/Styles --}}
             @php
               $toArray = function($v){
                 if (is_array($v)) return array_values(array_filter($v, fn($x)=>trim((string)$x) !== ''));
@@ -232,9 +179,7 @@
               <div class="mt-1 flex flex-wrap gap-2">
                 @forelse($payments as $p)
                   <span class="px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">{{ $p }}</span>
-                @empty
-                  <span class="text-slate-400">-</span>
-                @endforelse
+                @empty <span class="text-slate-400">-</span> @endforelse
               </div>
             </div>
 
@@ -243,9 +188,7 @@
               <div class="mt-1 flex flex-wrap gap-2">
                 @forelse($facils as $f)
                   <span class="px-3 py-1 rounded-full text-sm bg-cyan-100 text-cyan-800">{{ $f }}</span>
-                @empty
-                  <span class="text-slate-400">-</span>
-                @endforelse
+                @empty <span class="text-slate-400">-</span> @endforelse
               </div>
             </div>
 
@@ -254,9 +197,7 @@
               <div class="mt-1 flex flex-wrap gap-2">
                 @forelse($services as $s)
                   <span class="px-3 py-1 rounded-full text-sm bg-indigo-100 text-indigo-800">{{ $s }}</span>
-                @empty
-                  <span class="text-slate-400">-</span>
-                @endforelse
+                @empty <span class="text-slate-400">-</span> @endforelse
               </div>
             </div>
 
@@ -265,9 +206,7 @@
               <div class="mt-1 flex flex-wrap gap-2">
                 @forelse($styles as $stl)
                   <span class="px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800">{{ $stl }}</span>
-                @empty
-                  <span class="text-slate-400">-</span>
-                @endforelse
+                @empty <span class="text-slate-400">-</span> @endforelse
               </div>
               @if(!empty($cafe->other_style))
                 <div class="mt-2 text-sm">
@@ -277,9 +216,9 @@
               @endif
             </div>
 
-            {{-- ฟิลด์ boolean/option เพิ่มเติม --}}
+            {{-- Booleans --}}
             <div>
-              <div class="text-sm text-slate-500">ที่จอดรถ (parking)</div>
+              <div class="text-sm text-slate-500">ที่จอดรถ</div>
               @php $flag = (int)($cafe->parking ?? 0) === 1; @endphp
               <span class="inline-flex items-center gap-2 px-3 py-1 rounded-lg text-sm {{ $flag ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600' }}">
                 <i class="fa-solid {{ $flag ? 'fa-check-circle' : 'fa-minus-circle' }}"></i>
@@ -288,16 +227,15 @@
             </div>
 
             <div>
-              <div class="text-sm text-slate-500">รับบัตรเครดิต (credit_card)</div>
+              <div class="text-sm text-slate-500">รับบัตรเครดิต</div>
               @php $flag = (int)($cafe->credit_card ?? 0) === 1; @endphp
               <span class="inline-flex items-center gap-2 px-3 py-1 rounded-lg text-sm {{ $flag ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600' }}">
                 <i class="fa-solid {{ $flag ? 'fa-check-circle' : 'fa-minus-circle' }}"></i>
                 {{ $flag ? 'รองรับ' : 'ไม่รองรับ/ไม่ระบุ' }}
               </span>
             </div>
-
           </div>
-        </section>
+        </div>
 
         {{-- แกลเลอรีรูปภาพ --}}
         @php
@@ -307,7 +245,7 @@
         @endphp
 
         @if(!empty($images))
-          <section class="bg-white rounded-2xl border p-6">
+          <div class="bg-white rounded-2xl border p-6">
             <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
               <i class="fa-solid fa-images text-amber-500"></i> แกลเลอรีรูปภาพ
             </h2>
@@ -324,58 +262,27 @@
                 </div>
               @endforeach
             </div>
-          </section>
-        @endif
-
-      </div>
-
-      {{-- RIGHT: แผนที่ / ปุ่ม Google Maps / สรุปสั้น --}}
-      <aside class="space-y-6">
-
-        <section class="bg-white rounded-2xl border p-6">
-          <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
-            <i class="fa-solid fa-map-location-dot text-rose-500"></i> แผนที่และการนำทาง
-          </h2>
-
-          <div class="space-y-3">
-            <div class="text-sm text-slate-500">พิกัด</div>
-            <div class="font-semibold">
-              {{ $cafe->lat ?? '-' }}, {{ $cafe->lng ?? '-' }}
-            </div>
-
-            @if(!empty($cafe->lat) && !empty($cafe->lng))
-              <a href="https://www.google.com/maps/search/?api=1&query={{ $cafe->lat }},{{ $cafe->lng }}"
-                 target="_blank" rel="noopener"
-                 class="inline-flex w-full justify-center items-center gap-2 rounded-lg bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 font-semibold">
-                <i class="fa-brands fa-google"></i> เปิดด้วย Google Maps
-              </a>
-            @else
-              <div class="text-slate-400 text-sm">ยังไม่มีพิกัด</div>
-            @endif
           </div>
-        </section>
+        @endif
+      </section>
 
-        {{-- สรุปเปิดใหม่/สถานะอื่น ๆ --}}
-        <section class="bg-white rounded-2xl border p-6">
+      {{-- RIGHT: แผนที่เท่านั้น --}}
+      <aside class="space-y-6">
+        <div class="bg-white rounded-2xl border p-6">
           <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
-            <i class="fa-solid fa-list-check text-indigo-500"></i> สรุปสถานะ
+            <i class="fa-solid fa-map-location-dot text-rose-500"></i> แผนที่
           </h2>
-          <ul class="space-y-2 text-sm">
-            <li class="flex items-center gap-2">
-              <i class="fa-solid fa-bolt text-amber-500"></i>
-              เปิดใหม่: <span class="font-semibold ml-1">{{ !empty($cafe->is_new_opening) ? 'ใช่' : 'ไม่ใช่' }}</span>
-            </li>
-            <li class="flex items-center gap-2">
-              <i class="fa-regular fa-credit-card text-green-600"></i>
-              รับบัตรเครดิต: <span class="font-semibold ml-1">{{ (int)($cafe->credit_card ?? 0) === 1 ? 'รองรับ' : 'ไม่รองรับ/ไม่ระบุ' }}</span>
-            </li>
-            <li class="flex items-center gap-2">
-              <i class="fa-solid fa-square-parking text-sky-600"></i>
-              ที่จอดรถ: <span class="font-semibold ml-1">{{ (int)($cafe->parking ?? 0) === 1 ? 'มี' : 'ไม่มี/ไม่ระบุ' }}</span>
-            </li>
-          </ul>
-        </section>
 
+          <div id="map" class="w-full h-[340px] rounded-xl overflow-hidden border"></div>
+
+          @if(!empty($cafe->lat) && !empty($cafe->lng))
+            <a href="https://www.google.com/maps/search/?api=1&query={{ $cafe->lat }},{{ $cafe->lng }}"
+               target="_blank" rel="noopener"
+               class="mt-4 inline-flex w-full justify-center items-center gap-2 rounded-lg bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 font-semibold">
+              <i class="fa-brands fa-google"></i> นำทางด้วย Google Maps
+            </a>
+          @endif
+        </div>
       </aside>
     </div>
   </main>
@@ -391,6 +298,18 @@
     </button>
     <img :src="lightboxSrc" alt="preview" class="max-w-full max-h-full rounded-lg shadow-2xl"/>
   </div>
+
+  {{-- สคริปต์แผนที่ --}}
+  <script>
+    (function () {
+      const lat = Number('{{ $cafe->lat ?? '' }}') || 14.885;
+      const lng = Number('{{ $cafe->lng ?? '' }}') || 103.490;
+      const map = L.map('map', { scrollWheelZoom: true, tap: true }).setView([lat, lng], ({{ !empty($cafe->lat) && !empty($cafe->lng) ? 16 : 12 }}));
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+      L.marker([lat, lng]).addTo(map).bindPopup(`{{ addslashes($cafe->cafe_name ?? 'ตำแหน่ง') }}`).openPopup();
+      setTimeout(() => map.invalidateSize(), 250);
+    })();
+  </script>
 
 </body>
 </html>
