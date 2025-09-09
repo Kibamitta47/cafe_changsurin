@@ -71,7 +71,7 @@
           <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900">{{ $cafe->cafe_name }}</h1>
           @if(!empty($cafe->place_name))
             <p class="mt-1 text-slate-600">{{ $cafe->place_name }}</p>
-          @endif>
+          @endif
 
           <div class="mt-3 flex flex-wrap gap-2">
             @if(!empty($cafe->is_new_opening))
