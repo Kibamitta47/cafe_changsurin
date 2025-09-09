@@ -536,14 +536,14 @@
             </div>
         </div>
 
-        <div class="d-flex justify-content-end gap-2 mt-3">
-            <a href="/home-admin" class="btn btn-secondary d-flex align-items-center">
-                <i class="fas fa-times me-1"></i> ยกเลิก
-            </a>
-            <button type="submit" class="btn btn-primary px-4" id="submitBtn">
-                <i class="fas fa-save me-1"></i> บันทึกข้อมูล
-            </button>
-        </div>
+       <div class="d-flex justify-content-end gap-2 mt-3">
+    <a href="{{ route('admin.cafe.index') }}" class="btn btn-secondary d-flex align-items-center">
+        <i class="fas fa-times me-1"></i> ยกเลิก
+    </a>
+    <button type="submit" class="btn btn-primary px-4" id="submitBtn">
+        <i class="fas fa-save me-1"></i> บันทึกข้อมูล
+    </button>
+</div>
     </form>
 </div>
 
