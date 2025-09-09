@@ -22,12 +22,12 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
-    body{font-family:'Kanit',sans-serif;background:
-      radial-gradient(1200px 600px at 20% 0%, #fef3c7 0%, transparent 60%),
-      radial-gradient(1200px 600px at 100% 20%, #cffafe 0%, transparent 55%),
-      linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)}
+    body{font-family:'Kanit',sans-serif;background:#f6f8fb}
     [x-cloak]{display:none!important}
-    .glass{backdrop-filter:blur(10px); background:rgba(255,255,255,.75)}
+    .card{background:#fff;border:1px solid #e6e9ef;border-radius:16px;box-shadow:0 6px 16px rgba(30,41,59,.06)}
+    .chip{border:1px solid rgb(226 232 240); background:#f8fafc; color:#0f172a}
+    .chip-ok{border-color:rgb(187 247 208); background:#ecfdf5; color:#065f46}
+    .thumb:hover img{transform:scale(1.04)}
   </style>
 </head>
 <body class="min-h-screen text-slate-800" x-data="{ lightbox:false, lightboxSrc:'' }">
@@ -44,6 +44,7 @@
     $imgs = is_string($cafe->images) ? (json_decode($cafe->images, true) ?: []) : (is_array($cafe->images) ? $cafe->images : []);
     $featured = $imgs[0] ?? null;
     $thumbs = array_slice($imgs, 1, 4);
+
     $toArray=function($v){
       if (is_array($v)) return array_values(array_filter($v,fn($x)=>trim((string)$x)!=''));
       if (is_string($v)){
@@ -53,6 +54,7 @@
       }
       return [];
     };
+
     $facilities=$toArray($cafe->facilities);
     $styles=$toArray($cafe->cafe_styles);
     $payments=$toArray($cafe->payment_methods);
@@ -64,10 +66,10 @@
 
   <!-- HEADER -->
   <header class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6">
-    <div class="glass rounded-3xl shadow-xl border border-white/60 p-6 sm:p-8">
+    <div class="card p-6 sm:p-8">
       <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
+        <div class="min-w-0">
+          <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 truncate">
             {{ $cafe->cafe_name }}
             @if(!empty($cafe->is_new_opening))
               <span class="ml-2 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
@@ -77,47 +79,47 @@
           </h1>
           @if(!empty($cafe->place_name))
             <p class="text-slate-600 mt-1">{{ $cafe->place_name }}</p>
-          @endif
+          @endif>
         </div>
 
         <div class="flex flex-wrap gap-2">
           @if(!empty($cafe->price_range))
-            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm bg-cyan-50 text-cyan-700 border border-cyan-200">
-              <i class="fa-solid fa-tags"></i> {{ $cafe->price_range }}
+            <span class="chip inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm">
+              <i class="fa-solid fa-tags text-slate-500"></i> {{ $cafe->price_range }}
             </span>
           @endif
-          <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm {{ $hasParking ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600 border' }}">
+          <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm {{ $hasParking ? 'chip-ok' : 'chip' }}">
             <i class="fa-solid fa-square-parking"></i> ที่จอดรถ: {{ $hasParking ? 'มี' : 'ไม่มี/ไม่ระบุ' }}
           </span>
-          <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm {{ $hasCC ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600 border' }}">
+          <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm {{ $hasCC ? 'chip-ok' : 'chip' }}">
             <i class="fa-regular fa-credit-card"></i> บัตรเครดิต: {{ $hasCC ? 'รองรับ' : 'ไม่รองรับ/ไม่ระบุ' }}
           </span>
         </div>
       </div>
 
-      {{-- HERO GALLERY: รูปใต้หัวเรื่อง --}}
+      {{-- HERO GALLERY --}}
       @if($featured)
         <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-3">
-          <figure class="lg:col-span-2 relative overflow-hidden rounded-2xl shadow-2xl">
+          <figure class="lg:col-span-2 relative overflow-hidden rounded-xl shadow">
             <img src="{{ asset('storage/'.$featured) }}"
                  alt="ภาพ {{ $cafe->cafe_name }}"
-                 class="w-full h-[280px] sm:h-[360px] lg:h-[420px] object-cover transition-transform duration-500 hover:scale-[1.03] cursor-pointer"
+                 class="w-full h-[260px] sm:h-[360px] lg:h-[420px] object-cover transition-transform duration-500 hover:scale-[1.02] cursor-pointer"
                  @click="lightboxSrc='{{ asset('storage/'.$featured) }}'; lightbox=true">
-            <figcaption class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/40 to-transparent p-3 text-white text-sm">
+            <figcaption class="absolute bottom-0 left-0 right-0 bg-black/45 p-2 text-white text-xs sm:text-sm">
               ภาพหลัก
             </figcaption>
           </figure>
 
           <div class="grid grid-cols-4 lg:grid-cols-1 lg:grid-rows-4 gap-3 overflow-x-auto lg:overflow-visible py-1">
             @forelse($thumbs as $t)
-              <div class="relative rounded-xl overflow-hidden shadow-xl min-w-[140px] lg:min-w-0">
+              <div class="thumb relative rounded-lg overflow-hidden shadow min-w-[120px] lg:min-w-0">
                 <img src="{{ asset('storage/'.$t) }}"
                      alt="ภาพ {{ $cafe->cafe_name }}"
-                     class="w-full h-[120px] sm:h-[150px] lg:h-[95px] object-cover transition-transform duration-300 hover:scale-105 cursor-pointer"
+                     class="w-full h-[110px] sm:h-[150px] lg:h-[95px] object-cover transition-transform duration-300 cursor-pointer"
                      @click="lightboxSrc='{{ asset('storage/'.$t) }}'; lightbox=true">
               </div>
             @empty
-              <div class="rounded-xl border border-dashed border-slate-300 flex items-center justify-center text-slate-400">ไม่มีรูปเพิ่มเติม</div>
+              <div class="rounded-lg border border-dashed border-slate-300 flex items-center justify-center text-slate-400">ไม่มีรูปเพิ่มเติม</div>
             @endforelse
           </div>
         </div>
@@ -133,36 +135,36 @@
       <div class="lg:col-span-2 space-y-7">
 
         {{-- ข้อมูลคาเฟ่ --}}
-        <section class="glass rounded-3xl shadow-xl border border-white/60 p-6 sm:p-8">
+        <section class="card p-6 sm:p-8">
           <h2 class="text-xl font-bold mb-5 flex items-center gap-2 text-slate-900">
-            <i class="fa-solid fa-circle-info text-cyan-500"></i> ข้อมูลคาเฟ่
+            <i class="fa-solid fa-circle-info text-slate-500"></i> ข้อมูลคาเฟ่
           </h2>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-slate-700">
             <div class="flex items-start">
-              <i class="fa-solid fa-location-dot text-cyan-500 w-5 mt-1 mr-3 shrink-0"></i>
+              <i class="fa-solid fa-location-dot text-slate-500 w-5 mt-1 mr-3 shrink-0"></i>
               <span><strong>ที่อยู่:</strong> {{ $cafe->address }}</span>
             </div>
 
             <div class="flex items-center">
-              <i class="fa-solid fa-phone text-cyan-500 w-5 mr-3 shrink-0"></i>
+              <i class="fa-solid fa-phone text-slate-500 w-5 mr-3 shrink-0"></i>
               <span><strong>โทรศัพท์:</strong> {{ $cafe->phone ?? '-' }}</span>
             </div>
 
             <div class="flex items-center">
-              <i class="fa-solid fa-envelope text-cyan-500 w-5 mr-3 shrink-0"></i>
+              <i class="fa-solid fa-envelope text-slate-500 w-5 mr-3 shrink-0"></i>
               <span><strong>อีเมล:</strong>
                 @if(!empty($cafe->email))
-                  <a href="mailto:{{ $cafe->email }}" class="text-cyan-600 hover:underline">{{ $cafe->email }}</a>
+                  <a href="mailto:{{ $cafe->email }}" class="text-sky-700 hover:underline">{{ $cafe->email }}</a>
                 @else - @endif
               </span>
             </div>
 
             <div class="flex items-center">
-              <i class="fa-solid fa-globe text-cyan-500 w-5 mr-3 shrink-0"></i>
+              <i class="fa-solid fa-globe text-slate-500 w-5 mr-3 shrink-0"></i>
               <span><strong>เว็บไซต์:</strong>
                 @if(!empty($cafe->website))
-                  <a href="{{ $cafe->website }}" target="_blank" rel="noopener" class="text-cyan-600 hover:underline break-all">
+                  <a href="{{ $cafe->website }}" target="_blank" rel="noopener" class="text-sky-700 hover:underline break-all">
                     {{ $cafe->website }}
                   </a>
                 @else - @endif
@@ -170,11 +172,11 @@
             </div>
 
             <div class="flex items-center">
-              <i class="fa-brands fa-facebook text-cyan-500 w-5 mr-3 shrink-0"></i>
+              <i class="fa-brands fa-facebook text-slate-500 w-5 mr-3 shrink-0"></i>
               <span><strong>Facebook:</strong>
                 @if(!empty($cafe->facebook_page))
                   <a href="{{ str_starts_with($cafe->facebook_page,'http') ? $cafe->facebook_page : 'https://facebook.com/'.$cafe->facebook_page }}"
-                     target="_blank" rel="noopener" class="text-cyan-600 hover:underline break-all">
+                     target="_blank" rel="noopener" class="text-sky-700 hover:underline break-all">
                     {{ $cafe->facebook_page }}
                   </a>
                 @else - @endif
@@ -182,11 +184,11 @@
             </div>
 
             <div class="flex items-center">
-              <i class="fa-brands fa-instagram text-cyan-500 w-5 mr-3 shrink-0"></i>
+              <i class="fa-brands fa-instagram text-slate-500 w-5 mr-3 shrink-0"></i>
               <span><strong>Instagram:</strong>
                 @if(!empty($cafe->instagram_page))
                   <a href="{{ str_starts_with($cafe->instagram_page,'http') ? $cafe->instagram_page : 'https://instagram.com/'.$cafe->instagram_page }}"
-                     target="_blank" rel="noopener" class="text-cyan-600 hover:underline break-all">
+                     target="_blank" rel="noopener" class="text-sky-700 hover:underline break-all">
                     {{ $cafe->instagram_page }}
                   </a>
                 @else - @endif
@@ -194,13 +196,13 @@
             </div>
 
             <div class="flex items-center">
-              <i class="fa-brands fa-line text-cyan-500 w-5 mr-3 shrink-0"></i>
+              <i class="fa-brands fa-line text-slate-500 w-5 mr-3 shrink-0"></i>
               <span><strong>LINE:</strong> {{ $cafe->line_id ?? '-' }}</span>
             </div>
 
             {{-- เวลาทำการ --}}
             <div class="flex items-start md:col-span-2">
-              <i class="fa-solid fa-clock text-cyan-500 w-5 mt-1 mr-3 shrink-0"></i>
+              <i class="fa-solid fa-clock text-slate-500 w-5 mt-1 mr-3 shrink-0"></i>
               <span>
                 <strong>เวลาทำการ:</strong>
                 @php
@@ -209,9 +211,7 @@
                 @endphp
                 @if($hasStructured)
                   {{ $cafe->open_day }}{{ $closeDayText }},
-                  {{ \Carbon\Carbon::parse($cafe->open_time)->format('H:i') }}
-                  -
-                  {{ \Carbon\Carbon::parse($cafe->close_time)->format('H:i') }}
+                  {{ \Carbon\Carbon::parse($cafe->open_time)->format('H:i') }} - {{ \Carbon\Carbon::parse($cafe->close_time)->format('H:i') }}
                 @else
                   {{ $cafe->opening_hours ?? '-' }}
                 @endif
@@ -219,23 +219,25 @@
             </div>
           </div>
 
-          {{-- รายละเอียดเพิ่มเติม: แสดงเมื่อมีเท่านั้น --}}
+          {{-- รายละเอียดเพิ่มเติม --}}
           @if($desc !== '')
             <div class="mt-6 pt-6 border-t border-slate-200">
               <h3 class="text-lg font-semibold mb-2 flex items-center">
-                <i class="fa-solid fa-circle-info mr-2 text-cyan-500"></i> รายละเอียดเพิ่มเติม
+                <i class="fa-solid fa-circle-info mr-2 text-slate-500"></i> รายละเอียดเพิ่มเติม
               </h3>
               <p class="whitespace-pre-line text-slate-700 leading-relaxed">{{ $desc }}</p>
             </div>
           @endif
 
-          {{-- แท็กหมวดต่าง ๆ --}}
+          {{-- แท็กหมวด --}}
           @if($facilities)
             <div class="mt-6 pt-6 border-t border-slate-200">
-              <h3 class="text-lg font-semibold mb-3 flex items-center"><i class="fa-solid fa-wifi mr-2 text-cyan-500"></i> สิ่งอำนวยความสะดวก</h3>
+              <h3 class="text-lg font-semibold mb-3 flex items-center">
+                <i class="fa-solid fa-wifi mr-2 text-slate-500"></i> สิ่งอำนวยความสะดวก
+              </h3>
               <div class="flex flex-wrap gap-2">
                 @foreach($facilities as $i)
-                  <span class="px-3 py-1 rounded-full text-sm bg-cyan-50 text-cyan-700 border border-cyan-200">{{ $i }}</span>
+                  <span class="chip px-3 py-1 rounded-full text-sm">{{ $i }}</span>
                 @endforeach
               </div>
             </div>
@@ -243,10 +245,12 @@
 
           @if($styles)
             <div class="mt-6 pt-6 border-t border-slate-200">
-              <h3 class="text-lg font-semibold mb-3 flex items-center"><i class="fa-solid fa-palette mr-2 text-purple-500"></i> สไตล์คาเฟ่</h3>
+              <h3 class="text-lg font-semibold mb-3 flex items-center">
+                <i class="fa-solid fa-palette mr-2 text-slate-500"></i> สไตล์คาเฟ่
+              </h3>
               <div class="flex flex-wrap gap-2">
                 @foreach($styles as $i)
-                  <span class="px-3 py-1 rounded-full text-sm bg-purple-50 text-purple-700 border border-purple-200">{{ $i }}</span>
+                  <span class="chip px-3 py-1 rounded-full text-sm">{{ $i }}</span>
                 @endforeach
               </div>
               @if(!empty($cafe->other_style))
@@ -257,10 +261,12 @@
 
           @if($payments)
             <div class="mt-6 pt-6 border-t border-slate-200">
-              <h3 class="text-lg font-semibold mb-3 flex items-center"><i class="fa-regular fa-credit-card mr-2 text-green-600"></i> ช่องทางชำระเงิน</h3>
+              <h3 class="text-lg font-semibold mb-3 flex items-center">
+                <i class="fa-regular fa-credit-card mr-2 text-slate-500"></i> ช่องทางชำระเงิน
+              </h3>
               <div class="flex flex-wrap gap-2">
                 @foreach($payments as $i)
-                  <span class="px-3 py-1 rounded-full text-sm bg-emerald-50 text-emerald-700 border border-emerald-200">{{ $i }}</span>
+                  <span class="chip px-3 py-1 rounded-full text-sm">{{ $i }}</span>
                 @endforeach
               </div>
             </div>
@@ -268,25 +274,27 @@
 
           @if($services)
             <div class="mt-6 pt-6 border-t border-slate-200">
-              <h3 class="text-lg font-semibold mb-3 flex items-center"><i class="fa-solid fa-bell-concierge mr-2 text-indigo-500"></i> บริการเพิ่มเติม</h3>
+              <h3 class="text-lg font-semibold mb-3 flex items-center">
+                <i class="fa-solid fa-bell-concierge mr-2 text-slate-500"></i> บริการเพิ่มเติม
+              </h3>
               <div class="flex flex-wrap gap-2">
                 @foreach($services as $i)
-                  <span class="px-3 py-1 rounded-full text-sm bg-indigo-50 text-indigo-700 border border-indigo-200">{{ $i }}</span>
+                  <span class="chip px-3 py-1 rounded-full text-sm">{{ $i }}</span>
                 @endforeach
               </div>
             </div>
           @endif
         </section>
 
-        {{-- แกลเลอรีเพิ่มเติม (ถ้ามีมากกว่า 5) --}}
+        {{-- แกลเลอรีเพิ่มเติม --}}
         @if(count($imgs) > 5)
-          <section class="glass rounded-3xl shadow-xl border border-white/60 p-6 sm:p-8">
+          <section class="card p-6 sm:p-8">
             <h2 class="text-xl font-bold mb-5 flex items-center gap-2">
-              <i class="fa-solid fa-images text-amber-500"></i> แกลเลอรีเพิ่มเติม
+              <i class="fa-solid fa-images text-slate-500"></i> แกลเลอรีเพิ่มเติม
             </h2>
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
               @foreach(array_slice($imgs,5) as $img)
-                <div class="aspect-square rounded-xl overflow-hidden shadow-lg">
+                <div class="aspect-square rounded-lg overflow-hidden border border-slate-200 shadow-sm">
                   <img src="{{ asset('storage/'.$img) }}"
                        alt="ภาพ {{ $cafe->cafe_name }}"
                        class="w-full h-full object-cover transition-transform duration-300 hover:scale-105 cursor-pointer"
@@ -302,36 +310,36 @@
       {{-- RIGHT SIDEBAR --}}
       <aside class="space-y-7 lg:sticky lg:top-24 h-max">
         {{-- แผนที่ (ไม่โชว์ตัวเลขพิกัด) --}}
-        <section class="glass rounded-3xl shadow-xl border border-white/60 p-6">
+        <section class="card p-6">
           <h3 class="text-xl font-bold mb-4 flex items-center">
-            <i class="fa-solid fa-map-location-dot text-amber-500 mr-2"></i> แผนที่
+            <i class="fa-solid fa-map-location-dot text-slate-600 mr-2"></i> แผนที่
           </h3>
-          <div id="map" class="w-full h-[320px] rounded-xl overflow-hidden shadow-lg"></div>
+          <div id="map" class="w-full h-[320px] rounded-lg overflow-hidden border border-slate-200"></div>
           @if(!empty($cafe->lat) && !empty($cafe->lng))
             <a href="https://www.google.com/maps/search/?api=1&query={{ $cafe->lat }},{{ $cafe->lng }}"
                target="_blank" rel="noopener"
-               class="mt-4 inline-flex w-full justify-center items-center gap-2 px-4 py-3 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600 shadow-lg">
+               class="mt-4 inline-flex w-full justify-center items-center gap-2 px-4 py-3 rounded-lg bg-slate-900 text-white font-semibold hover:bg-slate-800">
               <i class="fa-brands fa-google"></i> เปิดด้วย Google Maps
             </a>
           @endif
         </section>
 
         {{-- รีวิว --}}
-        <section class="glass rounded-3xl shadow-xl border border-white/60 p-6 sm:p-8">
+        <section class="card p-6 sm:p-8">
           <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold flex items-center gap-2">
               <i class="fa-solid fa-star text-amber-500"></i> รีวิวจากผู้ใช้
             </h2>
             @auth
               <a href="{{ route('user.reviews.create', ['cafe_id' => $cafe->cafe_id ?? $cafe->id]) }}"
-                 class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow">
+                 class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-900 text-white hover:bg-slate-800">
                 <i class="fa-solid fa-pen-to-square"></i> เขียนรีวิว
               </a>
             @endauth
           </div>
 
           @if($reviews->isEmpty())
-            <div class="text-center py-8 rounded-xl border border-dashed border-slate-300 bg-white/60">
+            <div class="text-center py-8 rounded-lg border border-dashed border-slate-300 bg-slate-50">
               <i class="fa-solid fa-comment-slash text-4xl text-slate-400 mb-3"></i>
               <p class="text-slate-500">ยังไม่มีรีวิวสำหรับคาเฟ่นี้</p>
             </div>
@@ -362,7 +370,7 @@
                   @if($revImages)
                     <div class="mt-4 grid grid-cols-3 sm:grid-cols-4 gap-2">
                       @foreach($revImages as $image)
-                        <div class="aspect-square rounded-md overflow-hidden border border-white/70">
+                        <div class="aspect-square rounded-md overflow-hidden border border-slate-200">
                           <img src="{{ asset('storage/'.$image) }}"
                                alt="รูปรีวิวของ {{ $review->user_name ?? 'ผู้ใช้' }}"
                                class="w-full h-full object-cover transition-transform duration-300 hover:scale-105 cursor-pointer"
@@ -394,7 +402,7 @@
   </div>
 
   <footer class="py-6 text-center text-slate-500">
-    © {{ date('Y') }} ระบบคาเฟ่
+    © {{ date('Y') }} ระบบคาเฟ่น้องช้างสะเร็น
   </footer>
 
   {{-- MAP --}}
