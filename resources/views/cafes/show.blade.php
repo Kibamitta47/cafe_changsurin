@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>{{ $cafe->cafe_name }}</title>
 
   <!-- Tailwind & Alpine -->
@@ -22,27 +22,24 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
+    :root{ --safe-bottom: env(safe-area-inset-bottom); }
     body{font-family:'Kanit',sans-serif;background:#f5f7fb}
     [x-cloak]{display:none!important}
     .card{background:#fff;border:1px solid #e5e7eb;border-radius:1rem;box-shadow:0 4px 16px rgba(0,0,0,.04)}
-    .chip{display:inline-flex;align-items:center;gap:.5rem;padding:.375rem .75rem;border-radius:999px;border:1px solid #e5e7eb;background:#fff;font-size:.875rem}
+    .chip{display:inline-flex;align-items:center;gap:.5rem;padding:.35rem .65rem;border-radius:999px;border:1px solid #e5e7eb;background:#fff;font-size:.85rem}
   </style>
 </head>
-<body class="min-h-screen text-slate-800"
+<body class="min-h-screen text-slate-800 pb-[92px]"  <!-- เผื่อพื้นที่ให้แถบล่างบนมือถือ -->
       x-data="{ tab:'info', lightbox:false, lightboxSrc:'', copied:false }">
 
   {{-- Navbar --}}
-  @guest
-    @include('components.1navbar')
-  @endguest
-  @auth
-    @include('components.2navbar')
-  @endauth
+  @guest @include('components.1navbar') @endguest
+  @auth  @include('components.2navbar') @endauth
 
   @php
     // ---------- Helper & Data ----------
     $imgs = is_string($cafe->images) ? (json_decode($cafe->images, true) ?: []) : (is_array($cafe->images) ? $cafe->images : []);
-    $thumbs = array_slice($imgs, 0, 9); // แสดงเป็นกริดแทนสไลด์
+    $thumbs = array_slice($imgs, 0, 9);
     $toArray=function($v){
       if (is_array($v)) return array_values(array_filter($v,fn($x)=>trim((string)$x)!=''));
       if (is_string($v)){
@@ -64,16 +61,17 @@
     $avgRating = $reviewCount ? round($reviews->avg('rating'),1) : null;
   @endphp
 
-
-    <div class="mt-4 card p-6">
-      <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-5">
+  <!-- HEADER CARD -->
+  <header class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-3">
+    <div class="card p-4 sm:p-6">
+      <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 sm:gap-5">
         <div class="min-w-0">
-          <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900">{{ $cafe->cafe_name }}</h1>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-snug">{{ $cafe->cafe_name }}</h1>
           @if(!empty($cafe->place_name))
-            <p class="mt-1 text-slate-600">{{ $cafe->place_name }}</p>
+            <p class="mt-0.5 text-slate-600 text-sm sm:text-base">{{ $cafe->place_name }}</p>
           @endif
 
-          <div class="mt-3 flex flex-wrap gap-2">
+          <div class="mt-3 flex flex-wrap gap-1.5 sm:gap-2">
             @if(!empty($cafe->is_new_opening))
               <span class="chip"><i class="fa-solid fa-bolt text-amber-500"></i> เปิดใหม่</span>
             @endif
@@ -92,14 +90,14 @@
         </div>
 
         <div class="flex gap-2 shrink-0">
-          <button class="px-4 py-2 rounded-lg border hover:bg-slate-50"
+          <button class="px-3 py-2 sm:px-4 rounded-lg border hover:bg-slate-50 text-sm sm:text-base"
                   @click="navigator.share ? navigator.share({title:'{{ addslashes($cafe->cafe_name) }}', url: window.location.href}) : (async()=>{await navigator.clipboard.writeText(window.location.href); copied=true; setTimeout(()=>copied=false,1500)})()">
-            <i class="fa-solid fa-share-nodes"></i> แชร์
+            <i class="fa-solid fa-share-nodes"></i> <span class="hidden sm:inline">แชร์</span>
           </button>
           @auth
             <a href="{{ route('user.reviews.create', ['cafe_id' => $cafe->cafe_id ?? $cafe->id]) }}"
-               class="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">
-              <i class="fa-solid fa-pen-to-square"></i> เขียนรีวิว
+               class="px-3 py-2 sm:px-4 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-sm sm:text-base">
+              <i class="fa-solid fa-pen-to-square"></i> <span class="hidden sm:inline">เขียนรีวิว</span>
             </a>
           @endauth
         </div>
@@ -108,15 +106,15 @@
   </header>
 
   <!-- BODY -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-7">
+  <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-7">
 
-      <!-- LEFT: เนื้อหาหลัก -->
-      <div class="lg:col-span-2 space-y-7">
+      <!-- LEFT -->
+      <div class="lg:col-span-2 space-y-4 sm:space-y-7">
 
-        <!-- แกลเลอรีแบบกริด (แทนสไลด์) -->
-        <section class="card p-5">
-          <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+        <!-- GALLERY -->
+        <section class="card p-4 sm:p-5">
+          <h2 class="text-base sm:text-lg font-bold text-slate-900 mb-3 sm:mb-4 flex items-center gap-2">
             <i class="fa-regular fa-images text-cyan-600"></i> รูปภาพ
           </h2>
 
@@ -126,12 +124,13 @@
               <p>ยังไม่มีรูปภาพ</p>
             </div>
           @else
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
               @foreach($thumbs as $t)
-                <button class="group aspect-[3/2] overflow-hidden rounded-lg border"
+                <button class="group aspect-[4/3] overflow-hidden rounded-lg border"
                         @click="lightboxSrc='{{ asset('storage/'.$t) }}'; lightbox=true">
                   <img src="{{ asset('storage/'.$t) }}"
                        alt="ภาพ {{ $cafe->cafe_name }}"
+                       loading="lazy"
                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
                 </button>
               @endforeach
@@ -139,20 +138,20 @@
           @endif
         </section>
 
-        <!-- ข้อมูลคาเฟ่ -->
-        <section class="card p-6">
-          <div class="flex items-center gap-6 border-b pb-3">
-            <button class="py-2 px-1 font-medium"
+        <!-- INFO / REVIEWS -->
+        <section class="card p-4 sm:p-6">
+          <div class="flex items-center gap-4 border-b pb-2 sm:pb-3 overflow-x-auto no-scrollbar">
+            <button class="py-2 px-1 font-medium shrink-0 text-sm sm:text-base"
                     :class="tab==='info' ? 'text-cyan-700 border-b-2 border-cyan-600' : 'text-slate-500'"
                     @click="tab='info'">ข้อมูล</button>
-            <button class="py-2 px-1 font-medium"
+            <button class="py-2 px-1 font-medium shrink-0 text-sm sm:text-base"
                     :class="tab==='reviews' ? 'text-cyan-700 border-b-2 border-cyan-600' : 'text-slate-500'"
                     @click="tab='reviews'">รีวิว ({{ $reviewCount }})</button>
           </div>
 
           <!-- INFO -->
-          <div x-show="tab==='info'" x-cloak class="mt-6 space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4 text-slate-700">
+          <div x-show="tab==='info'" x-cloak class="mt-4 sm:mt-6 space-y-5 sm:space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-10 gap-y-3 sm:gap-y-4 text-slate-700 text-sm sm:text-base">
               <div class="flex items-start">
                 <i class="fa-solid fa-location-dot text-cyan-600 w-5 mt-1 mr-3 shrink-0"></i>
                 <div class="min-w-0">
@@ -245,15 +244,15 @@
 
             @if($desc !== '')
               <div class="pt-4 border-t">
-                <h3 class="font-semibold text-slate-900 mb-2"><i class="fa-solid fa-circle-info text-cyan-600 mr-2"></i> รายละเอียด</h3>
-                <p class="text-slate-700 whitespace-pre-line leading-relaxed">{{ $desc }}</p>
+                <h3 class="font-semibold text-slate-900 mb-2 text-base"><i class="fa-solid fa-circle-info text-cyan-600 mr-2"></i> รายละเอียด</h3>
+                <p class="text-slate-700 whitespace-pre-line leading-relaxed text-sm sm:text-base">{{ $desc }}</p>
               </div>
             @endif
 
             @if($facilities)
               <div class="pt-4 border-t">
-                <h3 class="font-semibold text-slate-900 mb-2"><i class="fa-solid fa-wifi text-cyan-600 mr-2"></i> สิ่งอำนวยความสะดวก</h3>
-                <div class="flex flex-wrap gap-2">
+                <h3 class="font-semibold text-slate-900 mb-2 text-base"><i class="fa-solid fa-wifi text-cyan-600 mr-2"></i> สิ่งอำนวยความสะดวก</h3>
+                <div class="flex flex-wrap gap-1.5 sm:gap-2">
                   @foreach($facilities as $i)
                     <span class="chip">{{ $i }}</span>
                   @endforeach
@@ -263,22 +262,22 @@
 
             @if($styles)
               <div class="pt-4 border-t">
-                <h3 class="font-semibold text-slate-900 mb-2"><i class="fa-solid fa-palette text-cyan-600 mr-2"></i> สไตล์คาเฟ่</h3>
-                <div class="flex flex-wrap gap-2">
+                <h3 class="font-semibold text-slate-900 mb-2 text-base"><i class="fa-solid fa-palette text-cyan-600 mr-2"></i> สไตล์คาเฟ่</h3>
+                <div class="flex flex-wrap gap-1.5 sm:gap-2">
                   @foreach($styles as $i)
                     <span class="chip">{{ $i }}</span>
                   @endforeach
                 </div>
                 @if(!empty($cafe->other_style))
-                  <p class="mt-2 text-slate-700"><strong>สไตล์อื่นๆ:</strong> {{ $cafe->other_style }}</p>
+                  <p class="mt-2 text-slate-700 text-sm sm:text-base"><strong>สไตล์อื่นๆ:</strong> {{ $cafe->other_style }}</p>
                 @endif
               </div>
             @endif
 
             @if($payments)
               <div class="pt-4 border-t">
-                <h3 class="font-semibold text-slate-900 mb-2"><i class="fa-regular fa-credit-card text-cyan-600 mr-2"></i> ช่องทางชำระเงิน</h3>
-                <div class="flex flex-wrap gap-2">
+                <h3 class="font-semibold text-slate-900 mb-2 text-base"><i class="fa-regular fa-credit-card text-cyan-600 mr-2"></i> ช่องทางชำระเงิน</h3>
+                <div class="flex flex-wrap gap-1.5 sm:gap-2">
                   @foreach($payments as $i)
                     <span class="chip">{{ $i }}</span>
                   @endforeach
@@ -288,8 +287,8 @@
 
             @if($services)
               <div class="pt-4 border-t">
-                <h3 class="font-semibold text-slate-900 mb-2"><i class="fa-solid fa-bell-concierge text-cyan-600 mr-2"></i> บริการเพิ่มเติม</h3>
-                <div class="flex flex-wrap gap-2">
+                <h3 class="font-semibold text-slate-900 mb-2 text-base"><i class="fa-solid fa-bell-concierge text-cyan-600 mr-2"></i> บริการเพิ่มเติม</h3>
+                <div class="flex flex-wrap gap-1.5 sm:gap-2">
                   @foreach($services as $i)
                     <span class="chip">{{ $i }}</span>
                   @endforeach
@@ -299,43 +298,44 @@
           </div>
 
           <!-- REVIEWS -->
-          <div x-show="tab==='reviews'" x-cloak class="mt-6">
+          <div x-show="tab==='reviews'" x-cloak class="mt-4 sm:mt-6">
             @if($reviews->isEmpty())
-              <div class="text-center py-12 border rounded-xl bg-white/60">
-                <i class="fa-solid fa-comment-slash text-4xl text-slate-400 mb-3"></i>
+              <div class="text-center py-10 border rounded-xl bg-white/60">
+                <i class="fa-solid fa-comment-slash text-3xl sm:text-4xl text-slate-400 mb-3"></i>
                 <p class="text-slate-500">ยังไม่มีรีวิวสำหรับคาเฟ่นี้</p>
               </div>
             @else
-              <div class="space-y-6">
+              <div class="space-y-5 sm:space-y-6">
                 @foreach($reviews as $review)
-                  <div class="border-t pt-6 first:border-t-0 first:pt-0">
-                    <div class="flex items-center justify-between">
-                      <p class="font-semibold text-slate-900">{{ $review->user_name ?? 'ผู้ใช้ไม่ระบุชื่อ' }}</p>
-                      <p class="text-sm text-slate-500">{{ optional($review->created_at)->format('d/m/Y') }}</p>
+                  <div class="border-t pt-5 first:border-t-0 first:pt-0">
+                    <div class="flex items-center justify-between gap-3">
+                      <p class="font-semibold text-slate-900 text-sm sm:text-base truncate">{{ $review->user_name ?? 'ผู้ใช้ไม่ระบุชื่อ' }}</p>
+                      <p class="text-xs sm:text-sm text-slate-500">{{ optional($review->created_at)->format('d/m/Y') }}</p>
                     </div>
-                    <p class="mt-1 font-bold">
+                    <p class="mt-1 font-bold text-sm sm:text-base">
                       @for($i=1;$i<=5;$i++)
                         <i class="fa-solid fa-star {{ $i <= (int)($review->rating ?? 0) ? 'text-amber-500' : 'text-slate-300' }}"></i>
                       @endfor
-                      <span class="text-sm ml-1 text-slate-600">({{ $review->rating ?? '-' }}/5)</span>
+                      <span class="text-xs sm:text-sm ml-1 text-slate-600">({{ $review->rating ?? '-' }}/5)</span>
                     </p>
                     @if(!empty($review->title))
-                      <h4 class="font-semibold text-lg mt-3 text-slate-900">{{ $review->title }}</h4>
+                      <h4 class="font-semibold mt-2 sm:mt-3 text-slate-900">{{ $review->title }}</h4>
                     @endif
                     @if(!empty($review->content))
-                      <p class="mt-1 text-slate-700 whitespace-pre-line leading-relaxed">{{ $review->content }}</p>
+                      <p class="mt-1 text-slate-700 whitespace-pre-line leading-relaxed text-sm sm:text-base">{{ $review->content }}</p>
                     @endif
 
                     @php
                       $revImages = is_string($review->images) ? (json_decode($review->images,true) ?: []) : (is_array($review->images) ? $review->images : []);
                     @endphp
                     @if($revImages)
-                      <div class="mt-4 grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      <div class="mt-3 sm:mt-4 grid grid-cols-3 sm:grid-cols-4 gap-2">
                         @foreach($revImages as $image)
                           <button class="aspect-square rounded-md overflow-hidden border"
                                   @click="lightboxSrc='{{ asset('storage/'.$image) }}'; lightbox=true">
                             <img src="{{ asset('storage/'.$image) }}"
                                  alt="รูปรีวิวของ {{ $review->user_name ?? 'ผู้ใช้' }}"
+                                 loading="lazy"
                                  class="w-full h-full object-cover transition-transform duration-300 hover:scale-105"/>
                           </button>
                         @endforeach
@@ -349,27 +349,27 @@
         </section>
       </div>
 
-      <!-- RIGHT: แผนที่ + ติดต่อเร็ว -->
-      <aside class="space-y-7 lg:sticky lg:top-24 h-max">
-        <section class="card p-6">
-          <h3 class="text-lg font-bold mb-4 flex items-center">
+      <!-- RIGHT -->
+      <aside class="space-y-4 sm:space-y-7 lg:sticky lg:top-24 h-max">
+        <section class="card p-4 sm:p-6">
+          <h3 class="text-base sm:text-lg font-bold mb-3 sm:mb-4 flex items-center">
             <i class="fa-solid fa-map-location-dot text-amber-600 mr-2"></i> แผนที่
           </h3>
-          <div id="map" class="w-full h-[320px] rounded-lg border"></div>
+          <div id="map" class="w-full h-[260px] sm:h-[320px] rounded-lg border"></div>
           @if(!empty($cafe->lat) && !empty($cafe->lng))
             <a href="https://www.google.com/maps/search/?api=1&query={{ $cafe->lat }},{{ $cafe->lng }}"
                target="_blank" rel="noopener"
-               class="mt-4 inline-flex w-full justify-center items-center gap-2 px-4 py-3 rounded-lg bg-amber-500 text-white font-semibold hover:bg-amber-600">
+               class="mt-3 sm:mt-4 inline-flex w-full justify-center items-center gap-2 px-4 py-3 rounded-lg bg-amber-500 text-white font-semibold hover:bg-amber-600">
               <i class="fa-brands fa-google"></i> เปิดด้วย Google Maps
             </a>
           @endif
         </section>
 
-        <section class="card p-6">
-          <h3 class="text-lg font-bold mb-4 flex items-center">
+        <section class="card p-4 sm:p-6">
+          <h3 class="text-base sm:text-lg font-bold mb-3 sm:mb-4 flex items-center">
             <i class="fa-solid fa-bolt text-emerald-600 mr-2"></i> ด่วน & ติดต่อ
           </h3>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
             <a href="{{ !empty($cafe->phone) ? 'tel:'.preg_replace('/\s+/', '', $cafe->phone) : '#' }}"
                class="px-4 py-3 rounded-lg bg-emerald-600 text-white text-center font-semibold hover:bg-emerald-700 {{ empty($cafe->phone)?'pointer-events-none opacity-50':'' }}">
               <i class="fa-solid fa-phone"></i> โทร
@@ -395,22 +395,22 @@
   </main>
 
   {{-- MOBILE STICKY --}}
-  <div class="fixed bottom-3 left-3 right-3 z-40 lg:hidden">
-    <div class="card p-2 grid grid-cols-4 gap-2">
+  <div class="fixed bottom-3 left-3 right-3 z-40 lg:hidden" style="padding-bottom: var(--safe-bottom);">
+    <div class="card p-2 grid grid-cols-4 gap-2 backdrop-blur-sm">
       <a href="{{ !empty($cafe->phone) ? 'tel:'.preg_replace('/\s+/', '', $cafe->phone) : '#' }}"
-         class="flex flex-col items-center py-2 rounded-lg border {{ empty($cafe->phone)?'pointer-events-none opacity-50':'' }}">
-        <i class="fa-solid fa-phone"></i><span class="text-xs mt-1">โทร</span>
+         class="flex flex-col items-center py-2 rounded-lg border text-sm {{ empty($cafe->phone)?'pointer-events-none opacity-50':'' }}">
+        <i class="fa-solid fa-phone"></i><span class="text-[11px] mt-1">โทร</span>
       </a>
-      <button class="flex flex-col items-center py-2 rounded-lg border"
+      <button class="flex flex-col items-center py-2 rounded-lg border text-sm"
               @click="document.getElementById('map')?.scrollIntoView({behavior:'smooth'})">
-        <i class="fa-solid fa-map-location-dot"></i><span class="text-xs mt-1">แผนที่</span>
+        <i class="fa-solid fa-map-location-dot"></i><span class="text-[11px] mt-1">แผนที่</span>
       </button>
-      <button class="flex flex-col items-center py-2 rounded-lg border" @click="tab='reviews'; window.scrollTo({top:0,behavior:'smooth'})">
-        <i class="fa-solid fa-star"></i><span class="text-xs mt-1">รีวิว</span>
+      <button class="flex flex-col items-center py-2 rounded-lg border text-sm" @click="tab='reviews'; window.scrollTo({top:0,behavior:'smooth'})">
+        <i class="fa-solid fa-star"></i><span class="text-[11px] mt-1">รีวิว</span>
       </button>
-      <button class="flex flex-col items-center py-2 rounded-lg bg-amber-500 text-white"
+      <button class="flex flex-col items-center py-2 rounded-lg bg-amber-500 text-white text-sm"
               @click="navigator.share ? navigator.share({title:'{{ addslashes($cafe->cafe_name) }}', url: location.href}) : (async()=>{await navigator.clipboard.writeText(location.href); copied=true; setTimeout(()=>copied=false,1500)})()">
-        <i class="fa-solid fa-share-nodes"></i><span class="text-xs mt-1">แชร์</span>
+        <i class="fa-solid fa-share-nodes"></i><span class="text-[11px] mt-1">แชร์</span>
       </button>
     </div>
   </div>
