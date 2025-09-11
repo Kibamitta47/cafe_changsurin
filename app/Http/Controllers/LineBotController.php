@@ -51,7 +51,7 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ===== ปุ่ม FAQ ให้ขึ้นคำตอบตาม DB จริง =====
+                // ===== ปุ่ม FAQ → ตอบตาม DB จริง =====
                 $map = [
                     'FreeWiFi'               => 'wifi',
                     'เปิดอยู่ตอนนี้'        => 'open_now',
@@ -105,7 +105,7 @@ class LineBotController extends Controller
                     $cafes = DB::select("
                         SELECT cafe_id,cafe_name,address,lat,lng,phone
                         FROM cafes
-                        WHERE address LIKE '%สุรินทร์%'
+                        WHERE status='approved' AND address LIKE '%สุรินทร์%'
                         ORDER BY created_at DESC
                         LIMIT 9
                     ");
@@ -144,6 +144,7 @@ class LineBotController extends Controller
                                sin(radians(?)) * sin(radians(cafes.lat))
                            )) AS distance
                     FROM cafes
+                    WHERE status='approved'
                     HAVING distance < 5
                     ORDER BY distance ASC
                     LIMIT 5
@@ -180,85 +181,118 @@ class LineBotController extends Controller
         ])->post("https://api.line.me/v2/bot/user/{$userId}/richmenu/{$richMenuId}");
     }
 
-    // ---------- FAQ Filters (ตรงกับสคีมจริง) ----------
+    // ---------- FAQ Filters (รองรับ JSON/status/เวลาไทย) ----------
     private function findCafesByFilter(string $type): array
     {
         switch ($type) {
-            // Wi-Fi: ค้นคำใน facilities/other_services (เก็บเป็น text/JSON)
+            // Wi-Fi: ค้นคำใน JSON facilities/other_services (เผื่อบันทึกเป็น text ธรรมดา)
             case 'wifi':
                 return DB::select("
                     SELECT cafe_id,cafe_name,address,lat,lng,phone
                     FROM cafes
-                    WHERE (facilities     LIKE '%Wi-Fi%' OR facilities     LIKE '%WiFi%' OR facilities     LIKE '%wifi%' OR facilities     LIKE '%ไวไฟ%')
-                       OR (other_services LIKE '%Wi-Fi%' OR other_services LIKE '%WiFi%' OR other_services LIKE '%wifi%' OR other_services LIKE '%ไวไฟ%')
+                    WHERE status='approved' AND (
+                        (JSON_VALID(facilities) AND (
+                            JSON_SEARCH(CAST(facilities AS JSON),'one','%Wi-Fi%') IS NOT NULL OR
+                            JSON_SEARCH(CAST(facilities AS JSON),'one','%WiFi%')  IS NOT NULL OR
+                            JSON_SEARCH(CAST(facilities AS JSON),'one','%wifi%')  IS NOT NULL OR
+                            JSON_SEARCH(CAST(facilities AS JSON),'one','%ไวไฟ%')  IS NOT NULL
+                        )) OR
+                        (JSON_VALID(other_services) AND (
+                            JSON_SEARCH(CAST(other_services AS JSON),'one','%Wi-Fi%') IS NOT NULL OR
+                            JSON_SEARCH(CAST(other_services AS JSON),'one','%WiFi%')  IS NOT NULL OR
+                            JSON_SEARCH(CAST(other_services AS JSON),'one','%wifi%')  IS NOT NULL OR
+                            JSON_SEARCH(CAST(other_services AS JSON),'one','%ไวไฟ%')  IS NOT NULL
+                        )) OR
+                        facilities     LIKE '%wifi%' OR facilities     LIKE '%Wi-Fi%' OR facilities     LIKE '%ไวไฟ%' OR
+                        other_services LIKE '%wifi%' OR other_services LIKE '%Wi-Fi%' OR other_services LIKE '%ไวไฟ%'
+                    )
                     ORDER BY updated_at DESC, cafe_id DESC
                     LIMIT 10
                 ");
 
-            // เปิดตอนนี้ (Real-time เวลาไทย, รองรับร้านข้ามเที่ยงคืน)
+            // เปิดอยู่ตอนนี้: ใช้เวลาไทย + รองรับร้านข้ามเที่ยงคืน
             case 'open_now':
                 $now = Carbon::now('Asia/Bangkok')->format('H:i:s');
                 return DB::select("
                     SELECT cafe_id,cafe_name,address,lat,lng,phone
                     FROM cafes
-                    WHERE open_time IS NOT NULL AND close_time IS NOT NULL AND
-                    (
-                        (close_time >= open_time AND ? BETWEEN open_time AND close_time)
-                        OR
-                        (close_time < open_time AND (? >= open_time OR ? <= close_time))
-                    )
+                    WHERE status='approved'
+                      AND open_time  IS NOT NULL
+                      AND close_time IS NOT NULL
+                      AND (
+                            (close_time >= open_time AND ? BETWEEN open_time AND close_time)
+                            OR
+                            (close_time <  open_time AND (? >= open_time OR ? <= close_time))
+                          )
                     ORDER BY cafe_id DESC
                     LIMIT 10
                 ", [$now, $now, $now]);
 
-            // ราคาย่อมเยา: โชว์ร้าน ‘ถูกสุด’ โดยจัดเรียงช่วงราคาจากถูก→แพง
+            // ราคาย่อมเยา: เรียงช่วงราคาจากถูก→แพง (ตามตัวเลือกหน้าแอดมิน)
             case 'cheap':
                 return DB::select("
                     SELECT cafe_id,cafe_name,address,lat,lng,phone,price_range
                     FROM cafes
-                    WHERE price_range IS NOT NULL AND price_range <> ''
+                    WHERE status='approved' AND price_range IS NOT NULL AND price_range <> ''
                     ORDER BY
                         CASE
-                            WHEN price_range LIKE '%ต่ำกว่า 100%'          THEN 1
-                            WHEN price_range LIKE '%101 - 250%'             THEN 2
-                            WHEN price_range LIKE '%251 - 500%'             THEN 3
-                            WHEN price_range LIKE '%501 - 1,000%'           THEN 4
-                            WHEN price_range LIKE '%มากกว่า 1,000%'         THEN 5
+                            WHEN price_range LIKE '%ต่ำกว่า 100%'   THEN 1
+                            WHEN price_range LIKE '%101 - 250%'      THEN 2
+                            WHEN price_range LIKE '%251 - 500%'      THEN 3
+                            WHEN price_range LIKE '%501 - 1,000%'    THEN 4
+                            WHEN price_range LIKE '%มากกว่า 1,000%'  THEN 5
                             ELSE 99
                         END ASC,
-                        updated_at DESC,
-                        cafe_id DESC
+                        updated_at DESC, cafe_id DESC
                     LIMIT 10
                 ");
 
-            // เปิดใหม่: ตามระบบ is_new_opening = 1 (หรือสร้างภายใน 60 วันเป็นสำรอง)
+            // เปิดใหม่: ตามธง is_new_opening (สำรองด้วย created_at ภายใน 60 วัน)
             case 'new':
                 return DB::select("
                     SELECT cafe_id,cafe_name,address,lat,lng,phone
                     FROM cafes
-                    WHERE is_new_opening = 1
-                       OR (created_at IS NOT NULL AND created_at >= DATE_SUB(NOW(), INTERVAL 60 DAY))
+                    WHERE status='approved' AND (
+                        is_new_opening = 1 OR
+                        (created_at IS NOT NULL AND created_at >= DATE_SUB(NOW(), INTERVAL 60 DAY))
+                    )
                     ORDER BY is_new_opening DESC, created_at DESC, cafe_id DESC
                     LIMIT 10
                 ");
 
-            // ที่จอดรถ: ตามคอลัมน์ parking = 1
+            // ที่จอดรถ
             case 'parking':
                 return DB::select("
                     SELECT cafe_id,cafe_name,address,lat,lng,phone
                     FROM cafes
-                    WHERE parking = 1
+                    WHERE status='approved' AND parking = 1
                     ORDER BY updated_at DESC, cafe_id DESC
                     LIMIT 10
                 ");
 
-            // ห้องประชุม/ทำงาน: จากสิ่งอำนวยความสะดวก
+            // ห้องประชุม/ทำงาน: ค้นคำใน JSON + text
             case 'meeting':
                 return DB::select("
                     SELECT cafe_id,cafe_name,address,lat,lng,phone
                     FROM cafes
-                    WHERE (facilities     LIKE '%ห้องประชุม%' OR facilities     LIKE '%meeting%' OR facilities     LIKE '%ประชุม%' OR facilities     LIKE '%Co-work%' OR facilities     LIKE '%Cowork%')
-                       OR (other_services LIKE '%ห้องประชุม%' OR other_services LIKE '%meeting%' OR other_services LIKE '%ประชุม%' OR other_services LIKE '%Co-work%' OR other_services LIKE '%Cowork%')
+                    WHERE status='approved' AND (
+                        (JSON_VALID(facilities) AND (
+                            JSON_SEARCH(CAST(facilities AS JSON),'one','%ห้องประชุม%') IS NOT NULL OR
+                            JSON_SEARCH(CAST(facilities AS JSON),'one','%meeting%')  IS NOT NULL OR
+                            JSON_SEARCH(CAST(facilities AS JSON),'one','%ประชุม%')   IS NOT NULL OR
+                            JSON_SEARCH(CAST(facilities AS JSON),'one','%co-work%')  IS NOT NULL OR
+                            JSON_SEARCH(CAST(facilities AS JSON),'one','%cowork%')   IS NOT NULL
+                        )) OR
+                        (JSON_VALID(other_services) AND (
+                            JSON_SEARCH(CAST(other_services AS JSON),'one','%ห้องประชุม%') IS NOT NULL OR
+                            JSON_SEARCH(CAST(other_services AS JSON),'one','%meeting%')  IS NOT NULL OR
+                            JSON_SEARCH(CAST(other_services AS JSON),'one','%ประชุม%')   IS NOT NULL OR
+                            JSON_SEARCH(CAST(other_services AS JSON),'one','%co-work%')  IS NOT NULL OR
+                            JSON_SEARCH(CAST(other_services AS JSON),'one','%cowork%')   IS NOT NULL
+                        )) OR
+                        facilities     LIKE '%ห้องประชุม%' OR facilities     LIKE '%meeting%' OR facilities     LIKE '%ประชุม%' OR
+                        other_services LIKE '%ห้องประชุม%' OR other_services LIKE '%meeting%' OR other_services LIKE '%ประชุม%'
+                    )
                     ORDER BY updated_at DESC, cafe_id DESC
                     LIMIT 10
                 ");
