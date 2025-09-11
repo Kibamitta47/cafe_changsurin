@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class LineBotController extends Controller
 {
@@ -38,7 +39,7 @@ class LineBotController extends Controller
             if ($event['type'] === 'message' && $event['message']['type'] === 'text') {
                 $text = trim($event['message']['text']);
 
-                // สลับ Rich Menu (รูปอยู่ใน LINE)
+                // สลับ Rich Menu
                 if (in_array($text, ['เมนู','menu','เริ่มต้น'])) {
                     $this->setUserRichMenu($userId, $this->richMain);
                     $this->replyText($replyToken, "เปิดเมนูหลักแล้วครับ 😊");
@@ -50,7 +51,7 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ===== ปุ่ม FAQ ให้ขึ้นคำตอบ =====
+                // ===== ปุ่ม FAQ ให้ขึ้นคำตอบตาม DB จริง =====
                 $map = [
                     'FreeWiFi'               => 'wifi',
                     'เปิดอยู่ตอนนี้'        => 'open_now',
@@ -76,12 +77,8 @@ class LineBotController extends Controller
                             'meeting'  => '🏢 มีห้องประชุม/ทำงาน',
                         };
                         $bubbles[] = $this->bubbleBasic(
-                            $c->cafe_name,
-                            $c->address,
-                            $note,
-                            $c->phone,
-                            $c->lat,
-                            $c->lng
+                            $c->cafe_name, $c->address, $note,
+                            $c->phone, $c->lat, $c->lng
                         );
                     }
                     $this->replyFlex($replyToken, "ผลลัพธ์: {$text}", [
@@ -90,7 +87,7 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ค้นหาคาเฟ่ใกล้ฉัน (คงไว้)
+                // ค้นหาคาเฟ่ใกล้ฉัน
                 if ($text === 'ค้นหาคาเฟ่ใกล้ฉัน') {
                     $this->replyMessage($replyToken, [
                         "type" => "text",
@@ -183,73 +180,92 @@ class LineBotController extends Controller
         ])->post("https://api.line.me/v2/bot/user/{$userId}/richmenu/{$richMenuId}");
     }
 
-    // ---------- FAQ Filters (อิงโครงสร้างคอลัมน์จริงของคุณ) ----------
+    // ---------- FAQ Filters (ตรงกับสคีมจริง) ----------
     private function findCafesByFilter(string $type): array
     {
-        return match ($type) {
-            // Free WiFi: ค้นจากช่อง facilities/other_services ที่มีคำว่า wifi/wi-fi
-            'wifi' => DB::select("
-                SELECT cafe_id,cafe_name,address,lat,lng,phone
-                FROM cafes
-                WHERE (facilities      LIKE '%wifi%' OR facilities      LIKE '%wi-fi%' OR facilities      LIKE '%ไวไฟ%')
-                   OR (other_services  LIKE '%wifi%' OR other_services  LIKE '%wi-fi%' OR other_services  LIKE '%ไวไฟ%')
-                ORDER BY updated_at DESC, cafe_id DESC
-                LIMIT 10
-            "),
+        switch ($type) {
+            // Wi-Fi: ค้นคำใน facilities/other_services (เก็บเป็น text/JSON)
+            case 'wifi':
+                return DB::select("
+                    SELECT cafe_id,cafe_name,address,lat,lng,phone
+                    FROM cafes
+                    WHERE (facilities     LIKE '%Wi-Fi%' OR facilities     LIKE '%WiFi%' OR facilities     LIKE '%wifi%' OR facilities     LIKE '%ไวไฟ%')
+                       OR (other_services LIKE '%Wi-Fi%' OR other_services LIKE '%WiFi%' OR other_services LIKE '%wifi%' OR other_services LIKE '%ไวไฟ%')
+                    ORDER BY updated_at DESC, cafe_id DESC
+                    LIMIT 10
+                ");
 
-            // เปิดอยู่ตอนนี้: รองรับกรณีข้ามเที่ยงคืน (close_time < open_time)
-            'open_now' => DB::select("
-                SELECT cafe_id,cafe_name,address,lat,lng,phone
-                FROM cafes
-                WHERE open_time IS NOT NULL AND close_time IS NOT NULL AND
-                (
-                    (close_time >= open_time AND TIME(NOW()) BETWEEN open_time AND close_time)
-                    OR
-                    (close_time < open_time AND (TIME(NOW()) >= open_time OR TIME(NOW()) <= close_time))
-                )
-                ORDER BY cafe_id DESC
-                LIMIT 10
-            "),
+            // เปิดตอนนี้ (Real-time เวลาไทย, รองรับร้านข้ามเที่ยงคืน)
+            case 'open_now':
+                $now = Carbon::now('Asia/Bangkok')->format('H:i:s');
+                return DB::select("
+                    SELECT cafe_id,cafe_name,address,lat,lng,phone
+                    FROM cafes
+                    WHERE open_time IS NOT NULL AND close_time IS NOT NULL AND
+                    (
+                        (close_time >= open_time AND ? BETWEEN open_time AND close_time)
+                        OR
+                        (close_time < open_time AND (? >= open_time OR ? <= close_time))
+                    )
+                    ORDER BY cafe_id DESC
+                    LIMIT 10
+                ", [$now, $now, $now]);
 
-            // ราคาย่อมเยา: ใช้ price_range เป็นข้อความ (เช่น 'ย่อมเยา','ถูก','ประหยัด', 'cheap','low')
-            'cheap' => DB::select("
-                SELECT cafe_id,cafe_name,address,lat,lng,phone
-                FROM cafes
-                WHERE price_range REGEXP 'ย่อมเยา|ถูก|ประหยัด|cheap|low'
-                ORDER BY updated_at DESC, cafe_id DESC
-                LIMIT 10
-            "),
+            // ราคาย่อมเยา: โชว์ร้าน ‘ถูกสุด’ โดยจัดเรียงช่วงราคาจากถูก→แพง
+            case 'cheap':
+                return DB::select("
+                    SELECT cafe_id,cafe_name,address,lat,lng,phone,price_range
+                    FROM cafes
+                    WHERE price_range IS NOT NULL AND price_range <> ''
+                    ORDER BY
+                        CASE
+                            WHEN price_range LIKE '%ต่ำกว่า 100%'          THEN 1
+                            WHEN price_range LIKE '%101 - 250%'             THEN 2
+                            WHEN price_range LIKE '%251 - 500%'             THEN 3
+                            WHEN price_range LIKE '%501 - 1,000%'           THEN 4
+                            WHEN price_range LIKE '%มากกว่า 1,000%'         THEN 5
+                            ELSE 99
+                        END ASC,
+                        updated_at DESC,
+                        cafe_id DESC
+                    LIMIT 10
+                ");
 
-            // เปิดใหม่: ใช้ is_new_opening = 1 หรือเพิ่งสร้างภายใน 60 วัน
-            'new' => DB::select("
-                SELECT cafe_id,cafe_name,address,lat,lng,phone
-                FROM cafes
-                WHERE is_new_opening = 1
-                   OR (created_at IS NOT NULL AND created_at >= DATE_SUB(NOW(), INTERVAL 60 DAY))
-                ORDER BY created_at DESC, cafe_id DESC
-                LIMIT 10
-            "),
+            // เปิดใหม่: ตามระบบ is_new_opening = 1 (หรือสร้างภายใน 60 วันเป็นสำรอง)
+            case 'new':
+                return DB::select("
+                    SELECT cafe_id,cafe_name,address,lat,lng,phone
+                    FROM cafes
+                    WHERE is_new_opening = 1
+                       OR (created_at IS NOT NULL AND created_at >= DATE_SUB(NOW(), INTERVAL 60 DAY))
+                    ORDER BY is_new_opening DESC, created_at DESC, cafe_id DESC
+                    LIMIT 10
+                ");
 
-            // มีที่จอดรถ: คอลัมน์ parking (tinyint)
-            'parking' => DB::select("
-                SELECT cafe_id,cafe_name,address,lat,lng,phone
-                FROM cafes
-                WHERE parking = 1
-                ORDER BY updated_at DESC, cafe_id DESC
-                LIMIT 10
-            "),
+            // ที่จอดรถ: ตามคอลัมน์ parking = 1
+            case 'parking':
+                return DB::select("
+                    SELECT cafe_id,cafe_name,address,lat,lng,phone
+                    FROM cafes
+                    WHERE parking = 1
+                    ORDER BY updated_at DESC, cafe_id DESC
+                    LIMIT 10
+                ");
 
-            // ห้องประชุม/ทำงาน: ค้นคำจาก facilities หรือ other_services
-            'meeting' => DB::select("
-                SELECT cafe_id,cafe_name,address,lat,lng,phone
-                FROM cafes
-                WHERE (facilities     LIKE '%ห้องประชุม%' OR facilities     LIKE '%meeting%' OR facilities     LIKE '%co-work%' OR facilities     LIKE '%cowork%')
-                   OR (other_services LIKE '%ห้องประชุม%' OR other_services LIKE '%meeting%' OR other_services LIKE '%co-work%' OR other_services LIKE '%cowork%')
-                ORDER BY updated_at DESC, cafe_id DESC
-                LIMIT 10
-            "),
-            default => [],
-        };
+            // ห้องประชุม/ทำงาน: จากสิ่งอำนวยความสะดวก
+            case 'meeting':
+                return DB::select("
+                    SELECT cafe_id,cafe_name,address,lat,lng,phone
+                    FROM cafes
+                    WHERE (facilities     LIKE '%ห้องประชุม%' OR facilities     LIKE '%meeting%' OR facilities     LIKE '%ประชุม%' OR facilities     LIKE '%Co-work%' OR facilities     LIKE '%Cowork%')
+                       OR (other_services LIKE '%ห้องประชุม%' OR other_services LIKE '%meeting%' OR other_services LIKE '%ประชุม%' OR other_services LIKE '%Co-work%' OR other_services LIKE '%Cowork%')
+                    ORDER BY updated_at DESC, cafe_id DESC
+                    LIMIT 10
+                ");
+
+            default:
+                return [];
+        }
     }
 
     // ---------- Flex Components ----------
