@@ -63,7 +63,7 @@ class LineBotController extends Controller
 
                 if (isset($map[$text])) {
                     $cafes = $this->findCafesByFilter($map[$text]);
-                    Log::info("FAQ {$map[$text]} found: ".count($cafes));
+                    Log::info("FAQ {$map[$text]} found: " . count($cafes));
                     if (empty($cafes)) {
                         $this->replyText($replyToken, "ยังไม่พบร้านตามเงื่อนไข “{$text}” ในระบบครับ");
                         continue;
@@ -160,7 +160,7 @@ class LineBotController extends Controller
                 $bubbles = [];
                 foreach ($cafes as $c) {
                     $bubbles[] = $this->bubbleBasic(
-                        $c->cafe_name, $c->address, "📍 ห่าง ".round($c->distance,2)." กม.",
+                        $c->cafe_name, $c->address, "📍 ห่าง " . round($c->distance, 2) . " กม.",
                         $c->phone, $c->lat, $c->lng
                     );
                 }
@@ -179,7 +179,7 @@ class LineBotController extends Controller
         if (!$userId || !$richMenuId) return;
 
         Http::withHeaders([
-            'Authorization' => 'Bearer '.$this->token,
+            'Authorization' => 'Bearer ' . $this->token,
         ])->post("https://api.line.me/v2/bot/user/{$userId}/richmenu/{$richMenuId}");
     }
 
@@ -234,7 +234,7 @@ class LineBotController extends Controller
                     LIMIT 20
                 ", [$now, $now, $now]);
 
-            // ราคาย่อมเยา: เรียงถูก→แพง
+            // ราคาย่อมเยา: แปลง price_range เป็นตัวเลขแล้วเรียงจากถูก→แพง (รองรับข้อความ)
             case 'cheap':
                 return DB::select("
                     SELECT cafe_id,cafe_name,address,lat,lng,phone,price_range
@@ -242,15 +242,19 @@ class LineBotController extends Controller
                     WHERE LOWER(COALESCE(status,''))='approved'
                       AND price_range IS NOT NULL AND price_range <> ''
                     ORDER BY
-                        CASE
-                            WHEN price_range LIKE '%ต่ำกว่า 100%'   THEN 1
-                            WHEN price_range LIKE '%101 - 250%'      THEN 2
-                            WHEN price_range LIKE '%251 - 500%'      THEN 3
-                            WHEN price_range LIKE '%501 - 1,000%'    THEN 4
-                            WHEN price_range LIKE '%มากกว่า 1,000%'  THEN 5
-                            ELSE 99
-                        END ASC,
-                        updated_at DESC, cafe_id DESC
+                        /* เลขตัวแรกในสตริง (ตัด comma) ใช้แทนราคาต่ำสุด */
+                        COALESCE(
+                          CAST(NULLIF(REGEXP_SUBSTR(REPLACE(price_range, ',', ''), '[0-9]+'), '') AS UNSIGNED),
+                          /* mapping สำหรับข้อความ */
+                          CASE
+                            WHEN price_range REGEXP 'ย่อมเยา|ถูก|ประหยัด|cheap|low' THEN 1
+                            WHEN price_range REGEXP 'ปานกลาง|medium'                THEN 250
+                            WHEN price_range REGEXP 'แพง|สูง|high|premium'          THEN 1000
+                            ELSE 999999
+                          END
+                        ) ASC,
+                        updated_at DESC,
+                        cafe_id DESC
                     LIMIT 20
                 ");
 
@@ -330,7 +334,7 @@ class LineBotController extends Controller
                     ["type" => "text","text" => (string)$name,"weight" => "bold","size" => "lg","wrap" => true],
                     ["type" => "text","text" => (string)($addr ?? "-"),"size" => "sm","color" => "#666666","wrap" => true],
                     ["type" => "text","text" => (string)$sub,"size" => "xs","color" => "#999999","wrap" => true],
-                    ["type" => "text","text" => "☎ ".($phone ?: "ไม่มีข้อมูล"),"size" => "xs","color" => "#999999","wrap" => true]
+                    ["type" => "text","text" => "☎ " . ($phone ?: "ไม่มีข้อมูล"),"size" => "xs","color" => "#999999","wrap" => true]
                 ]
             ],
             "footer" => [
@@ -364,7 +368,7 @@ class LineBotController extends Controller
     {
         Http::withHeaders([
             'Content-Type'  => 'application/json',
-            'Authorization' => 'Bearer '.$this->token,
+            'Authorization' => 'Bearer ' . $this->token,
         ])->post('https://api.line.me/v2/bot/message/reply', [
             'replyToken' => $replyToken,
             'messages'   => [$message],
