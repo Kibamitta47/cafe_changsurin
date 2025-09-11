@@ -27,10 +27,13 @@
     [x-cloak]{display:none!important}
     .card{background:#fff;border:1px solid #e5e7eb;border-radius:1rem;box-shadow:0 4px 16px rgba(0,0,0,.04)}
     .chip{display:inline-flex;align-items:center;gap:.5rem;padding:.35rem .65rem;border-radius:999px;border:1px solid #e5e7eb;background:#fff;font-size:.85rem}
+    .no-scrollbar::-webkit-scrollbar{display:none}
+    .no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
   </style>
 </head>
-<body class="min-h-screen text-slate-800 pb-[92px]"  <!-- เผื่อพื้นที่ให้แถบล่างบนมือถือ -->
-      x-data="{ tab:'info', lightbox:false, lightboxSrc:'', copied:false }">
+<body class="min-h-screen text-slate-800 pb-[92px]"
+      x-data="{ tab:'info', lightbox:false, lightboxSrc:'', copied:false, ready:false }"
+      x-init="ready=true">
 
   {{-- Navbar --}}
   @guest @include('components.1navbar') @endguest
@@ -91,7 +94,7 @@
 
         <div class="flex gap-2 shrink-0">
           <button class="px-3 py-2 sm:px-4 rounded-lg border hover:bg-slate-50 text-sm sm:text-base"
-                  @click="navigator.share ? navigator.share({title:'{{ addslashes($cafe->cafe_name) }}', url: window.location.href}) : (async()=>{await navigator.clipboard.writeText(window.location.href); copied=true; setTimeout(()=>copied=false,1500)})()">
+                  @click="navigator.share ? navigator.share({title:'{{ addslashes($cafe->cafe_name) }}', url: window.location.href}) : (async()=>{try{await navigator.clipboard.writeText(window.location.href)}finally{copied=true; setTimeout(()=>copied=false,1500)}})()">
             <i class="fa-solid fa-share-nodes"></i> <span class="hidden sm:inline">แชร์</span>
           </button>
           @auth
@@ -150,7 +153,7 @@
           </div>
 
           <!-- INFO -->
-          <div x-show="tab==='info'" x-cloak class="mt-4 sm:mt-6 space-y-5 sm:space-y-6">
+          <div x-show="ready && tab==='info'" x-cloak class="mt-4 sm:mt-6 space-y-5 sm:space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-10 gap-y-3 sm:gap-y-4 text-slate-700 text-sm sm:text-base">
               <div class="flex items-start">
                 <i class="fa-solid fa-location-dot text-cyan-600 w-5 mt-1 mr-3 shrink-0"></i>
@@ -159,7 +162,7 @@
                   <p class="break-words">{{ $cafe->address }}</p>
                   <div class="mt-2 flex flex-wrap gap-2">
                     <button class="px-3 py-1.5 rounded-md border hover:bg-slate-50"
-                            @click="await navigator.clipboard.writeText(`{{ trim(preg_replace('/\s+/', ' ', $cafe->address)) }}`); copied=true; setTimeout(()=>copied=false,1500)">
+                            @click="navigator.clipboard.writeText(`{{ trim(preg_replace('/\s+/', ' ', $cafe->address)) }}`); copied=true; setTimeout(()=>copied=false,1500)">
                       <i class="fa-regular fa-copy"></i> คัดลอก
                     </button>
                     @if(!empty($cafe->lat) && !empty($cafe->lng))
@@ -298,7 +301,7 @@
           </div>
 
           <!-- REVIEWS -->
-          <div x-show="tab==='reviews'" x-cloak class="mt-4 sm:mt-6">
+          <div x-show="ready && tab==='reviews'" x-cloak class="mt-4 sm:mt-6">
             @if($reviews->isEmpty())
               <div class="text-center py-10 border rounded-xl bg-white/60">
                 <i class="fa-solid fa-comment-slash text-3xl sm:text-4xl text-slate-400 mb-3"></i>
@@ -375,7 +378,7 @@
               <i class="fa-solid fa-phone"></i> โทร
             </a>
             <button class="px-4 py-3 rounded-lg border hover:bg-slate-50"
-                    @click="navigator.share ? navigator.share({title:'{{ addslashes($cafe->cafe_name) }}', text:'ชวนไปคาเฟ่นี้กันไหม?', url: location.href}) : (async()=>{await navigator.clipboard.writeText(location.href); copied=true; setTimeout(()=>copied=false,1500)})()">
+                    @click="navigator.share ? navigator.share({title:'{{ addslashes($cafe->cafe_name) }}', text:'ชวนไปคาเฟ่นี้กันไหม?', url: location.href}) : (async()=>{try{await navigator.clipboard.writeText(location.href)}finally{copied=true; setTimeout(()=>copied=false,1500)}})()">
               <i class="fa-solid fa-share-nodes"></i> แชร์
             </button>
             <a href="{{ !empty($cafe->website) ? $cafe->website : '#' }}" target="_blank" rel="noopener"
@@ -409,7 +412,7 @@
         <i class="fa-solid fa-star"></i><span class="text-[11px] mt-1">รีวิว</span>
       </button>
       <button class="flex flex-col items-center py-2 rounded-lg bg-amber-500 text-white text-sm"
-              @click="navigator.share ? navigator.share({title:'{{ addslashes($cafe->cafe_name) }}', url: location.href}) : (async()=>{await navigator.clipboard.writeText(location.href); copied=true; setTimeout(()=>copied=false,1500)})()">
+              @click="navigator.share ? navigator.share({title:'{{ addslashes($cafe->cafe_name) }}', url: location.href}) : (async()=>{try{await navigator.clipboard.writeText(location.href)}finally{copied=true; setTimeout(()=>copied=false,1500)}})()">
         <i class="fa-solid fa-share-nodes"></i><span class="text-[11px] mt-1">แชร์</span>
       </button>
     </div>
