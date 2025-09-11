@@ -8,22 +8,7 @@
   <title>น้องช้างสะเร็น - ระบบคาเฟ่และข่าวสาร</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Alpine.js + backups + fail-safe uncloaking -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <script>
-    window.addEventListener('error', function(e){
-      if (String(e?.filename||'').includes('alpinejs')) {
-        var s=document.createElement('script'); s.defer=true;
-        s.src='https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js'; document.head.appendChild(s);
-      }
-    });
-    document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(() => { if (!window.Alpine) {
-        document.querySelectorAll('[x-cloak]').forEach(el => el.removeAttribute('x-cloak'));
-      }}, 3000);
-    });
-  </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -432,7 +417,7 @@
                         <i class="fa-regular fa-clock w-4 h-4 mr-1.5 text-indigo-500 shrink-0"></i>
                         <span x-text="`${cafe.openDay}${cafe.closeDay ? ' - ' + cafe.closeDay : ''}${cafe.openTime ? `, ${cafe.openTime} น. - ${cafe.closeTime} น.` : ''}`"></span>
                       </div>
-                      <!-- ✅ แสดงราคาจาก priceText ที่ normalize แล้ว -->
+                      <!-- ✅ ใช้ priceText ที่ normalize แล้ว -->
                       <div x-show="cafe.priceLevel" class="flex items-center">
                         <i class="fa-solid fa-tags w-4 h-4 mr-1.5 text-green-500 shrink-0"></i>
                         <span>ราคา: </span><span class="ml-1" x-text="cafe.priceText"></span>
@@ -601,6 +586,7 @@
     }
 
     function pageController(config) {
+      // ====== mapping วัน + ตัวช่วยขยายช่วงวัน ======
       const DAY_ORDER = ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
       const ALL_DAYS = [...DAY_ORDER];
 
@@ -610,7 +596,6 @@
       }
 
       return {
-        // ===== state
         allCafes: [],
         filteredCafes: [],
         allNews: [],
@@ -627,7 +612,6 @@
         },
         filters: { rating: 0, time: '', days: [], isNewOpening: false, priceRanges: [], styles: [], facilities: [], paymentMethods: [], otherServices: [] },
         likedCafeIds: config.initialLikedIds || [],
-        __inited: false,                 // ✅ กัน init ซ้ำ
 
         expandOpenDays(openDay, closeDay) {
           if (isEveryday(openDay) || isEveryday(closeDay)) return [...ALL_DAYS];
@@ -636,16 +620,18 @@
           if (start === -1 && end === -1) return [];
           if (start !== -1 && end === -1) return [DAY_ORDER[start]];
           if (start === -1 && end !== -1) return [DAY_ORDER[end]];
-          const result = []; let i = start;
-          while (true) { result.push(DAY_ORDER[i]); if (i === end) break; i = (i + 1) % 7; }
+
+          const result = [];
+          let i = start;
+          while (true) {
+            result.push(DAY_ORDER[i]);
+            if (i === end) break;
+            i = (i + 1) % 7;
+          }
           return result;
         },
 
-        // ✅ กัน Alpine init ซ้ำ
         initializeAllData() {
-          if (this.__inited) return;
-          this.__inited = true;
-
           this.loadCafeData();
           this.loadNewsData();
           this.extractAvailableFilters();
@@ -654,39 +640,33 @@
           this.$watch('selectedHour', (newHour) => { this.filters.time = newHour ? `${newHour}:00` : ''; this.applyFilters(); });
         },
 
-        // ✅ เดดุปข่าวตาม id + รีเซ็ตก่อนทุกครั้ง
         loadNewsData() {
-          this.allNews = [];
-          this.filteredNews = [];
           const els = document.querySelectorAll('#news-data-source .news-item');
-          const mapById = new Map();
-          Array.from(els).forEach(el => {
-            const item = {
-              id: parseInt(el.dataset.id),
-              title: el.dataset.title,
-              link: el.dataset.link,
-              image: el.dataset.image,
-              dateString: el.dataset.dateString
-            };
-            mapById.set(item.id, item);  // ซ้ำ id จะถูกทับ
-          });
-          this.allNews = Array.from(mapById.values());
-          this.filteredNews = [...this.allNews];
+          this.allNews = Array.from(els).map(el => ({
+            id: parseInt(el.dataset.id), title: el.dataset.title, link: el.dataset.link, image: el.dataset.image, dateString: el.dataset.dateString
+          }));
+          this.filteredNews = [...this.allNews]; // ✅ clone ป้องกัน render ซ้ำ
         },
 
-        // ✅ Normalize ราคาเป็นระดับ 1–5
+        // ✅ Normalize ราคาเป็นระดับ 1–5 และสร้าง priceText สำหรับแสดงผล
         loadCafeData() {
           const els = document.querySelectorAll('#cafe-data-source .cafe-item');
+
           const toPriceLevel = (rawText, fallbackText) => {
             const raw = (rawText ?? fallbackText ?? '').toString().trim();
-            if (/^\d+$/.test(raw)) return Math.max(1, Math.min(5, parseInt(raw, 10)));
+            if (/^\d+$/.test(raw)) {
+              const n = Math.max(1, Math.min(5, parseInt(raw, 10)));
+              return n;
+            }
             const n = (raw.match(/฿/g) || []).length;
             return Math.max(1, Math.min(5, n || 1));
           };
 
           this.allCafes = Array.from(els).map(el => {
-            const openDay = el.dataset.openDay, closeDay = el.dataset.closeDay;
+            const openDay = el.dataset.openDay;
+            const closeDay = el.dataset.closeDay;
             const expanded = this.expandOpenDays(openDay, closeDay);
+
             const priceSymbolText = el.dataset.priceRange || '';
             const priceOriginal   = el.dataset.originalPriceRange || '';
             const priceLevel      = toPriceLevel(priceOriginal, priceSymbolText);
@@ -705,7 +685,11 @@
               openTime: el.dataset.openTime,
               closeTime: el.dataset.closeTime,
               phone: el.dataset.phone,
-              priceLevel, priceText, originalPriceRange: priceOriginal,
+
+              priceLevel,          // ✅ 1–5
+              priceText,           // ✅ "฿".."฿฿฿฿฿"
+              originalPriceRange: priceOriginal,
+
               isNewOpening: el.dataset.isNewOpening === 'true',
               cafeStyles: el.dataset.styles ? el.dataset.styles.split(',').filter(Boolean) : [],
               facilities: el.dataset.facilities ? el.dataset.facilities.split(',').filter(Boolean) : [],
@@ -737,12 +721,12 @@
           this.displayedCafeCount = this.cafesPerPage;
           const q = this.searchTerm.toLowerCase().trim();
 
-          // ราคา: แปลง "฿฿" → 2
+          // ✅ แปลง checkbox "฿฿" เป็นระดับตัวเลข [2,...]
           const wantedPriceLevels = (this.filters.priceRanges || [])
             .map(s => (s.match(/฿/g) || []).length)
             .filter(n => n > 0);
 
-          // ===== Cafes =====
+          // ===== กรองคาเฟ่ =====
           this.filteredCafes = this.allCafes.filter(cafe => {
             if (this.filters.rating > 0 && cafe.rating < this.filters.rating) return false;
             if (this.filters.isNewOpening && !cafe.isNewOpening) return false;
@@ -754,11 +738,15 @@
               const openDays = cafe.openDaysExpanded || [];
               if (!this.filters.days.some(d => openDays.includes(d))) return false;
             }
+
+            // ✅ เทียบระดับราคาแบบตัวเลข
             if (wantedPriceLevels.length && !wantedPriceLevels.includes(cafe.priceLevel)) return false;
+
             if (this.filters.styles.length && !this.filters.styles.some(s => cafe.cafeStyles.includes(s))) return false;
             if (this.filters.facilities.length && !this.filters.facilities.some(f => cafe.facilities.includes(f))) return false;
             if (this.filters.paymentMethods.length && !this.filters.paymentMethods.some(p => cafe.paymentMethods.includes(p))) return false;
             if (this.filters.otherServices.length && !this.filters.otherServices.some(o => cafe.otherServices.includes(o))) return false;
+
             if (q) {
               const hay = `${cafe.title} ${cafe.address} ${cafe.placeName} ${cafe.cafeStyles.join(' ')}`.toLowerCase();
               if (!hay.includes(q)) return false;
@@ -766,15 +754,18 @@
             return true;
           });
 
-          // ===== News (always from unique allNews) =====
-          this.filteredNews = this.allNews.filter(n => !q || n.title.toLowerCase().includes(q));
+          // ===== กรองข่าว (reset จาก allNews ทุกครั้ง) =====
+          this.filteredNews = this.allNews.filter(n => {
+            if (q && !n.title.toLowerCase().includes(q)) return false;
+            return true;
+          });
         },
 
         clearFilters() {
           this.filters = { rating:0, time:'', days:[], isNewOpening:false, priceRanges:[], styles:[], facilities:[], paymentMethods:[], otherServices:[] };
           this.selectedHour = '';
           this.searchTerm = '';
-          this.filteredNews = [...this.allNews];
+          this.filteredNews = [...this.allNews]; // ✅ รีเซ็ตข่าว
         },
 
         isLiked(id) { return Array.isArray(this.likedCafeIds) && this.likedCafeIds.includes(id); },
