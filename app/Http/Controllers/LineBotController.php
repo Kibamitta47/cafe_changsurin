@@ -60,8 +60,10 @@ class LineBotController extends Controller
                     'ที่จอดรถ'               => 'parking',
                     'มีห้องประชุมทำงานได้'   => 'meeting',
                 ];
+
                 if (isset($map[$text])) {
                     $cafes = $this->findCafesByFilter($map[$text]);
+                    Log::info("FAQ {$map[$text]} found: ".count($cafes));
                     if (empty($cafes)) {
                         $this->replyText($replyToken, "ยังไม่พบร้านตามเงื่อนไข “{$text}” ในระบบครับ");
                         continue;
@@ -105,7 +107,7 @@ class LineBotController extends Controller
                     $cafes = DB::select("
                         SELECT cafe_id,cafe_name,address,lat,lng,phone
                         FROM cafes
-                        WHERE status='approved' AND address LIKE '%สุรินทร์%'
+                        WHERE LOWER(COALESCE(status,''))='approved' AND address LIKE '%สุรินทร์%'
                         ORDER BY created_at DESC
                         LIMIT 9
                     ");
@@ -144,7 +146,7 @@ class LineBotController extends Controller
                                sin(radians(?)) * sin(radians(cafes.lat))
                            )) AS distance
                     FROM cafes
-                    WHERE status='approved'
+                    WHERE LOWER(COALESCE(status,''))='approved'
                     HAVING distance < 5
                     ORDER BY distance ASC
                     LIMIT 5
@@ -181,16 +183,16 @@ class LineBotController extends Controller
         ])->post("https://api.line.me/v2/bot/user/{$userId}/richmenu/{$richMenuId}");
     }
 
-    // ---------- FAQ Filters (รองรับ JSON/status/เวลาไทย) ----------
+    // ---------- FAQ Filters (อัปเดตครบ) ----------
     private function findCafesByFilter(string $type): array
     {
         switch ($type) {
-            // Wi-Fi: ค้นคำใน JSON facilities/other_services (เผื่อบันทึกเป็น text ธรรมดา)
+            // Wi-Fi: รองรับ JSON และข้อความปกติ
             case 'wifi':
                 return DB::select("
                     SELECT cafe_id,cafe_name,address,lat,lng,phone
                     FROM cafes
-                    WHERE status='approved' AND (
+                    WHERE LOWER(COALESCE(status,''))='approved' AND (
                         (JSON_VALID(facilities) AND (
                             JSON_SEARCH(CAST(facilities AS JSON),'one','%Wi-Fi%') IS NOT NULL OR
                             JSON_SEARCH(CAST(facilities AS JSON),'one','%WiFi%')  IS NOT NULL OR
@@ -203,20 +205,24 @@ class LineBotController extends Controller
                             JSON_SEARCH(CAST(other_services AS JSON),'one','%wifi%')  IS NOT NULL OR
                             JSON_SEARCH(CAST(other_services AS JSON),'one','%ไวไฟ%')  IS NOT NULL
                         )) OR
-                        facilities     LIKE '%wifi%' OR facilities     LIKE '%Wi-Fi%' OR facilities     LIKE '%ไวไฟ%' OR
-                        other_services LIKE '%wifi%' OR other_services LIKE '%Wi-Fi%' OR other_services LIKE '%ไวไฟ%'
+                        facilities     LIKE '%wifi%' COLLATE utf8mb4_general_ci OR
+                        facilities     LIKE '%Wi-Fi%' COLLATE utf8mb4_general_ci OR
+                        facilities     LIKE '%ไวไฟ%' COLLATE utf8mb4_general_ci OR
+                        other_services LIKE '%wifi%' COLLATE utf8mb4_general_ci OR
+                        other_services LIKE '%Wi-Fi%' COLLATE utf8mb4_general_ci OR
+                        other_services LIKE '%ไวไฟ%' COLLATE utf8mb4_general_ci
                     )
                     ORDER BY updated_at DESC, cafe_id DESC
-                    LIMIT 10
+                    LIMIT 20
                 ");
 
-            // เปิดอยู่ตอนนี้: ใช้เวลาไทย + รองรับร้านข้ามเที่ยงคืน
+            // เปิดอยู่ตอนนี้: เวลาไทย + รองรับข้ามเที่ยงคืน
             case 'open_now':
                 $now = Carbon::now('Asia/Bangkok')->format('H:i:s');
                 return DB::select("
                     SELECT cafe_id,cafe_name,address,lat,lng,phone
                     FROM cafes
-                    WHERE status='approved'
+                    WHERE LOWER(COALESCE(status,''))='approved'
                       AND open_time  IS NOT NULL
                       AND close_time IS NOT NULL
                       AND (
@@ -225,15 +231,16 @@ class LineBotController extends Controller
                             (close_time <  open_time AND (? >= open_time OR ? <= close_time))
                           )
                     ORDER BY cafe_id DESC
-                    LIMIT 10
+                    LIMIT 20
                 ", [$now, $now, $now]);
 
-            // ราคาย่อมเยา: เรียงช่วงราคาจากถูก→แพง (ตามตัวเลือกหน้าแอดมิน)
+            // ราคาย่อมเยา: เรียงถูก→แพง
             case 'cheap':
                 return DB::select("
                     SELECT cafe_id,cafe_name,address,lat,lng,phone,price_range
                     FROM cafes
-                    WHERE status='approved' AND price_range IS NOT NULL AND price_range <> ''
+                    WHERE LOWER(COALESCE(status,''))='approved'
+                      AND price_range IS NOT NULL AND price_range <> ''
                     ORDER BY
                         CASE
                             WHEN price_range LIKE '%ต่ำกว่า 100%'   THEN 1
@@ -244,38 +251,42 @@ class LineBotController extends Controller
                             ELSE 99
                         END ASC,
                         updated_at DESC, cafe_id DESC
-                    LIMIT 10
+                    LIMIT 20
                 ");
 
-            // เปิดใหม่: ตามธง is_new_opening (สำรองด้วย created_at ภายใน 60 วัน)
+            // เปิดใหม่: ยึด is_new_opening=1 (ตรงหน้าเว็บ)
             case 'new':
                 return DB::select("
                     SELECT cafe_id,cafe_name,address,lat,lng,phone
                     FROM cafes
-                    WHERE status='approved' AND (
-                        is_new_opening = 1 OR
-                        (created_at IS NOT NULL AND created_at >= DATE_SUB(NOW(), INTERVAL 60 DAY))
-                    )
-                    ORDER BY is_new_opening DESC, created_at DESC, cafe_id DESC
-                    LIMIT 10
+                    WHERE LOWER(COALESCE(status,''))='approved'
+                      AND CAST(COALESCE(is_new_opening,0) AS UNSIGNED) = 1
+                    ORDER BY updated_at DESC, created_at DESC, cafe_id DESC
+                    LIMIT 20
                 ");
 
-            // ที่จอดรถ
+            // ที่จอดรถ: โฟกัส JSON ใน facilities (+ สำรองข้อความ/คอลัมน์)
             case 'parking':
                 return DB::select("
                     SELECT cafe_id,cafe_name,address,lat,lng,phone
                     FROM cafes
-                    WHERE status='approved' AND parking = 1
+                    WHERE LOWER(COALESCE(status,''))='approved' AND (
+                        (JSON_VALID(facilities) AND JSON_SEARCH(CAST(facilities AS JSON),'one','%ที่จอดรถ%') IS NOT NULL)
+                        OR (JSON_VALID(other_services) AND JSON_SEARCH(CAST(other_services AS JSON),'one','%ที่จอดรถ%') IS NOT NULL)
+                        OR facilities     LIKE '%ที่จอดรถ%' COLLATE utf8mb4_general_ci
+                        OR other_services LIKE '%ที่จอดรถ%' COLLATE utf8mb4_general_ci
+                        OR CAST(COALESCE(parking,0) AS UNSIGNED) = 1
+                    )
                     ORDER BY updated_at DESC, cafe_id DESC
-                    LIMIT 10
+                    LIMIT 20
                 ");
 
-            // ห้องประชุม/ทำงาน: ค้นคำใน JSON + text
+            // ห้องประชุม/ทำงาน: JSON + ข้อความ
             case 'meeting':
                 return DB::select("
                     SELECT cafe_id,cafe_name,address,lat,lng,phone
                     FROM cafes
-                    WHERE status='approved' AND (
+                    WHERE LOWER(COALESCE(status,''))='approved' AND (
                         (JSON_VALID(facilities) AND (
                             JSON_SEARCH(CAST(facilities AS JSON),'one','%ห้องประชุม%') IS NOT NULL OR
                             JSON_SEARCH(CAST(facilities AS JSON),'one','%meeting%')  IS NOT NULL OR
@@ -290,11 +301,15 @@ class LineBotController extends Controller
                             JSON_SEARCH(CAST(other_services AS JSON),'one','%co-work%')  IS NOT NULL OR
                             JSON_SEARCH(CAST(other_services AS JSON),'one','%cowork%')   IS NOT NULL
                         )) OR
-                        facilities     LIKE '%ห้องประชุม%' OR facilities     LIKE '%meeting%' OR facilities     LIKE '%ประชุม%' OR
-                        other_services LIKE '%ห้องประชุม%' OR other_services LIKE '%meeting%' OR other_services LIKE '%ประชุม%'
+                        facilities     LIKE '%ห้องประชุม%' COLLATE utf8mb4_general_ci OR
+                        facilities     LIKE '%meeting%'   COLLATE utf8mb4_general_ci OR
+                        facilities     LIKE '%ประชุม%'    COLLATE utf8mb4_general_ci OR
+                        other_services LIKE '%ห้องประชุม%' COLLATE utf8mb4_general_ci OR
+                        other_services LIKE '%meeting%'   COLLATE utf8mb4_general_ci OR
+                        other_services LIKE '%ประชุม%'    COLLATE utf8mb4_general_ci
                     )
                     ORDER BY updated_at DESC, cafe_id DESC
-                    LIMIT 10
+                    LIMIT 20
                 ");
 
             default:
