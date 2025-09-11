@@ -417,9 +417,10 @@
                         <i class="fa-regular fa-clock w-4 h-4 mr-1.5 text-indigo-500 shrink-0"></i>
                         <span x-text="`${cafe.openDay}${cafe.closeDay ? ' - ' + cafe.closeDay : ''}${cafe.openTime ? `, ${cafe.openTime} น. - ${cafe.closeTime} น.` : ''}`"></span>
                       </div>
-                      <div x-show="cafe.originalPriceRange" class="flex items-center">
+                      <!-- ✅ ใช้ priceText ที่ normalize แล้ว -->
+                      <div x-show="cafe.priceLevel" class="flex items-center">
                         <i class="fa-solid fa-tags w-4 h-4 mr-1.5 text-green-500 shrink-0"></i>
-                        <span>ราคา: </span><span class="ml-1" x-text="cafe.originalPriceRange"></span>
+                        <span>ราคา: </span><span class="ml-1" x-text="cafe.priceText"></span>
                       </div>
                     </div>
                   </div>
@@ -647,12 +648,29 @@
           this.filteredNews = [...this.allNews]; // ✅ clone ป้องกัน render ซ้ำ
         },
 
+        // ✅ Normalize ราคาเป็นระดับ 1–5 และสร้าง priceText สำหรับแสดงผล
         loadCafeData() {
           const els = document.querySelectorAll('#cafe-data-source .cafe-item');
+
+          const toPriceLevel = (rawText, fallbackText) => {
+            const raw = (rawText ?? fallbackText ?? '').toString().trim();
+            if (/^\d+$/.test(raw)) {
+              const n = Math.max(1, Math.min(5, parseInt(raw, 10)));
+              return n;
+            }
+            const n = (raw.match(/฿/g) || []).length;
+            return Math.max(1, Math.min(5, n || 1));
+          };
+
           this.allCafes = Array.from(els).map(el => {
             const openDay = el.dataset.openDay;
             const closeDay = el.dataset.closeDay;
             const expanded = this.expandOpenDays(openDay, closeDay);
+
+            const priceSymbolText = el.dataset.priceRange || '';
+            const priceOriginal   = el.dataset.originalPriceRange || '';
+            const priceLevel      = toPriceLevel(priceOriginal, priceSymbolText);
+            const priceText       = '฿'.repeat(priceLevel);
 
             return {
               id: parseInt(el.dataset.id),
@@ -663,13 +681,15 @@
               imageUrls: JSON.parse(el.dataset.images || '[]'),
               placeName: el.dataset.placeName,
               rating: parseFloat(el.dataset.rating || 0),
-              openDay: openDay,
-              closeDay: closeDay,
+              openDay, closeDay,
               openTime: el.dataset.openTime,
               closeTime: el.dataset.closeTime,
               phone: el.dataset.phone,
-              priceRange: el.dataset.priceRange,
-              originalPriceRange: el.dataset.originalPriceRange,
+
+              priceLevel,          // ✅ 1–5
+              priceText,           // ✅ "฿".."฿฿฿฿฿"
+              originalPriceRange: priceOriginal,
+
               isNewOpening: el.dataset.isNewOpening === 'true',
               cafeStyles: el.dataset.styles ? el.dataset.styles.split(',').filter(Boolean) : [],
               facilities: el.dataset.facilities ? el.dataset.facilities.split(',').filter(Boolean) : [],
@@ -701,6 +721,11 @@
           this.displayedCafeCount = this.cafesPerPage;
           const q = this.searchTerm.toLowerCase().trim();
 
+          // ✅ แปลง checkbox "฿฿" เป็นระดับตัวเลข [2,...]
+          const wantedPriceLevels = (this.filters.priceRanges || [])
+            .map(s => (s.match(/฿/g) || []).length)
+            .filter(n => n > 0);
+
           // ===== กรองคาเฟ่ =====
           this.filteredCafes = this.allCafes.filter(cafe => {
             if (this.filters.rating > 0 && cafe.rating < this.filters.rating) return false;
@@ -713,7 +738,10 @@
               const openDays = cafe.openDaysExpanded || [];
               if (!this.filters.days.some(d => openDays.includes(d))) return false;
             }
-            if (this.filters.priceRanges.length && !this.filters.priceRanges.includes(cafe.priceRange)) return false;
+
+            // ✅ เทียบระดับราคาแบบตัวเลข
+            if (wantedPriceLevels.length && !wantedPriceLevels.includes(cafe.priceLevel)) return false;
+
             if (this.filters.styles.length && !this.filters.styles.some(s => cafe.cafeStyles.includes(s))) return false;
             if (this.filters.facilities.length && !this.filters.facilities.some(f => cafe.facilities.includes(f))) return false;
             if (this.filters.paymentMethods.length && !this.filters.paymentMethods.some(p => cafe.paymentMethods.includes(p))) return false;
