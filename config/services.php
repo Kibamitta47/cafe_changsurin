@@ -37,6 +37,8 @@ return [
     'redirect' => env('LINE_REDIRECT_URI'),
     'channel_access_token' => env('LINE_CHANNEL_ACCESS_TOKEN'),
     'channel_secret' => env('LINE_CHANNEL_SECRET'),
+    'richmenu_main_id'     => env('LINE_RICHMENU_MAIN_ID'),
+    'richmenu_faq_id'      => env('LINE_RICHMENU_FAQ_ID'),
 ],
 
 ];
