@@ -38,7 +38,7 @@ class LineBotController extends Controller
             if ($event['type'] === 'message' && $event['message']['type'] === 'text') {
                 $text = trim($event['message']['text']);
 
-                // สลับ Rich Menu
+                // สลับ Rich Menu (รูปอยู่ใน LINE)
                 if (in_array($text, ['เมนู','menu','เริ่มต้น'])) {
                     $this->setUserRichMenu($userId, $this->richMain);
                     $this->replyText($replyToken, "เปิดเมนูหลักแล้วครับ 😊");
@@ -50,14 +50,14 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ===== FAQ Filters =====
+                // ===== ปุ่ม FAQ ให้ขึ้นคำตอบ =====
                 $map = [
-                    'FreeWiFi'             => 'wifi',
-                    'เปิดอยู่ตอนนี้'      => 'open_now',
-                    'คาเฟ่ราคาย่อมเยา'    => 'cheap',
-                    'เปิดใหม่'             => 'new',
-                    'ที่จอดรถ'             => 'parking',
-                    'มีห้องประชุมทำงานได้' => 'meeting',
+                    'FreeWiFi'               => 'wifi',
+                    'เปิดอยู่ตอนนี้'        => 'open_now',
+                    'คาเฟ่ราคาย่อมเยา'      => 'cheap',
+                    'เปิดใหม่'               => 'new',
+                    'ที่จอดรถ'               => 'parking',
+                    'มีห้องประชุมทำงานได้'   => 'meeting',
                 ];
                 if (isset($map[$text])) {
                     $cafes = $this->findCafesByFilter($map[$text]);
@@ -76,8 +76,12 @@ class LineBotController extends Controller
                             'meeting'  => '🏢 มีห้องประชุม/ทำงาน',
                         };
                         $bubbles[] = $this->bubbleBasic(
-                            $c->cafe_name, $c->address, $note,
-                            $c->phone, $c->lat, $c->lng
+                            $c->cafe_name,
+                            $c->address,
+                            $note,
+                            $c->phone,
+                            $c->lat,
+                            $c->lng
                         );
                     }
                     $this->replyFlex($replyToken, "ผลลัพธ์: {$text}", [
@@ -86,7 +90,7 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ค้นหาคาเฟ่ใกล้ฉัน
+                // ค้นหาคาเฟ่ใกล้ฉัน (คงไว้)
                 if ($text === 'ค้นหาคาเฟ่ใกล้ฉัน') {
                     $this->replyMessage($replyToken, [
                         "type" => "text",
@@ -179,51 +183,69 @@ class LineBotController extends Controller
         ])->post("https://api.line.me/v2/bot/user/{$userId}/richmenu/{$richMenuId}");
     }
 
-    // ---------- FAQ Filters ----------
+    // ---------- FAQ Filters (อิงโครงสร้างคอลัมน์จริงของคุณ) ----------
     private function findCafesByFilter(string $type): array
     {
         return match ($type) {
+            // Free WiFi: ค้นจากช่อง facilities/other_services ที่มีคำว่า wifi/wi-fi
             'wifi' => DB::select("
                 SELECT cafe_id,cafe_name,address,lat,lng,phone
                 FROM cafes
-                WHERE free_wifi = 1
-                ORDER BY rating DESC, updated_at DESC
+                WHERE (facilities      LIKE '%wifi%' OR facilities      LIKE '%wi-fi%' OR facilities      LIKE '%ไวไฟ%')
+                   OR (other_services  LIKE '%wifi%' OR other_services  LIKE '%wi-fi%' OR other_services  LIKE '%ไวไฟ%')
+                ORDER BY updated_at DESC, cafe_id DESC
                 LIMIT 10
             "),
+
+            // เปิดอยู่ตอนนี้: รองรับกรณีข้ามเที่ยงคืน (close_time < open_time)
             'open_now' => DB::select("
                 SELECT cafe_id,cafe_name,address,lat,lng,phone
                 FROM cafes
-                WHERE TIME(NOW()) BETWEEN open_time AND close_time
-                ORDER BY rating DESC
+                WHERE open_time IS NOT NULL AND close_time IS NOT NULL AND
+                (
+                    (close_time >= open_time AND TIME(NOW()) BETWEEN open_time AND close_time)
+                    OR
+                    (close_time < open_time AND (TIME(NOW()) >= open_time OR TIME(NOW()) <= close_time))
+                )
+                ORDER BY cafe_id DESC
                 LIMIT 10
             "),
+
+            // ราคาย่อมเยา: ใช้ price_range เป็นข้อความ (เช่น 'ย่อมเยา','ถูก','ประหยัด', 'cheap','low')
             'cheap' => DB::select("
                 SELECT cafe_id,cafe_name,address,lat,lng,phone
                 FROM cafes
-                WHERE (price_level IS NOT NULL AND price_level <= 2)
-                   OR (avg_price IS NOT NULL AND avg_price <= 60)
-                ORDER BY COALESCE(avg_price, 0) ASC, rating DESC
+                WHERE price_range REGEXP 'ย่อมเยา|ถูก|ประหยัด|cheap|low'
+                ORDER BY updated_at DESC, cafe_id DESC
                 LIMIT 10
             "),
+
+            // เปิดใหม่: ใช้ is_new_opening = 1 หรือเพิ่งสร้างภายใน 60 วัน
             'new' => DB::select("
                 SELECT cafe_id,cafe_name,address,lat,lng,phone
                 FROM cafes
-                WHERE created_at >= DATE_SUB(NOW(), INTERVAL 60 DAY)
-                ORDER BY created_at DESC
+                WHERE is_new_opening = 1
+                   OR (created_at IS NOT NULL AND created_at >= DATE_SUB(NOW(), INTERVAL 60 DAY))
+                ORDER BY created_at DESC, cafe_id DESC
                 LIMIT 10
             "),
+
+            // มีที่จอดรถ: คอลัมน์ parking (tinyint)
             'parking' => DB::select("
                 SELECT cafe_id,cafe_name,address,lat,lng,phone
                 FROM cafes
-                WHERE has_parking = 1
-                ORDER BY rating DESC, updated_at DESC
+                WHERE parking = 1
+                ORDER BY updated_at DESC, cafe_id DESC
                 LIMIT 10
             "),
+
+            // ห้องประชุม/ทำงาน: ค้นคำจาก facilities หรือ other_services
             'meeting' => DB::select("
                 SELECT cafe_id,cafe_name,address,lat,lng,phone
                 FROM cafes
-                WHERE has_meeting_room = 1
-                ORDER BY rating DESC, updated_at DESC
+                WHERE (facilities     LIKE '%ห้องประชุม%' OR facilities     LIKE '%meeting%' OR facilities     LIKE '%co-work%' OR facilities     LIKE '%cowork%')
+                   OR (other_services LIKE '%ห้องประชุม%' OR other_services LIKE '%meeting%' OR other_services LIKE '%co-work%' OR other_services LIKE '%cowork%')
+                ORDER BY updated_at DESC, cafe_id DESC
                 LIMIT 10
             "),
             default => [],
