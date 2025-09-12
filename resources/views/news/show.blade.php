@@ -83,17 +83,7 @@
   <!-- HERO -->
   <section class="relative bg-gradient-to-br from-brand-50 via-white to-slate-50 border-b border-slate-200/70">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10">
-      <!-- breadcrumb -->
-      <nav class="text-sm text-slate-500 mb-4" aria-label="Breadcrumb">
-        <ol class="flex items-center gap-1 flex-wrap">
-          <li><a href="{{ route('home') }}" class="hover:text-brand-700 hover:underline">หน้าแรก</a></li>
-          <li class="mx-1 text-slate-400">/</li>
-          <li><a href="{{ route('news.index') }}" class="hover:text-brand-700 hover:underline">ข่าวสาร</a></li>
-          <li class="mx-1 text-slate-400">/</li>
-          <li class="text-slate-700 line-clamp-1">{{ $newsItem->title }}</li>
-        </ol>
-      </nav>
-
+     
       <!-- หัวเรื่อง -->
       <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">
         {{ $newsItem->title }}
