@@ -354,7 +354,7 @@
         </div>
 
             <div class="actions d-flex justify-content-center gap-3 mt-4 pt-4 border-top">
-                <a href="{{ route('user.dashboard') }}" class="btn btn-outline-secondary px-4">
+                <a href="{{ route('user.cafes.my') }}" class="btn btn-outline-secondary px-4">
                     <i class="fas fa-times me-2"></i>ยกเลิก
                 </a>
                 <button type="submit" class="btn btn-primary px-4" id="submitBtn">
