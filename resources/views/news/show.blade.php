@@ -15,15 +15,13 @@
 
   <style>
     body{font-family:'Kanit',system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif}
-    /* ความกว้างบรรทัดให้อ่านสบาย */
     .reading p{line-height:1.9}
-    /* ปรับสีหัวข้อใน prose */
     .prose :where(h1,h2,h3,h4){color:#0f172a}
     .prose :where(a){text-decoration:none}
     .prose :where(a:hover){text-decoration:underline}
-    /* ไลท์บ็อกซ์ */
     .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:60}
     .lightbox.open{display:flex}
+    .progress{position:fixed;top:0;left:0;height:4px;width:0;background:linear-gradient(90deg,#60a5fa,#22c55e);z-index:50;box-shadow:0 0 12px rgba(34,197,94,.35)}
   </style>
 
   <script>
@@ -34,7 +32,11 @@
             brand: { 50:'#eff6ff',200:'#bfdbfe',500:'#3b82f6',600:'#2563eb' }
           },
           boxShadow: {
-            soft: '0 10px 30px rgba(2,6,23,.08)'
+            soft: '0 12px 34px rgba(2,6,23,.08)',
+            card: '0 8px 24px rgba(2,6,23,.06)'
+          },
+          borderRadius: {
+            xl2: '1.25rem'
           }
         }
       }
@@ -43,66 +45,110 @@
 </head>
 <body class="bg-slate-50 text-slate-800">
 
+  <!-- Progress -->
+  <div id="progressBar" class="progress"></div>
+
   {{-- Navbar --}}
   @guest @include('components.1navbar') @endguest
   @auth  @include('components.2navbar') @endauth
 
-  <!-- คอนเทนเนอร์หลัก -->
+  <!-- Hero -->
+  <section class="relative">
+    <div class="absolute inset-0 bg-gradient-to-b from-brand-50/80 to-transparent pointer-events-none"></div>
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      <nav class="text-sm text-slate-500 mb-4 flex items-center gap-2">
+        <a href="{{ route('news.index') }}" class="hover:text-brand-600"><i class="fa-solid fa-house"></i> ข่าวทั้งหมด</a>
+        <span class="opacity-60">/</span>
+        <span class="line-clamp-1">{{ $newsItem->title }}</span>
+      </nav>
+
+      <header class="bg-white/80 backdrop-blur rounded-2xl shadow-card border border-slate-200 p-5 md:p-7">
+        <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-slate-900 mb-3">
+          {{ $newsItem->title }}
+        </h1>
+
+        <div class="flex flex-wrap items-center gap-3 text-sm">
+          <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-700">
+            <i class="fa-regular fa-calendar"></i>
+            เผยแพร่: {{ optional($newsItem->start_datetime)->format('d F Y, H:i') ?? 'N/A' }}
+          </span>
+          <span id="readingTime" class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-700">
+            <i class="fa-regular fa-clock"></i> ใช้อ่านประมาณ: —
+          </span>
+
+          <div class="ml-auto flex items-center gap-2">
+            <button id="copyBtn" type="button"
+              class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 shadow-sm">
+              <i class="fa-solid fa-link"></i> คัดลอกลิงก์
+            </button>
+            <a target="_blank" rel="noopener"
+               href="https://www.facebook.com/sharer/sharer.php?u={{ urlencode(request()->fullUrl()) }}"
+               class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 shadow-sm">
+              <i class="fa-brands fa-facebook"></i> แชร์
+            </a>
+            <a target="_blank" rel="noopener"
+               href="https://line.me/R/msg/text/?{{ urlencode($newsItem->title.' '.request()->fullUrl()) }}"
+               class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 shadow-sm">
+              <i class="fa-brands fa-line"></i> LINE
+            </a>
+          </div>
+        </div>
+      </header>
+    </div>
+  </section>
+
+  <!-- Main -->
   <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-    <!-- หัวเรื่อง + เมตา -->
-    <header class="mb-6">
-      <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">
-        {{ $newsItem->title }}
-      </h1>
-      <div class="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-600">
-        <span class="inline-flex items-center gap-2">
-          <i class="fa-regular fa-calendar"></i>
-          เผยแพร่: {{ optional($newsItem->start_datetime)->format('d F Y, H:i') ?? 'N/A' }}
-        </span>
-
-        <!-- เวลาที่ใช้ในการอ่าน (คำนวณแบบง่ายด้วย CSS trick + JS เล็กน้อย) -->
-        <span id="readingTime" class="inline-flex items-center gap-2">
-          <i class="fa-regular fa-clock"></i> ใช้อ่านประมาณ: —
-        </span>
-
-        <!-- ปุ่มคัดลอกลิงก์ -->
-        <button
-          id="copyBtn"
-          class="ml-auto inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 shadow-sm"
-          type="button">
-          <i class="fa-solid fa-link"></i> คัดลอกลิงก์
-        </button>
-      </div>
-    </header>
-
-    <!-- เลย์เอาต์ 2 คอลัมน์ -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-      <!-- คอลัมน์ซ้าย: เนื้อหาข่าวหลัก -->
+      <!-- Content -->
       <main class="lg:col-span-2">
         <article class="bg-white rounded-2xl shadow-soft border border-slate-200 overflow-hidden">
 
-          {{-- รูปภาพหลัก (แสดงแค่รูปแรก) --}}
+          {{-- รูปภาพหลัก --}}
           @if(!empty($newsItem->images))
             <div class="relative">
               <img
                 src="{{ asset('storage/' . $newsItem->images[0]) }}"
                 alt="{{ $newsItem->title }}"
-                class="w-full max-h-[520px] object-cover"
-                loading="lazy">
+                class="w-full max-h-[520px] object-cover">
+              <div class="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/30 to-transparent"></div>
+              <div class="absolute top-4 right-4">
+                <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur text-slate-700 shadow">
+                  <i class="fa-regular fa-image"></i>
+                  {{ count($newsItem->images) }} รูป
+                </span>
+              </div>
             </div>
           @endif
 
           <div class="p-6 sm:p-8">
-            <hr class="mb-6 border-slate-200">
+            <div class="flex flex-wrap items-center gap-2 mb-6">
+              <a href="{{ route('news.index') }}"
+                 class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700">
+                <i class="fa-solid fa-arrow-left"></i> ย้อนกลับ
+              </a>
+            </div>
 
-            {{-- เนื้อหา (คงเดิมทุกคำ) --}}
-            <div id="articleContent" class="prose prose-slate max-w-none reading text-lg whitespace-pre-wrap">
+            <div id="articleContent" class="prose prose-slate max-w-none reading text-[1.05rem] whitespace-pre-wrap">
               {{ $newsItem->content }}
             </div>
 
-            {{-- แกลเลอรีรูปภาพ (รูปที่เหลือ) --}}
+            {{-- ลิงก์เพิ่มเติม --}}
+            @if($newsItem->link_url)
+              <div class="mt-8 pt-6 border-t border-slate-200">
+                <a
+                  href="{{ $newsItem->link_url }}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-2 text-brand-600 hover:text-brand-600/90 hover:underline font-semibold">
+                  <i class="fas fa-arrow-up-right-from-square"></i>
+                  อ่านข้อมูลเพิ่มเติมที่ลิงก์ต้นฉบับ
+                </a>
+              </div>
+            @endif
+
+            {{-- แกลเลอรี --}}
             @if(isset($newsItem->images) && count($newsItem->images) > 1)
               <div class="mt-10">
                 <div class="flex items-center gap-2 mb-4">
@@ -119,43 +165,18 @@
                       <img
                         src="{{ $src }}"
                         alt="{{ $newsItem->title }}"
-                        class="w-full h-full object-cover group-hover:scale-105 transition"
-                        loading="lazy">
+                        class="w-full h-full object-cover group-hover:scale-105 transition">
                     </button>
                   @endforeach
                 </div>
               </div>
             @endif
-
-            {{-- ลิงก์เพิ่มเติม --}}
-            @if($newsItem->link_url)
-              <div class="mt-8 pt-6 border-t border-slate-200">
-                <a
-                  href="{{ $newsItem->link_url }}"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="inline-flex items-center gap-2 text-brand-600 hover:text-brand-600/90 hover:underline font-semibold">
-                  <i class="fas fa-arrow-up-right-from-square"></i>
-                  อ่านข้อมูลเพิ่มเติมที่ลิงก์ต้นฉบับ
-                </a>
-              </div>
-            @endif
           </div>
         </article>
-
-        <!-- ปุ่มนำทางสั้นๆ -->
-        <div class="mt-6 flex flex-wrap gap-3">
-          <a href="{{ url()->previous() }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 shadow-sm">
-            <i class="fa-solid fa-arrow-left-long"></i> กลับ
-          </a>
-          <a href="{{ route('news.index') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 shadow-sm">
-            <i class="fa-regular fa-newspaper"></i> ดูข่าวทั้งหมด
-          </a>
-        </div>
       </main>
 
-      <!-- คอลัมน์ขวา: ข่าวสารแนะนำ -->
-      <aside>
+      <!-- Sidebar -->
+      <aside class="lg:sticky lg:top-24 self-start space-y-6">
         <div class="bg-white p-6 rounded-2xl shadow-soft border border-slate-200">
           <div class="flex items-center gap-2 mb-4">
             <span class="inline-block w-2.5 h-2.5 rounded-sm bg-brand-500"></span>
@@ -191,12 +212,28 @@
             <p class="text-sm text-slate-500">ไม่มีข่าวสารแนะนำในขณะนี้</p>
           @endif
         </div>
+
+        <div class="bg-gradient-to-br from-white to-brand-50 border border-slate-200 p-6 rounded-2xl shadow-card">
+          <div class="flex items-start gap-4">
+            <div class="w-12 h-12 rounded-full bg-brand-500/10 grid place-items-center text-brand-600">
+              <i class="fa-regular fa-newspaper"></i>
+            </div>
+            <div class="min-w-0">
+              <h3 class="font-semibold text-slate-900">ติดตามข่าวใหม่</h3>
+              <p class="text-sm text-slate-600">อัปเดตข่าวสารคาเฟ่และชุมชนในสุรินทร์แบบรวดเร็ว</p>
+              <a href="{{ route('news.index') }}"
+                 class="mt-3 inline-flex items-center gap-2 text-brand-600 font-semibold hover:underline">
+                ดูข่าวทั้งหมด <i class="fa-solid fa-chevron-right text-xs"></i>
+              </a>
+            </div>
+          </div>
+        </div>
       </aside>
 
     </div>
   </div>
 
-  <!-- Lightbox แบบเรียบง่าย -->
+  <!-- Lightbox -->
   <div id="lightbox" class="lightbox">
     <div class="relative w-full max-w-5xl px-4">
       <img id="lightboxImg" src="" alt="image" class="w-full max-h-[80vh] object-contain rounded-xl shadow-xl">
@@ -210,7 +247,7 @@
   </div>
 
   <script>
-    // คำนวณเวลาอ่านโดยประมาณ (~250 คำ/นาที)
+    // เวลาอ่าน
     (function(){
       const el = document.getElementById('articleContent');
       const rt = document.getElementById('readingTime');
@@ -235,7 +272,7 @@
       });
     })();
 
-    // ไลท์บ็อกซ์สำหรับแกลเลอรี
+    // ไลท์บ็อกซ์
     (function(){
       const lb = document.getElementById('lightbox');
       const lbImg = document.getElementById('lightboxImg');
@@ -251,6 +288,23 @@
       closeBtn.addEventListener('click', close);
       lb.addEventListener('click', (e)=>{ if(e.target === lb) close(); });
       window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') close(); });
+    })();
+
+    // Progress bar
+    (function(){
+      const bar = document.getElementById('progressBar');
+      const article = document.getElementById('articleContent');
+      const onScroll = ()=>{
+        if(!article) return;
+        const rect = article.getBoundingClientRect();
+        const total = article.scrollHeight - window.innerHeight + rect.top;
+        const scrolled = Math.min(Math.max(window.scrollY - (article.offsetTop - 80), 0), total || 1);
+        const percent = Math.max(0, Math.min(100, (scrolled / (total || 1)) * 100));
+        bar.style.width = percent + '%';
+      };
+      window.addEventListener('scroll', onScroll, {passive:true});
+      window.addEventListener('resize', onScroll);
+      onScroll();
     })();
   </script>
 </body>
