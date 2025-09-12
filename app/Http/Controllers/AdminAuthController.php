@@ -14,16 +14,13 @@ use App\Models\Cafe;
 use App\Models\AddnewsAdmin;
 use Illuminate\Support\Facades\Hash;
 
-// เพิ่มสำหรับบีบอัด/ย่อภาพ
 use Intervention\Image\ImageManager;
-use Intervention\Image\Drivers\Imagick\Driver;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
 
 class AdminAuthController extends Controller
 {
-    public function showRegister()
-    {
-        return view('admin.register-admin');
-    }
+    public function showRegister(){ return view('admin.register-admin'); }
 
     public function register(Request $request)
     {
@@ -42,10 +39,7 @@ class AdminAuthController extends Controller
         return redirect()->route('login.admin')->with('success', 'สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ');
     }
 
-    public function showLogin()
-    {
-        return view('admin.login-admin');
-    }
+    public function showLogin(){ return view('admin.login-admin'); }
 
     public function login(Request $request)
     {
@@ -64,44 +58,38 @@ class AdminAuthController extends Controller
             return redirect()->route('admin.home')->with('success', 'เข้าสู่ระบบสำเร็จ');
         }
 
-        return back()->withErrors([
-            'email' => 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
-        ])->onlyInput('email');
+        return back()->withErrors(['email' => 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'])->onlyInput('email');
     }
 
     public function logout(Request $request)
     {
         if (Auth::guard('admin')->check()) {
-            Log::info('Admin logout: ' . Auth::guard('admin')->user()->Email);
+            Log::info('Admin logout: '.Auth::guard('admin')->user()->Email);
         }
-
         Auth::guard('admin')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
-        return redirect()->route('login.admin')->with('success', 'ออกจากระบบสำเร็จ');
+        return redirect()->route('login.admin')->with('success','ออกจากระบบสำเร็จ');
     }
 
     public function home()
     {
         $totalUsers   = User::count();
         $totalCafes   = Cafe::count();
-        $pendingCafes = Cafe::where('status', 'pending')->count();
+        $pendingCafes = Cafe::where('status','pending')->count();
         $totalNews    = AddnewsAdmin::count();
 
         $userRegistrationData = User::select(
                 DB::raw('DATE(created_at) as registration_date'),
                 DB::raw('count(*) as user_count')
             )
-            ->where('created_at', '>=', now()->subDays(15))
-            ->groupBy('registration_date')
-            ->orderBy('registration_date', 'asc')
-            ->get()
-            ->keyBy('registration_date');
+            ->where('created_at','>=', now()->subDays(15))
+            ->groupBy('registration_date')->orderBy('registration_date','asc')
+            ->get()->keyBy('registration_date');
 
         $chartLabels = [];
         $chartData   = [];
-        for ($i = 14; $i >= 0; $i--) {
+        for ($i=14; $i>=0; $i--) {
             $date = now()->subDays($i);
             $dateString = $date->format('Y-m-d');
             $chartLabels[] = $date->translatedFormat('j M');
@@ -109,13 +97,11 @@ class AdminAuthController extends Controller
         }
 
         $cafeStatusData   = Cafe::select('status', DB::raw('count(*) as count'))->groupBy('status')->get();
-        $cafeStatusLabels = $cafeStatusData->pluck('status')->map(function ($status) {
-            return $status;
-        });
+        $cafeStatusLabels = $cafeStatusData->pluck('status');
         $cafeStatusCounts = $cafeStatusData->pluck('count');
 
-        $topCafes      = Cafe::where('status', 'approved')->withAvg('reviews', 'rating')
-                            ->orderBy('reviews_avg_rating', 'desc')->take(10)->get();
+        $topCafes      = Cafe::where('status','approved')->withAvg('reviews','rating')
+                            ->orderBy('reviews_avg_rating','desc')->take(10)->get();
         $topCafeLabels = $topCafes->pluck('cafe_name');
         $topCafeData   = $topCafes->pluck('reviews_avg_rating');
 
@@ -128,9 +114,7 @@ class AdminAuthController extends Controller
 
     public function editProfile()
     {
-        return view('admin.edit-profileadmin', [
-            'admin' => Auth::guard('admin')->user()
-        ]);
+        return view('admin.edit-profileadmin', ['admin'=>Auth::guard('admin')->user()]);
     }
 
     public function updateProfile(Request $request)
@@ -139,13 +123,9 @@ class AdminAuthController extends Controller
 
         $request->validate([
             'name'  => 'required|string|max:255',
-            'email' => [
-                'required','email',
-                Rule::unique('admin_id','Email')->ignore($admin->admin_id, 'admin_id'),
-            ],
-            // อนุญาตไฟล์เข้ามาใหญ่ขึ้นนิด แล้วเราจะบีบอัดเอง
-            'profile_image'  => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240', // 10MB
-            'password'       => 'nullable|min:8|confirmed',
+            'email' => ['required','email', Rule::unique('admin_id','Email')->ignore($admin->admin_id,'admin_id')],
+            'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
+            'password'      => 'nullable|min:8|confirmed',
         ]);
 
         $admin->UserName = $request->name;
@@ -156,35 +136,27 @@ class AdminAuthController extends Controller
         }
 
         if ($request->hasFile('profile_image')) {
-            // ลบรูปเดิมถ้ามี
             if (!empty($admin->profile_image) && Storage::disk('public')->exists($admin->profile_image)) {
                 Storage::disk('public')->delete($admin->profile_image);
             }
 
-            // จัดการรูป: ย่อ/ครอปเป็นสี่เหลี่ยม 512x512 และบีบอัดเป็น WebP
             $uploaded = $request->file('profile_image');
 
-            $manager = new ImageManager(new Driver());
+            // เลือก driver อัตโนมัติ: ถ้ามี imagick ใช้ imagick; ไม่งั้นใช้ GD
+            $driver  = extension_loaded('imagick') ? new ImagickDriver() : new GdDriver();
+            $manager = new ImageManager($driver);
+
             $image   = $manager->read($uploaded->getPathname());
+            $image   = $image->cover(512, 512);           // ทำเป็นจัตุรัส 512x512
+            $encoded = $image->toWebp(75);                // บีบอัดเป็น WebP
 
-            // ทำเป็นจัตุรัส 512x512 (เหมาะกับ avatar); ถ้าอยากคงสัดส่วนใช้ ->scaleDown(width: 512) แทน
-            $image   = $image->cover(512, 512);
-
-            // บีบอัดเป็น WebP คุณภาพ 75 (เล็กมากแต่ยังคม)
-            $encoded = $image->toWebp(75);
-
-            // ชื่อไฟล์
-            $filename = 'profile_' . $admin->admin_id . '_' . time() . '.webp';
-
-            // บันทึกลง storage/app/public/profile_images/...
+            $filename = 'profile_'.$admin->admin_id.'_'.time().'.webp';
             Storage::disk('public')->put('profile_images/'.$filename, (string) $encoded);
-
-            // เก็บ path แบบ relative
             $admin->profile_image = 'profile_images/'.$filename;
         }
 
         $admin->save();
 
-        return back()->with('success', 'อัปเดตข้อมูลโปรไฟล์เรียบร้อยแล้ว');
+        return back()->with('success','อัปเดตข้อมูลโปรไฟล์เรียบร้อยแล้ว');
     }
 }
