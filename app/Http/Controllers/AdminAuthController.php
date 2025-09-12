@@ -14,6 +14,10 @@ use App\Models\Cafe;
 use App\Models\AddnewsAdmin;
 use Illuminate\Support\Facades\Hash;
 
+// เพิ่มสำหรับบีบอัด/ย่อภาพ
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
+
 class AdminAuthController extends Controller
 {
     public function showRegister()
@@ -50,7 +54,6 @@ class AdminAuthController extends Controller
             'password' => 'required',
         ]);
 
-        // ใช้คอลัมน์ Email ให้ตรง DB
         $ok = Auth::guard('admin')->attempt(
             ['Email' => $credentials['email'], 'password' => $credentials['password']],
             $request->boolean('remember')
@@ -140,8 +143,9 @@ class AdminAuthController extends Controller
                 'required','email',
                 Rule::unique('admin_id','Email')->ignore($admin->admin_id, 'admin_id'),
             ],
+            // อนุญาตไฟล์เข้ามาใหญ่ขึ้นนิด แล้วเราจะบีบอัดเอง
+            'profile_image'  => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240', // 10MB
             'password'       => 'nullable|min:8|confirmed',
-            'profile_image'  => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
         $admin->UserName = $request->name;
@@ -152,12 +156,31 @@ class AdminAuthController extends Controller
         }
 
         if ($request->hasFile('profile_image')) {
-            // ถ้าเก็บ path เต็ม เช่น "profile_images/xxxx.jpg" ก็ลบได้เลย
-            if (!empty($admin->profile_image)) {
+            // ลบรูปเดิมถ้ามี
+            if (!empty($admin->profile_image) && Storage::disk('public')->exists($admin->profile_image)) {
                 Storage::disk('public')->delete($admin->profile_image);
             }
-            $path = $request->file('profile_image')->store('profile_images', 'public');
-            $admin->profile_image = $path;
+
+            // จัดการรูป: ย่อ/ครอปเป็นสี่เหลี่ยม 512x512 และบีบอัดเป็น WebP
+            $uploaded = $request->file('profile_image');
+
+            $manager = new ImageManager(new Driver());
+            $image   = $manager->read($uploaded->getPathname());
+
+            // ทำเป็นจัตุรัส 512x512 (เหมาะกับ avatar); ถ้าอยากคงสัดส่วนใช้ ->scaleDown(width: 512) แทน
+            $image   = $image->cover(512, 512);
+
+            // บีบอัดเป็น WebP คุณภาพ 75 (เล็กมากแต่ยังคม)
+            $encoded = $image->toWebp(75);
+
+            // ชื่อไฟล์
+            $filename = 'profile_' . $admin->admin_id . '_' . time() . '.webp';
+
+            // บันทึกลง storage/app/public/profile_images/...
+            Storage::disk('public')->put('profile_images/'.$filename, (string) $encoded);
+
+            // เก็บ path แบบ relative
+            $admin->profile_image = 'profile_images/'.$filename;
         }
 
         $admin->save();
