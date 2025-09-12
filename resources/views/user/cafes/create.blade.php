@@ -125,7 +125,7 @@
         <!-- ซ้าย -->
         <div class="col-lg-6">
           <div class="form-section">
-            <div class="section-header"><i class="bi bi-shop"></i>ข้อมูลพื้นฐาน</div>
+            <div class="section-header"><i class="bi bi-shop"></i>ข้อมูล</div>
 
             <div class="mb-3">
               <label for="cafe_name" class="form-label">ชื่อคาเฟ่ <span class="text-danger">*</span></label>
