@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
  <style>
-  /* ===== Theme ตามรูป (โทนฟ้าอ่อน สะอาด เงานุ่ม) ===== */
+  /* ===== Theme (โทนฟ้าอ่อน สะอาด เงานุ่ม) ===== */
   :root{
     --brand:#4A90E2;          /* ฟ้าหลัก */
     --brand-600:#357ABD;      /* ฟ้าเข้ม */
@@ -34,7 +34,8 @@
   body.sidebar-open{padding-left:250px}
 
   /* กล่องหน้าฟอร์ม */
-  .container.mt-5.mb-5{
+  .container.mt-5.mb-5,
+  .container{
     background:#fff;border:1px solid var(--line);border-radius:var(--radius);
     box-shadow:var(--shadow);padding:34px 28px;max-width:1200px
   }
@@ -49,7 +50,7 @@
     background:var(--brand-50);color:var(--brand)
   }
 
-  /* หัวข้อย่อยแต่ละส่วน */
+  /* หัวข้อย่อยแต่ละส่วน (ที่ยังใช้ h5) */
   h5.text-primary{
     color:var(--brand-600)!important;font-weight:800;margin:18px 0 10px
   }
@@ -84,7 +85,7 @@
   .btn-outline-danger{background:#ffedf3;color:#b21e5f;border-color:#ffd5e4}
   .btn-outline-dark{background:#eef2f7;color:#2f3b4a;border-color:#e2e8f0}
 
-  /* กลุ่ม checkbox แบบชิป (ใช้กับ .form-check-inline ที่มีอยู่) */
+  /* กลุ่ม checkbox แบบชิป */
   .form-check-inline{
     background:#f9fbff;border:1px solid var(--line);border-radius:999px;
     padding:.38rem .72rem;margin-right:.5rem!important
@@ -100,16 +101,37 @@
   /* ปุ่มบนแผนที่ */
   #locateBtn,#resetBtn{border-radius:999px}
 
-  /* แกลเลอรี่รูปตัวอย่างเดิมให้ดูเนียน */
+  /* แกลเลอรี่รูป */
   .img-thumbnail{width:100px;height:100px;object-fit:cover;border-radius:12px;border:1px solid #eef3fb}
 
   /* แจ้งเตือน */
   .alert{border-radius:12px}
 
+  /* ===== Head Label (ตามภาพแนบ) ===== */
+  .head-label{
+    display:flex; align-items:center; gap:.6rem;
+    font-weight:800; letter-spacing:.2px;
+    color:#1f3b65;
+    margin:18px 0 10px;
+    font-size:1.05rem;
+  }
+  .head-label .chip{
+    width:10px; height:10px; border-radius:2px;
+    background:#4A90E2;
+    box-shadow:0 1px 0 rgba(0,0,0,.06);
+  }
+  .head-label small{font-weight:600;color:#6b7b97}
+
+  .section-block{
+    padding:10px 0 2px;
+    border-top:1px solid var(--line);
+    margin-top:8px;
+  }
+
   /* RWD */
   @media (max-width:768px){
     body.sidebar-open{padding-left:0}
-    .container.mt-5.mb-5{padding:20px;margin:20px 0!important}
+    .container{padding:20px;margin:20px 0!important}
     h2{font-size:1.35rem}
     .btn-check + .btn{display:block;width:100%;margin-bottom:.45rem!important}
     #map{height:300px}
@@ -151,7 +173,7 @@
         <!-- ซ้าย -->
         <div class="col-lg-6">
           <div class="form-section">
-            <h5 class="section-header"><i class="bi bi-shop"></i>ข้อมูลพื้นฐาน</h5>
+            <h5 class="section-header text-primary"><i class="bi bi-shop"></i> ข้อมูลพื้นฐาน</h5>
 
             <div class="mb-3">
               <label for="cafe_name" class="form-label">ชื่อคาเฟ่ <span class="text-danger">*</span></label>
@@ -201,11 +223,11 @@
           </div>
 
           <div class="form-section">
-            <h5 class="section-header"><i class="bi bi-palette-fill"></i>สไตล์คาเฟ่</h5>
+            <h5 class="section-header text-primary"><i class="bi bi-palette-fill"></i> สไตล์คาเฟ่</h5>
             <div class="mb-3 form-check-group d-flex flex-wrap">
               @foreach(['มินิมอล','วินเทจ','โมเดิร์น','อินดัสเทรียล','ธรรมชาติ/สวน','โคซี่/อบอุ่น','อาร์ต/แกลเลอรี่','ลอฟท์','ญี่ปุ่น','ยุโรป'] as $style)
                 @php $id='style_'.\Illuminate\Support\Str::slug($style); @endphp
-                <div class="form-check">
+                <div class="form-check me-2 mb-2">
                   <input type="checkbox" id="{{ $id }}" name="cafe_styles[]" value="{{ $style }}" class="form-check-input" {{ in_array($style, old('cafe_styles', $cafe->cafe_styles ?? []))?'checked':'' }}>
                   <label for="{{ $id }}" class="form-check-label">{{ $style }}</label>
                 </div>
@@ -220,7 +242,7 @@
           </div>
 
           <div class="form-section">
-            <h5 class="section-header"><i class="bi bi-person-lines-fill"></i>ข้อมูลติดต่อ</h5>
+            <h5 class="section-header text-primary"><i class="bi bi-person-lines-fill"></i> ข้อมูลติดต่อ</h5>
 
             <div class="mb-3">
               <label for="phone" class="form-label">เบอร์ติดต่อ</label>
@@ -249,39 +271,42 @@
               @error('website')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
             </div>
 
+            <!-- ===== Social Media (หัวข้อสไตล์รูปแนบ) ===== -->
             <hr class="my-3">
-            <label class="form-label fw-bold">โซเชียลมีเดีย</label>
-
-            <div class="mb-2">
-              <div class="input-group">
-                <span class="input-group-text"><i class="fab fa-facebook-f"></i></span>
-                <input type="text" name="facebook_page" class="form-control @error('facebook_page') is-invalid @enderror" placeholder="ลิงก์ Facebook Page" value="{{ old('facebook_page', $cafe->facebook_page ?? '') }}">
+            <div class="head-label"><span class="chip"></span><span>Social Media</span></div>
+            <div class="section-block">
+              <div class="mb-2">
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fab fa-facebook-f"></i></span>
+                  <input type="text" name="facebook_page" class="form-control @error('facebook_page') is-invalid @enderror" placeholder="ลิงก์ Facebook Page" value="{{ old('facebook_page', $cafe->facebook_page ?? '') }}">
+                </div>
+                @error('facebook_page')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
               </div>
-              @error('facebook_page')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-            </div>
 
-            <div class="mb-2">
-              <div class="input-group">
-                <span class="input-group-text"><i class="fab fa-instagram"></i></span>
-                <input type="text" name="instagram_page" class="form-control @error('instagram_page') is-invalid @enderror" placeholder="ชื่อผู้ใช้ Instagram" value="{{ old('instagram_page', $cafe->instagram_page ?? '') }}">
+              <div class="mb-2">
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fab fa-instagram"></i></span>
+                  <input type="text" name="instagram_page" class="form-control @error('instagram_page') is-invalid @enderror" placeholder="ชื่อผู้ใช้ Instagram" value="{{ old('instagram_page', $cafe->instagram_page ?? '') }}">
+                </div>
+                @error('instagram_page')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
               </div>
-              @error('instagram_page')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-            </div>
 
-            <div>
-              <div class="input-group">
-                <span class="input-group-text"><i class="fab fa-line"></i></span>
-                <input type="text" name="line_id" class="form-control @error('line_id') is-invalid @enderror" placeholder="Line ID หรือ @บัญชี" value="{{ old('line_id', $cafe->line_id ?? '') }}">
+              <div>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fab fa-line"></i></span>
+                  <input type="text" name="line_id" class="form-control @error('line_id') is-invalid @enderror" placeholder="Line ID หรือ @บัญชี" value="{{ old('line_id', $cafe->line_id ?? '') }}">
+                </div>
+                @error('line_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
               </div>
-              @error('line_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
             </div>
+            <!-- ===== /Social Media ===== -->
           </div>
         </div>
 
         <!-- ขวา -->
         <div class="col-lg-6">
           <div class="form-section">
-            <h5 class="section-header"><i class="bi bi-geo-alt-fill"></i>ที่ตั้งและแผนที่</h5>
+            <h5 class="section-header text-primary"><i class="bi bi-geo-alt-fill"></i> ที่ตั้งและแผนที่</h5>
 
             <div class="mb-3">
               <label for="place_name" class="form-label">ชื่อสถานที่ <span class="text-danger">*</span></label>
@@ -332,7 +357,7 @@
           </div>
 
           <div class="form-section">
-            <h5 class="section-header"><i class="bi bi-clock-history"></i>เวลาทำการ</h5>
+            <h5 class="section-header text-primary"><i class="bi bi-clock-history"></i> เวลาทำการ</h5>
             <div class="row g-2">
               <div class="col-md-6">
                 <label for="open_day" class="form-label">วันเปิด</label>
@@ -379,35 +404,42 @@
           </div>
 
           <div class="form-section">
-            <h5 class="section-header"><i class="bi bi-stars"></i>บริการและสิ่งอำนวยความสะดวก</h5>
+            <h5 class="section-header text-primary"><i class="bi bi-stars"></i> บริการและสิ่งอำนวยความสะดวก</h5>
 
-            <label class="form-label fw-bold">วิธีชำระเงิน</label>
-            <div class="mb-2 form-check-group d-flex flex-wrap">
+            <!-- ===== วิธีชำระเงิน (หัวข้อสไตล์รูปแนบ) ===== -->
+            <div class="head-label"><span class="chip"></span><span>วิธีชำระเงิน</span></div>
+            <div class="section-block mb-2 form-check-group d-flex flex-wrap">
               @foreach(['เงินสด','บัตรเครดิต','บัตรเดบิต','จ่ายผ่านมือถือ','ไม่ระบุ'] as $payment)
                 @php $id='pay_'.\Illuminate\Support\Str::slug($payment); @endphp
-                <div class="form-check">
+                <div class="form-check me-2 mb-2">
                   <input type="checkbox" id="{{ $id }}" name="payment_methods[]" value="{{ $payment }}" class="form-check-input" {{ in_array($payment, old('payment_methods', $cafe->payment_methods ?? []))?'checked':'' }}>
                   <label for="{{ $id }}" class="form-check-label">{{ $payment }}</label>
                 </div>
               @endforeach
             </div>
 
-            <label class="form-label fw-bold mt-2">สิ่งอำนวยความสะดวก</label>
-            <div class="mb-2 form-check-group d-flex flex-wrap">
+            <!-- ===== สิ่งอำนวยความสะดวก ===== -->
+            <div class="head-label" style="margin-top:14px;">
+              <span class="chip"></span><span>สิ่งอำนวยความสะดวก</span>
+            </div>
+            <div class="section-block mb-2 form-check-group d-flex flex-wrap">
               @foreach(['ห้องประชุม','โซนเด็กเล่น','ที่จอดรถ','เครื่องปรับอากาศ','Wi-Fi'] as $facility)
                 @php $id='facility_'.\Illuminate\Support\Str::slug($facility); @endphp
-                <div class="form-check">
+                <div class="form-check me-2 mb-2">
                   <input type="checkbox" id="{{ $id }}" name="facilities[]" value="{{ $facility }}" class="form-check-input" {{ in_array($facility, old('facilities', $cafe->facilities ?? []))?'checked':'' }}>
                   <label for="{{ $id }}" class="form-check-label">{{ $facility }}</label>
                 </div>
               @endforeach
             </div>
 
-            <label class="form-label fw-bold mt-2">บริการเพิ่มเติม</label>
-            <div class="form-check-group d-flex flex-wrap">
+            <!-- ===== บริการเพิ่มเติม ===== -->
+            <div class="head-label" style="margin-top:14px;">
+              <span class="chip"></span><span>บริการเพิ่มเติม</span>
+            </div>
+            <div class="section-block form-check-group d-flex flex-wrap">
               @foreach(['ส่งเดลิเวอรี่','รับจัดงาน','ซื้อกลับบ้าน','รับจองโต๊ะ'] as $service)
                 @php $id='service_'.\Illuminate\Support\Str::slug($service); @endphp
-                <div class="form-check">
+                <div class="form-check me-2 mb-2">
                   <input type="checkbox" id="{{ $id }}" name="other_services[]" value="{{ $service }}" class="form-check-input" {{ in_array($service, old('other_services', $cafe->other_services ?? []))?'checked':'' }}>
                   <label for="{{ $id }}" class="form-check-label">{{ $service }}</label>
                 </div>
@@ -437,16 +469,15 @@
 document.addEventListener('DOMContentLoaded', function () {
   // ---------- ค่าควบคุมการอัปโหลด ----------
   const MAX_FILES = 5;
-  const MAX_PER_FILE = 5 * 1024 * 1024;       // 5MB/ไฟล์ (ตรวจของเดิม)
-  const TARGET_PER_FILE = 1.5 * 1024 * 1024;  // บีบอัดให้เล็กกว่าประมาณนี้
-  const MAX_TOTAL = 20 * 1024 * 1024;         // รวมทั้งหมด ≤ 20MB หลังบีบอัด
-  const MAX_DIM = 1600;                        // ย่อลงให้ด้านยาวสุดไม่เกิน 1600px
+  const MAX_PER_FILE = 5 * 1024 * 1024;       // 5MB/ไฟล์
+  const TARGET_PER_FILE = 1.5 * 1024 * 1024;  // เป้าหมายต่อไฟล์
+  const MAX_TOTAL = 20 * 1024 * 1024;         // รวมทั้งหมด ≤ 20MB
+  const MAX_DIM = 1600;                        // ด้านยาวสุดไม่เกิน 1600px
 
   const imageInput = document.getElementById('images');
   const cafeForm = document.getElementById('cafeForm');
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
-  // ------------ ตรวจจำนวนไฟล์ทันทีที่เลือก ------------
   imageInput?.addEventListener('change', () => {
     if (imageInput.files.length > MAX_FILES) {
       alert('เลือกได้สูงสุด 5 รูปภาพเท่านั้น');
@@ -454,7 +485,7 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
     for (const f of imageInput.files) {
-      if (f.size > 50 * 1024 * 1024) { // กันเผื่อรูปใหญ่มากผิดปกติ
+      if (f.size > 50 * 1024 * 1024) {
         alert(`ไฟล์ ${f.name} ใหญ่เกิน 50MB ไม่รองรับ`);
         imageInput.value = '';
         return;
@@ -462,32 +493,24 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  // ------------- ดัก submit เพื่อบีบอัดรูป + ส่งด้วย fetch -------------
   cafeForm.addEventListener('submit', async function(e) {
-    // เงื่อนไขอื่น
     if (!duplicateCoordsWarning.classList.contains('d-none') ||
         !outOfBoundsWarning.classList.contains('d-none')) {
       e.preventDefault(); alert('โปรดแก้ไขพิกัดก่อนบันทึก'); return;
     }
-
-    // ถ้าไม่มีไฟล์ ก็ปล่อยให้ submit ปกติ
     if (!imageInput || imageInput.files.length === 0) return;
 
     e.preventDefault();
 
-    // 1) ตรวจจำนวนไฟล์
     if (imageInput.files.length > MAX_FILES) {
-      alert('กรุณาอัปโหลดรูปภาพไม่เกิน 5 รูป');
-      return;
+      alert('กรุณาอัปโหลดรูปภาพไม่เกิน 5 รูป'); return;
     }
 
-    // 2) บีบอัดไฟล์ทั้งหมด
     const files = Array.from(imageInput.files);
     const compressed = [];
     let totalAfter = 0;
 
     for (const file of files) {
-      // ถ้าไฟล์เดิมไม่ใหญ่มาก จะบีบให้สั้น (เพื่อให้แน่ใจหลุด 413)
       const out = await compressImage(file, {maxDim: MAX_DIM, targetBytes: TARGET_PER_FILE});
       compressed.push(out);
       totalAfter += out.blob.size;
@@ -503,7 +526,6 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
 
-    // 3) เตรียม FormData: ลบทุกรายการชื่อ images[] เดิม แล้วใส่ไฟล์ที่บีบอัดแทน
     const fd = new FormData(cafeForm);
     fd.delete('images[]');
     compressed.forEach((it, idx) => {
@@ -511,27 +533,15 @@ document.addEventListener('DOMContentLoaded', function () {
       fd.append('images[]', it.blob, safeName);
     });
 
-    // 4) ส่งด้วย fetch (method เป็น POST เสมอ, PUT ใช้ _method)
     const action = cafeForm.getAttribute('action');
-    const method = (cafeForm.getAttribute('method') || 'POST').toUpperCase(); // จะเป็น POST อยู่แล้ว
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังบันทึก...';
 
     try {
-      const res = await fetch(action, {
-        method: 'POST',
-        headers: { 'X-CSRF-TOKEN': csrf },
-        body: fd,
-        redirect: 'follow'
-      });
-      // ถ้าสำเร็จ Laravel มัก redirect -> ให้ตามไป
-      if (res.redirected) {
-        window.location.href = res.url;
-        return;
-      }
+      const res = await fetch(action, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf }, body: fd, redirect: 'follow' });
+      if (res.redirected) { window.location.href = res.url; return; }
       if (res.ok) {
-        // อาจเป็น JSON หรือ HTML; พยายามกลับไป dashboard
         try {
           const data = await res.json();
           if (data?.redirect) { window.location.href = data.redirect; return; }
@@ -551,18 +561,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  // ---------- ฟังก์ชันบีบอัดรูป ----------
   async function compressImage(file, {maxDim=1600, targetBytes=1.5*1024*1024} = {}) {
     const bitmap = await readImageBitmap(file);
     const {width, height} = fitContain(bitmap.width, bitmap.height, maxDim);
-
-    // วาดลง canvas
     const canvas = document.createElement('canvas');
     canvas.width = width; canvas.height = height;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(bitmap, 0, 0, width, height);
 
-    // ลองลดคุณภาพหลายสเต็ปจนได้ขนาดที่ต้องการ
     let quality = 0.9;
     let blob = await canvasToBlob(canvas, 'image/jpeg', quality);
     const steps = [0.85, 0.8, 0.75, 0.7, 0.65, 0.6];
@@ -579,28 +585,23 @@ document.addEventListener('DOMContentLoaded', function () {
     const r = Math.min(max / w, max / h);
     return {width: Math.round(w*r), height: Math.round(h*r)};
   }
-
   function canvasToBlob(canvas, type, quality){
     return new Promise(resolve => canvas.toBlob(b => resolve(b), type, quality));
   }
-
   async function readImageBitmap(file){
     if ('createImageBitmap' in window) {
       return await createImageBitmap(file);
     }
-    // fallback
     const dataUrl = await fileToDataURL(file);
     const img = new Image();
     img.decoding = 'async';
     img.src = dataUrl;
     await img.decode();
-    // วาดใส่ canvas เพื่อได้ ImageBitmap-like
     const c = document.createElement('canvas');
     c.width = img.naturalWidth; c.height = img.naturalHeight;
     c.getContext('2d').drawImage(img, 0, 0);
     return { width: c.width, height: c.height, drawImage: (ctx, ...args)=>ctx.drawImage(img, ...args) };
   }
-
   function fileToDataURL(file){
     return new Promise((resolve,reject)=>{
       const fr = new FileReader();
