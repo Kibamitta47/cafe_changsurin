@@ -43,7 +43,7 @@
     }
   </script>
 </head>
-<body class="bg-slate-50 text-slate-800">
+<body class="bg-slate-50 text-slate-800 antialiased">
 
   <!-- Progress -->
   <div id="progressBar" class="progress"></div>
@@ -57,7 +57,6 @@
     <div class="absolute inset-0 bg-gradient-to-b from-brand-50/80 to-transparent pointer-events-none"></div>
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
       <nav class="text-sm text-slate-500 mb-4 flex items-center gap-2">
-        <a href="{{ route('news.index') }}" class="hover:text-brand-600"><i class="fa-solid fa-house"></i> ข่าวทั้งหมด</a>
         <span class="opacity-60">/</span>
         <span class="line-clamp-1">{{ $newsItem->title }}</span>
       </nav>
@@ -103,7 +102,7 @@
 
       <!-- Content -->
       <main class="lg:col-span-2">
-        <article class="bg-white rounded-2xl shadow-soft border border-slate-200 overflow-hidden">
+        <article class="bg-white rounded-2xl shadow-soft border border-slate-200 overflow-hidden divide-y divide-slate-100">
 
           {{-- รูปภาพหลัก --}}
           @if(!empty($newsItem->images))
@@ -111,7 +110,7 @@
               <img
                 src="{{ asset('storage/' . $newsItem->images[0]) }}"
                 alt="{{ $newsItem->title }}"
-                class="w-full max-h-[520px] object-cover">
+                class="w-full max-h-[520px] object-cover select-none">
               <div class="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/30 to-transparent"></div>
               <div class="absolute top-4 right-4">
                 <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur text-slate-700 shadow">
@@ -123,30 +122,9 @@
           @endif
 
           <div class="p-6 sm:p-8">
-            <div class="flex flex-wrap items-center gap-2 mb-6">
-              <a href="{{ route('news.index') }}"
-                 class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700">
-                <i class="fa-solid fa-arrow-left"></i> ย้อนกลับ
-              </a>
-            </div>
-
-            <div id="articleContent" class="prose prose-slate max-w-none reading text-[1.05rem] whitespace-pre-wrap">
+            <div id="articleContent" class="prose prose-slate max-w-none reading text-[1.06rem] leading-relaxed whitespace-pre-wrap">
               {{ $newsItem->content }}
             </div>
-
-            {{-- ลิงก์เพิ่มเติม --}}
-            @if($newsItem->link_url)
-              <div class="mt-8 pt-6 border-t border-slate-200">
-                <a
-                  href="{{ $newsItem->link_url }}"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="inline-flex items-center gap-2 text-brand-600 hover:text-brand-600/90 hover:underline font-semibold">
-                  <i class="fas fa-arrow-up-right-from-square"></i>
-                  อ่านข้อมูลเพิ่มเติมที่ลิงก์ต้นฉบับ
-                </a>
-              </div>
-            @endif
 
             {{-- แกลเลอรี --}}
             @if(isset($newsItem->images) && count($newsItem->images) > 1)
@@ -160,12 +138,12 @@
                     @php $src = asset('storage/' . $imageFile); @endphp
                     <button
                       type="button"
-                      class="group aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+                      class="group aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-50 ring-1 ring-transparent hover:ring-brand-200 transition"
                       data-image="{{ $src }}">
                       <img
                         src="{{ $src }}"
                         alt="{{ $newsItem->title }}"
-                        class="w-full h-full object-cover group-hover:scale-105 transition">
+                        class="w-full h-full object-cover group-hover:scale-105 transition duration-300 ease-out">
                     </button>
                   @endforeach
                 </div>
@@ -211,22 +189,6 @@
           @else
             <p class="text-sm text-slate-500">ไม่มีข่าวสารแนะนำในขณะนี้</p>
           @endif
-        </div>
-
-        <div class="bg-gradient-to-br from-white to-brand-50 border border-slate-200 p-6 rounded-2xl shadow-card">
-          <div class="flex items-start gap-4">
-            <div class="w-12 h-12 rounded-full bg-brand-500/10 grid place-items-center text-brand-600">
-              <i class="fa-regular fa-newspaper"></i>
-            </div>
-            <div class="min-w-0">
-              <h3 class="font-semibold text-slate-900">ติดตามข่าวใหม่</h3>
-              <p class="text-sm text-slate-600">อัปเดตข่าวสารคาเฟ่และชุมชนในสุรินทร์แบบรวดเร็ว</p>
-              <a href="{{ route('news.index') }}"
-                 class="mt-3 inline-flex items-center gap-2 text-brand-600 font-semibold hover:underline">
-                ดูข่าวทั้งหมด <i class="fa-solid fa-chevron-right text-xs"></i>
-              </a>
-            </div>
-          </div>
         </div>
       </aside>
 
