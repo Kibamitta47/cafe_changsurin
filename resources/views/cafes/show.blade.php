@@ -377,10 +377,6 @@
                class="px-4 py-3 rounded-lg bg-emerald-600 text-white text-center font-semibold hover:bg-emerald-700 {{ empty($cafe->phone)?'pointer-events-none opacity-50':'' }}">
               <i class="fa-solid fa-phone"></i> โทร
             </a>
-            <button class="px-4 py-3 rounded-lg border hover:bg-slate-50"
-                    @click="navigator.share ? navigator.share({title:'{{ addslashes($cafe->cafe_name) }}', text:'ชวนไปคาเฟ่นี้กันไหม?', url: location.href}) : (async()=>{try{await navigator.clipboard.writeText(location.href)}finally{copied=true; setTimeout(()=>copied=false,1500)}})()">
-              <i class="fa-solid fa-share-nodes"></i> แชร์
-            </button>
             @auth
             @endauth
           </div>
