@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Hash;
 
 // เพิ่มสำหรับบีบอัด/ย่อภาพ
 use Intervention\Image\ImageManager;
-use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\Drivers\Imagick\Driver;
 
 class AdminAuthController extends Controller
 {
