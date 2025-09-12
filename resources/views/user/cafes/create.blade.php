@@ -14,129 +14,35 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
  <style>
-  /* ===== Theme (โทนฟ้าอ่อน สะอาด เงานุ่ม) ===== */
-  :root{
-    --brand:#4A90E2;          /* ฟ้าหลัก */
-    --brand-600:#357ABD;      /* ฟ้าเข้ม */
-    --brand-50:#F1F6FF;       /* ฟ้าอ่อนหัวข้อ/พื้น */
-    --ink:#2c3e50;            /* ตัวอักษรหลัก */
-    --muted:#6b7280;          /* ตัวอักษรรอง */
-    --line:#e6edf5;           /* เส้นขอบ */
-    --bg:#f7faff;             /* พื้นหลังทั้งหน้า */
-    --radius:16px;
-    --shadow:0 10px 24px rgba(35,78,135,.06);
-    --shadow-sm:0 6px 14px rgba(35,78,135,.05);
-    --focus:0 0 0 .25rem rgba(74,144,226,.25);
-  }
-
-  /* พื้นหลังรวม + ตัวอักษร */
-  body{font-family:'Sarabun','Inter',system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);padding:20px 0}
-  body.sidebar-open{padding-left:250px}
-
-  /* กล่องหน้าฟอร์ม */
-  .container.mt-5.mb-5,
-  .container{
-    background:#fff;border:1px solid var(--line);border-radius:var(--radius);
-    box-shadow:var(--shadow);padding:34px 28px;max-width:1200px
-  }
-
-  /* หัวเรื่องใหญ่ */
-  h2{
-    display:flex;align-items:center;gap:10px;color:var(--brand-600);
-    border-bottom:2px solid var(--line);padding-bottom:14px;margin-bottom:24px;font-weight:800
-  }
-  h2 i{
-    width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
-    background:var(--brand-50);color:var(--brand)
-  }
-
-  /* หัวข้อย่อยแต่ละส่วน (ที่ยังใช้ h5) */
-  h5.text-primary{
-    color:var(--brand-600)!important;font-weight:800;margin:18px 0 10px
-  }
-
-  /* ป้ายกำกับ + คอนโทรล */
-  .form-label{font-weight:600;color:var(--muted);margin-bottom:.4rem}
-  .form-control,.form-select,.input-group-text{
-    border-radius:12px;border-color:var(--line);padding:.72rem .95rem
-  }
-  .form-control:focus,.form-select:focus{
-    border-color:var(--brand);box-shadow:var(--focus)
-  }
-  .input-group-text{background:#f9fbff;color:var(--muted)}
-
-  /* ปุ่มฟอร์มหลัก */
-  .btn-primary{background:var(--brand);border-color:var(--brand);font-weight:700;padding:10px 24px;border-radius:10px}
-  .btn-primary:hover{background:var(--brand-600);border-color:var(--brand-600);transform:translateY(-1px)}
-  .btn-secondary{font-weight:700;border-radius:10px}
-  .btn-secondary:hover{transform:translateY(-1px)}
-
-  /* แถบปุ่มด้านล่างให้ดูเป็นบล็อก */
-  .d-flex.justify-content-end.gap-2.mt-3{
-    padding-top:18px;border-top:1px solid var(--line);margin-top:22px!important
-  }
-
-  /* ปุ่มเลือกช่วงราคา → สไตล์แคปซูล */
-  .btn-check + .btn{border-radius:999px;padding:.46rem .85rem;font-weight:700}
-  .btn-check:checked + .btn{outline:2px solid var(--brand);outline-offset:1px}
-  .btn-outline-primary{background:#ecf3ff;color:#1d5ac2;border-color:#d6e6ff}
-  .btn-outline-success{background:#eafaf2;color:#0f7b5c;border-color:#cfeee0}
-  .btn-outline-warning{background:#fff6e6;color:#9a6400;border-color:#ffe2b8}
-  .btn-outline-danger{background:#ffedf3;color:#b21e5f;border-color:#ffd5e4}
-  .btn-outline-dark{background:#eef2f7;color:#2f3b4a;border-color:#e2e8f0}
-
-  /* กลุ่ม checkbox แบบชิป */
-  .form-check-inline{
-    background:#f9fbff;border:1px solid var(--line);border-radius:999px;
-    padding:.38rem .72rem;margin-right:.5rem!important
-  }
-  .form-check-input{margin-top:0}
-  .form-check-input:checked{background-color:var(--brand);border-color:var(--brand)}
-  .form-check-label{font-weight:700;color:#41536e}
-
-  /* กล่องแผนที่ */
-  #map{height:400px;margin-bottom:1.2rem;border-radius:14px;border:1px solid var(--line)}
-  .leaflet-container{background:#e9f2ff;border-radius:14px}
-
-  /* ปุ่มบนแผนที่ */
-  #locateBtn,#resetBtn{border-radius:999px}
-
-  /* แกลเลอรี่รูป */
-  .img-thumbnail{width:100px;height:100px;object-fit:cover;border-radius:12px;border:1px solid #eef3fb}
-
-  /* แจ้งเตือน */
-  .alert{border-radius:12px}
-
-  /* ===== Head Label (ตามภาพแนบ) ===== */
-  .head-label{
-    display:flex; align-items:center; gap:.6rem;
-    font-weight:800; letter-spacing:.2px;
-    color:#1f3b65;
-    margin:18px 0 10px;
-    font-size:1.05rem;
-  }
-  .head-label .chip{
-    width:10px; height:10px; border-radius:2px;
-    background:#4A90E2;
-    box-shadow:0 1px 0 rgba(0,0,0,.06);
-  }
-  .head-label small{font-weight:600;color:#6b7b97}
-
-  .section-block{
-    padding:10px 0 2px;
-    border-top:1px solid var(--line);
-    margin-top:8px;
-  }
-
-  /* RWD */
-  @media (max-width:768px){
-    body.sidebar-open{padding-left:0}
-    .container{padding:20px;margin:20px 0!important}
-    h2{font-size:1.35rem}
-    .btn-check + .btn{display:block;width:100%;margin-bottom:.45rem!important}
-    #map{height:300px}
-  }
-</style>
+    .form-check-label { font-weight: 600; color: #333; }
+    :root { --primary-blue:#3b82f6; --dark-blue:#2563eb; --red-error:#dc2626; --red-dark:#b91c1c; --gray-light:#e5e7eb; --gray-text:#333; --white:#fff; --shadow-light:rgba(0,0,0,.08); --transition-ease:all .3s; }
+    body { font-family:'Sarabun','Inter',sans-serif; background:#f0f2f5; color:#333; padding:20px 0; transition:padding-left .3s; }
+    body.sidebar-open { padding-left:250px; }
+    .container.mt-5.mb-5 { background:#fff; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,.05); padding:40px; }
+    h2 { color:var(--dark-blue); border-bottom:2px solid var(--gray-light); padding-bottom:15px; margin-bottom:30px; font-weight:700; }
+    .form-label { font-weight:600; color:#555; margin-bottom:8px; }
+    .form-control,.form-select,.input-group-text { border-radius:8px; border-color:#ced4da; }
+    .form-control:focus,.form-select:focus { box-shadow:0 0 0 .25rem rgba(59,130,246,.25); border-color:var(--primary-blue); }
+    .form-check-inline { margin-right:1.5rem; margin-bottom:.5rem; }
+    .btn-check + .btn { border-radius:8px; padding:8px 15px; font-size:.95rem; }
+    #map { height:400px; margin-bottom:1.5rem; border-radius:8px; border:1px solid #dee2e6; }
+    .leaflet-container { background:#e9ecef; border-radius:8px; }
+    .d-flex.justify-content-end.gap-2.mt-3 { padding-top:20px; border-top:1px solid var(--gray-light); margin-top:30px!important; }
+    .btn-primary { background:var(--primary-blue); border-color:var(--primary-blue); font-weight:600; padding:10px 25px; border-radius:8px; transition:background-color .2s, transform .2s; }
+    .btn-primary:hover { background:var(--dark-blue); border-color:var(--dark-blue); transform:translateY(-1px); }
+    .btn-secondary { background:#6c757d; border-color:#6c757d; font-weight:600; padding:10px 25px; border-radius:8px; transition:background-color .2s, transform .2s; }
+    .btn-secondary:hover { background:#5c636a; border-color:#5c636a; transform:translateY(-1px); }
+    .form-text { font-size:.875em; color:#6c757d; margin-top:5px; }
+    @media (max-width:768px){
+      body.sidebar-open{padding-left:0}
+      .container.mt-5.mb-5{padding:20px; margin:20px 0!important}
+      h2{font-size:1.5rem; margin-bottom:20px}
+      .btn-check + .btn{display:block; width:100%; margin-bottom:.5rem!important}
+      .d-flex.justify-content-end.gap-2.mt-3{flex-direction:column; align-items:stretch}
+      .d-flex.justify-content-end.gap-2.mt-3 .btn{width:100%}
+      #map{height:300px}
+    }
+  </style>
 
 </head>
 <body>
