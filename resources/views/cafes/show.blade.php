@@ -381,15 +381,7 @@
                     @click="navigator.share ? navigator.share({title:'{{ addslashes($cafe->cafe_name) }}', text:'ชวนไปคาเฟ่นี้กันไหม?', url: location.href}) : (async()=>{try{await navigator.clipboard.writeText(location.href)}finally{copied=true; setTimeout(()=>copied=false,1500)}})()">
               <i class="fa-solid fa-share-nodes"></i> แชร์
             </button>
-            <a href="{{ !empty($cafe->website) ? $cafe->website : '#' }}" target="_blank" rel="noopener"
-               class="px-4 py-3 rounded-lg bg-cyan-600 text-white text-center font-semibold hover:bg-cyan-700 {{ empty($cafe->website)?'pointer-events-none opacity-50':'' }}">
-              <i class="fa-solid fa-globe"></i> เว็บไซต์
-            </a>
             @auth
-            <a href="{{ route('user.reviews.create', ['cafe_id' => $cafe->cafe_id ?? $cafe->id]) }}"
-               class="px-4 py-3 rounded-lg bg-amber-500 text-white text-center font-semibold hover:bg-amber-600">
-              <i class="fa-solid fa-pen-to-square"></i> รีวิว
-            </a>
             @endauth
           </div>
         </section>
