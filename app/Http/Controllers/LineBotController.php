@@ -39,7 +39,7 @@ class LineBotController extends Controller
             if ($event['type'] === 'message' && $event['message']['type'] === 'text') {
                 $text = trim($event['message']['text']);
 
-                // สลับ Rich Menu
+                // Rich Menu
                 if (in_array($text, ['เมนู','menu','เริ่มต้น'])) {
                     $this->setUserRichMenu($userId, $this->richMain);
                     $this->replyText($replyToken, "เปิดเมนูหลักแล้วครับ 😊");
@@ -51,13 +51,13 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ===== ปุ่ม FAQ → ดึงจาก DB =====
+                // FAQ Map
                 $map = [
                     'FreeWiFi'               => 'wifi',
                     'เปิดอยู่ตอนนี้'        => 'open_now',
                     'เปิดอยู่ตอนนี่'        => 'open_now',
                     'คาเฟ่ราคาย่อมเยา'      => 'cheap',
-                    'คาเฟ่ราคาย่อมเยส'      => 'cheap', // รองรับสะกดพลาด
+                    'คาเฟ่ราคาย่อมเยส'      => 'cheap',
                     'เปิดใหม่'               => 'new',
                     'ที่จอดรถ'               => 'parking',
                     'มีห้องประชุมทำงานได้'   => 'meeting',
@@ -65,12 +65,9 @@ class LineBotController extends Controller
 
                 if (isset($map[$text])) {
                     $cafes = $this->findCafesByFilter($map[$text]);
-                    Log::info("FAQ {$map[$text]} found", ['count' => count($cafes)]);
-
-                    // สร้างบับเบิลผลลัพธ์
                     $bubbles = [];
+
                     if (!empty($cafes)) {
-                        // จำกัด 9 ร้านแรก
                         $cafes = array_slice($cafes, 0, 9);
                         foreach ($cafes as $c) {
                             $note = match ($map[$text]) {
@@ -92,7 +89,6 @@ class LineBotController extends Controller
                             );
                         }
                     } else {
-                        // ไม่พบ -> ใส่บับเบิลแจ้ง+ลิงก์เว็บไซต์
                         $bubbles[] = $this->bubbleInfo(
                             "ยังไม่พบร้านตามเงื่อนไข",
                             "ลองค้นหาเพิ่มเติมบนเว็บไซต์",
@@ -100,7 +96,6 @@ class LineBotController extends Controller
                         );
                     }
 
-                    // บับเบิล “ดูเพิ่มเติมบนเว็บไซต์”
                     $bubbles[] = $this->bubbleMore(
                         'ดูเพิ่มเติมบนเว็บไซต์',
                         'เปิดเว็บ น้องช้างสะเร็น',
@@ -113,94 +108,9 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ค้นหาคาเฟ่ใกล้ฉัน
-                if ($text === 'ค้นหาคาเฟ่ใกล้ฉัน') {
-                    $this->replyMessage($replyToken, [
-                        "type" => "text",
-                        "text" => "กรุณาส่งพิกัดของคุณเพื่อค้นหาคาเฟ่ใกล้คุณ 🐘☕",
-                        "quickReply" => ["items" => [[
-                            "type" => "action",
-                            "action" => ["type" => "location","label" => "📍 แชร์ตำแหน่งของฉัน"]
-                        ]]]
-                    ]);
-                    continue;
-                }
-
-                // แนะนำคาเฟ่ในเมืองสุรินทร์
-                if (in_array($text, ['แนะนำคาเฟ่เมืองสุรินทร์','คาเฟ่เมืองสุรินทร์','recommend'])) {
-                    $cafes = DB::select("
-                        SELECT cafe_id,cafe_name,address,lat,lng,phone
-                        FROM cafes
-                        WHERE LOWER(COALESCE(status,''))='approved' AND address COLLATE utf8mb4_general_ci LIKE '%สุรินทร์%'
-                        ORDER BY created_at DESC
-                        LIMIT 9
-                    ");
-                    $bubbles = [];
-                    if (!empty($cafes)) {
-                        foreach ($cafes as $c) {
-                            $bubbles[] = $this->bubbleBasic(
-                                $c->cafe_name, $c->address, "⭐ แนะนำในเมืองสุรินทร์",
-                                $c->phone, $c->lat, $c->lng
-                            );
-                        }
-                    } else {
-                        $bubbles[] = $this->bubbleInfo(
-                            "ยังไม่มีข้อมูลคาเฟ่ในเมืองสุรินทร์",
-                            "ดูข้อมูลล่าสุดบนเว็บไซต์",
-                            "https://nongchangsaren.com/"
-                        );
-                    }
-                    // ปุ่มไปเว็บ
-                    $bubbles[] = $this->bubbleMore('ดูเพิ่มเติมบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
-                    $this->replyFlex($replyToken, "แนะนำคาเฟ่เมืองสุรินทร์", [
-                        "type" => "carousel","contents" => $bubbles
-                    ]);
-                    continue;
-                }
-
-                // default
+                // Default
                 $this->replyText($replyToken, "พิมพ์ “เมนู” เพื่อเปิดเมนูหลัก หรือ “FAQ” เพื่อดูเมนูคำตอบครับ");
                 continue;
-            }
-
-            // ---------- LOCATION ----------
-            if ($event['type'] === 'message' && $event['message']['type'] === 'location') {
-                $lat = $event['message']['latitude'];
-                $lng = $event['message']['longitude'];
-
-                $cafes = DB::select("
-                    SELECT cafes.cafe_id, cafes.cafe_name, cafes.address, cafes.lat, cafes.lng, cafes.phone,
-                           (6371 * acos(
-                               cos(radians(?)) * cos(radians(cafes.lat)) *
-                               cos(radians(cafes.lng) - radians(?)) +
-                               sin(radians(?)) * sin(radians(cafes.lat))
-                           )) AS distance
-                    FROM cafes
-                    WHERE LOWER(COALESCE(status,''))='approved'
-                    HAVING distance < 5
-                    ORDER BY distance ASC
-                    LIMIT 5
-                ", [$lat, $lng, $lat]);
-
-                $bubbles = [];
-                if (!empty($cafes)) {
-                    foreach ($cafes as $c) {
-                        $bubbles[] = $this->bubbleBasic(
-                            $c->cafe_name, $c->address, "📍 ห่าง " . round($c->distance, 2) . " กม.",
-                            $c->phone, $c->lat, $c->lng
-                        );
-                    }
-                } else {
-                    $bubbles[] = $this->bubbleInfo(
-                        "ไม่พบคาเฟ่ในรัศมี 5 กม.",
-                        "ดูแผนที่ร้านทั้งหมดบนเว็บไซต์",
-                        "https://nongchangsaren.com/"
-                    );
-                }
-                $bubbles[] = $this->bubbleMore('ดูเพิ่มเติมบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
-                $this->replyFlex($replyToken, "คาเฟ่ใกล้คุณ", [
-                    "type" => "carousel","contents" => $bubbles
-                ]);
             }
         }
 
@@ -211,146 +121,84 @@ class LineBotController extends Controller
     private function setUserRichMenu(?string $userId, ?string $richMenuId): void
     {
         if (!$userId || !$richMenuId) return;
-
         Http::withHeaders([
             'Authorization' => 'Bearer '.$this->token,
         ])->post("https://api.line.me/v2/bot/user/{$userId}/richmenu/{$richMenuId}");
     }
 
-    // ---------- FAQ Filters (ครอบคลุม JSON + ไทย) ----------
+    // ---------- FAQ Filters ----------
     private function findCafesByFilter(string $type): array
     {
         switch ($type) {
-            // Wi-Fi
             case 'wifi':
                 return DB::select("
                     SELECT cafe_id,cafe_name,address,lat,lng,phone
                     FROM cafes
-                    WHERE LOWER(COALESCE(status,''))='approved' AND (
-                        (JSON_VALID(facilities) AND (
-                            JSON_SEARCH(CAST(facilities AS JSON),'one','%Wi-Fi%') IS NOT NULL OR
-                            JSON_SEARCH(CAST(facilities AS JSON),'one','%WiFi%')  IS NOT NULL OR
-                            JSON_SEARCH(CAST(facilities AS JSON),'one','%wifi%')  IS NOT NULL OR
-                            JSON_SEARCH(CAST(facilities AS JSON),'one','%ไวไฟ%')  IS NOT NULL
-                        )) OR
-                        (JSON_VALID(other_services) AND (
-                            JSON_SEARCH(CAST(other_services AS JSON),'one','%Wi-Fi%') IS NOT NULL OR
-                            JSON_SEARCH(CAST(other_services AS JSON),'one','%WiFi%')  IS NOT NULL OR
-                            JSON_SEARCH(CAST(other_services AS JSON),'one','%wifi%')  IS NOT NULL OR
-                            JSON_SEARCH(CAST(other_services AS JSON),'one','%ไวไฟ%')  IS NOT NULL
-                        )) OR
-                        facilities     COLLATE utf8mb4_general_ci LIKE '%wifi%' OR
-                        facilities     COLLATE utf8mb4_general_ci LIKE '%Wi-Fi%' OR
-                        facilities     COLLATE utf8mb4_general_ci LIKE '%ไวไฟ%' OR
-                        other_services COLLATE utf8mb4_general_ci LIKE '%wifi%' OR
-                        other_services COLLATE utf8mb4_general_ci LIKE '%Wi-Fi%' OR
-                        other_services COLLATE utf8mb4_general_ci LIKE '%ไวไฟ%'
-                    )
+                    WHERE LOWER(COALESCE(status,''))='approved'
+                      AND (facilities LIKE '%wifi%' COLLATE utf8mb4_general_ci
+                           OR other_services LIKE '%wifi%' COLLATE utf8mb4_general_ci
+                           OR facilities LIKE '%ไวไฟ%' COLLATE utf8mb4_general_ci
+                           OR other_services LIKE '%ไวไฟ%' COLLATE utf8mb4_general_ci)
                     ORDER BY updated_at DESC, cafe_id DESC
                     LIMIT 20
                 ");
 
-            // เปิดอยู่ตอนนี้ (รองรับข้ามเที่ยงคืน)
             case 'open_now':
                 $now = Carbon::now('Asia/Bangkok')->format('H:i:s');
                 return DB::select("
                     SELECT cafe_id,cafe_name,address,lat,lng,phone
                     FROM cafes
                     WHERE LOWER(COALESCE(status,''))='approved'
-                      AND open_time  IS NOT NULL
+                      AND open_time IS NOT NULL
                       AND close_time IS NOT NULL
                       AND (
                             (close_time >= open_time AND ? BETWEEN open_time AND close_time)
                             OR
-                            (close_time <  open_time AND (? >= open_time OR ? <= close_time))
+                            (close_time < open_time AND (? >= open_time OR ? <= close_time))
                           )
                     ORDER BY cafe_id DESC
                     LIMIT 20
                 ", [$now, $now, $now]);
 
-            // ราคาย่อมเยา
             case 'cheap':
                 return DB::select("
-                    SELECT cafe_id,cafe_name,address,lat,lng,phone,price_range
+                    SELECT cafe_id,cafe_name,address,lat,lng,phone
                     FROM cafes
                     WHERE LOWER(COALESCE(status,''))='approved'
-                    ORDER BY
-                        CASE
-                            WHEN price_range REGEXP 'ย่อมเยา|ถูก|ประหยัด|cheap|low' THEN 1
-                            ELSE 9
-                        END ASC,
-                        CASE
-                            WHEN REPLACE(REPLACE(REPLACE(price_range,' ',''),',',''),'บาท','') LIKE '%ต่ำกว่า100%' THEN 2
-                            WHEN REPLACE(REPLACE(REPLACE(price_range,' ',''),',',''),'บาท','') LIKE '%<100%' THEN 2
-                            WHEN REPLACE(REPLACE(REPLACE(price_range,' ',''),',',''),'บาท','') LIKE '%101-250%' THEN 3
-                            WHEN price_range LIKE '%101 - 250%' THEN 3
-                            WHEN REPLACE(REPLACE(REPLACE(price_range,' ',''),',',''),'บาท','') LIKE '%251-500%' THEN 4
-                            WHEN price_range LIKE '%251 - 500%' THEN 4
-                            WHEN price_range LIKE '%501 - 1,000%' THEN 5
-                            WHEN REPLACE(REPLACE(REPLACE(price_range,' ',''),',',''),'บาท','') REGEXP '501[-–—]1000' THEN 5
-                            WHEN price_range LIKE '%มากกว่า 1,000%' THEN 6
-                            WHEN REPLACE(REPLACE(REPLACE(price_range,' ',''),',',''),'บาท','') LIKE '%>1000%' THEN 6
-                            ELSE 98
-                        END ASC,
-                        updated_at DESC,
-                        cafe_id DESC
+                    ORDER BY updated_at DESC, cafe_id DESC
                     LIMIT 20
                 ");
 
-            // เปิดใหม่: ยึด is_new_opening
             case 'new':
                 return DB::select("
                     SELECT cafe_id,cafe_name,address,lat,lng,phone
                     FROM cafes
                     WHERE LOWER(COALESCE(status,''))='approved'
                       AND CAST(COALESCE(is_new_opening,0) AS UNSIGNED) = 1
-                    ORDER BY updated_at DESC, created_at DESC, cafe_id DESC
-                    LIMIT 20
-                ");
-
-            // ที่จอดรถ
-            case 'parking':
-                return DB::select("
-                    SELECT cafe_id,cafe_name,address,lat,lng,phone
-                    FROM cafes
-                    WHERE LOWER(COALESCE(status,''))='approved' AND (
-                        (JSON_VALID(facilities) AND JSON_SEARCH(CAST(facilities AS JSON),'one','%ที่จอดรถ%') IS NOT NULL)
-                        OR (JSON_VALID(other_services) AND JSON_SEARCH(CAST(other_services AS JSON),'one','%ที่จอดรถ%') IS NOT NULL)
-                        OR facilities     COLLATE utf8mb4_general_ci LIKE '%ที่จอดรถ%'
-                        OR other_services COLLATE utf8mb4_general_ci LIKE '%ที่จอดรถ%'
-                        OR CAST(COALESCE(parking,0) AS UNSIGNED) = 1
-                    )
                     ORDER BY updated_at DESC, cafe_id DESC
                     LIMIT 20
                 ");
 
-            // ห้องประชุม/ทำงาน
+            case 'parking':
+                return DB::select("
+                    SELECT cafe_id,cafe_name,address,lat,lng,phone
+                    FROM cafes
+                    WHERE LOWER(COALESCE(status,''))='approved'
+                      AND (facilities LIKE '%ที่จอดรถ%' COLLATE utf8mb4_general_ci
+                           OR other_services LIKE '%ที่จอดรถ%' COLLATE utf8mb4_general_ci)
+                    ORDER BY updated_at DESC, cafe_id DESC
+                    LIMIT 20
+                ");
+
             case 'meeting':
                 return DB::select("
                     SELECT cafe_id,cafe_name,address,lat,lng,phone
                     FROM cafes
-                    WHERE LOWER(COALESCE(status,''))='approved' AND (
-                        (JSON_VALID(facilities) AND (
-                            JSON_SEARCH(CAST(facilities AS JSON),'one','%ห้องประชุม%') IS NOT NULL OR
-                            JSON_SEARCH(CAST(facilities AS JSON),'one','%meeting%')  IS NOT NULL OR
-                            JSON_SEARCH(CAST(facilities AS JSON),'one','%ประชุม%')   IS NOT NULL OR
-                            JSON_SEARCH(CAST(facilities AS JSON),'one','%co-work%')  IS NOT NULL OR
-                            JSON_SEARCH(CAST(facilities AS JSON),'one','%cowork%')   IS NOT NULL
-                        )) OR
-                        (JSON_VALID(other_services) AND (
-                            JSON_SEARCH(CAST(other_services AS JSON),'one','%ห้องประชุม%') IS NOT NULL OR
-                            JSON_SEARCH(CAST(other_services AS JSON),'one','%meeting%')  IS NOT NULL OR
-                            JSON_SEARCH(CAST(other_services AS JSON),'one','%ประชุม%')   IS NOT NULL OR
-                            JSON_SEARCH(CAST(other_services AS JSON),'one','%co-work%')  IS NOT NULL OR
-                            JSON_SEARCH(CAST(other_services AS JSON),'one','%cowork%')   IS NOT NULL
-                        )) OR
-                        facilities     COLLATE utf8mb4_general_ci LIKE '%ห้องประชุม%' OR
-                        facilities     COLLATE utf8mb4_general_ci LIKE '%meeting%'   OR
-                        facilities     COLLATE utf8mb4_general_ci LIKE '%ประชุม%'    OR
-                        other_services COLLATE utf8mb4_general_ci LIKE '%ห้องประชุม%' OR
-                        other_services COLLATE utf8mb4_general_ci LIKE '%meeting%'   OR
-                        other_services COLLATE utf8mb4_general_ci LIKE '%ประชุม%'
-                    )
+                    WHERE LOWER(COALESCE(status,''))='approved'
+                      AND (facilities LIKE '%ประชุม%' COLLATE utf8mb4_general_ci
+                           OR other_services LIKE '%ประชุม%' COLLATE utf8mb4_general_ci
+                           OR facilities LIKE '%meeting%' COLLATE utf8mb4_general_ci
+                           OR other_services LIKE '%meeting%' COLLATE utf8mb4_general_ci)
                     ORDER BY updated_at DESC, cafe_id DESC
                     LIMIT 20
                 ");
@@ -360,32 +208,49 @@ class LineBotController extends Controller
         }
     }
 
-    // ---------- Flex Components ----------
+    // ---------- Flex Components (ตกแต่ง) ----------
     private function bubbleBasic($name, $addr, $sub, $phone, $lat, $lng, $mapUrl = null): array
     {
         $mapUrl = $mapUrl ?: "https://maps.google.com/?q={$lat},{$lng}";
         return [
             "type" => "bubble",
+            "size" => "mega",
+            "action" => ["type" => "uri","uri" => $mapUrl],
+            "hero" => [
+                "type" => "image",
+                "url" => "https://i.imgur.com/5B2xqV3.png",
+                "size" => "full",
+                "aspectRatio" => "20:9",
+                "aspectMode" => "cover"
+            ],
             "body" => [
-                "type" => "box",
-                "layout" => "vertical",
-                "spacing" => "sm",
+                "type" => "box","layout" => "vertical","paddingAll" => "16px","spacing" => "12px",
                 "contents" => [
-                    ["type" => "text","text" => (string)$name,"weight" => "bold","size" => "lg","wrap" => true],
-                    ["type" => "text","text" => (string)($addr ?? "-"),"size" => "sm","color" => "#666666","wrap" => true],
-                    ["type" => "text","text" => (string)$sub,"size" => "xs","color" => "#999999","wrap" => true],
-                    ["type" => "text","text" => "☎ ".($phone ?: "ไม่มีข้อมูล"),"size" => "xs","color" => "#999999","wrap" => true]
+                    [
+                        "type" => "box","layout" => "baseline","contents" => [[
+                            "type" => "text","text" => $sub,"size" => "12px","color" => "#1D4ED8","weight" => "bold","wrap" => true
+                        ]],"backgroundColor" => "#E0EAFF","cornerRadius" => "12px","paddingAll" => "6px"
+                    ],
+                    ["type" => "text","text" => (string)$name,"size" => "lg","weight" => "bold","wrap" => true,"color" => "#1f2937"],
+                    ["type" => "box","layout" => "baseline","spacing" => "6px","contents" => [
+                        ["type" => "icon","url" => "https://i.imgur.com/1QmNq4r.png","size" => "sm"],
+                        ["type" => "text","text" => (string)($addr ?: "-"),"wrap" => true,"size" => "sm","color" => "#6b7280"]
+                    ]],
+                    ["type" => "box","layout" => "baseline","spacing" => "6px","contents" => [
+                        ["type" => "icon","url" => "https://i.imgur.com/1gI3zJv.png","size" => "sm"],
+                        ["type" => "text","text" => "โทร: ".($phone ?: "ไม่มีข้อมูล"),"size" => "sm","color" => "#6b7280","wrap" => true]
+                    ]]
                 ]
             ],
             "footer" => [
-                "type" => "box",
-                "layout" => "vertical",
-                "spacing" => "md",
-                "contents" => [[
-                    "type" => "button","style" => "primary",
-                    "action" => ["type" => "uri","label" => "เปิดแผนที่","uri" => $mapUrl],
-                ]],
-                "flex" => 0
+                "type" => "box","layout" => "vertical","spacing" => "12px","paddingAll" => "14px","contents" => [[
+                    "type" => "button","style" => "primary","height" => "sm","color" => "#1D4ED8",
+                    "action" => ["type" => "uri","label" => "เปิดแผนที่","uri" => $mapUrl]
+                ]],"backgroundColor" => "#F3F4F6"
+            ],
+            "styles" => [
+                "body" => ["backgroundColor" => "#FFFFFF"],
+                "footer" => ["separator" => true,"separatorColor" => "#E5E7EB"]
             ]
         ];
     }
@@ -393,44 +258,51 @@ class LineBotController extends Controller
     private function bubbleMore(string $title, string $sub, string $url): array
     {
         return [
-            "type" => "bubble",
+            "type" => "bubble","size" => "mega",
             "body" => [
-                "type" => "box", "layout" => "vertical", "spacing" => "sm",
+                "type" => "box","layout" => "vertical","paddingAll" => "20px","spacing" => "12px",
                 "contents" => [
-                    ["type" => "text","text" => $title,"weight" => "bold","size" => "lg","wrap" => true],
-                    ["type" => "text","text" => $sub,"size" => "sm","color" => "#666666","wrap" => true],
+                    [
+                        "type" => "box","layout" => "baseline","contents" => [[
+                            "type" => "text","text" => "ดูเพิ่มเติม","weight" => "bold","size" => "md","color" => "#0f172a"
+                        ]],"backgroundColor" => "#FEF3C7","cornerRadius" => "12px","paddingAll" => "6px"
+                    ],
+                    ["type" => "text","text" => $title,"weight" => "bold","size" => "lg","wrap" => true,"color" => "#111827"],
+                    ["type" => "text","text" => $sub,"size" => "sm","wrap" => true,"color" => "#6b7280"]
                 ]
             ],
             "footer" => [
-                "type" => "box","layout" => "vertical","spacing" => "md",
-                "contents" => [[
-                    "type" => "button","style" => "primary",
-                    "action" => ["type" => "uri","label" => "ไปที่เว็บไซต์","uri" => $url],
-                ]],
-                "flex" => 0
-            ]
+                "type" => "box","layout" => "vertical","contents" => [[
+                    "type" => "button","style" => "link","action" => ["type" => "uri","label" => "ไปที่เว็บไซต์","uri" => $url]
+                ]],"backgroundColor" => "#F3F4F6","paddingAll" => "14px"
+            ],
+            "styles" => ["body" => ["backgroundColor" => "#FFFFFF"],"footer" => ["separator" => true,"separatorColor" => "#E5E7EB"]]
         ];
     }
 
     private function bubbleInfo(string $title, string $sub, string $url): array
     {
         return [
-            "type" => "bubble",
+            "type" => "bubble","size" => "mega",
             "body" => [
-                "type" => "box","layout" => "vertical","spacing" => "sm",
+                "type" => "box","layout" => "vertical","paddingAll" => "20px","spacing" => "12px",
                 "contents" => [
-                    ["type" => "text","text" => $title,"weight" => "bold","size" => "lg","wrap" => true],
-                    ["type" => "text","text" => $sub,"size" => "sm","color" => "#666666","wrap" => true],
+                    [
+                        "type" => "box","layout" => "baseline","contents" => [[
+                            "type" => "text","text" => "แจ้งเตือน","weight" => "bold","size" => "md","color" => "#7c2d12"
+                        ]],"backgroundColor" => "#FEE2E2","cornerRadius" => "12px","paddingAll" => "6px"
+                    ],
+                    ["type" => "text","text" => $title,"weight" => "bold","size" => "lg","wrap" => true,"color" => "#111827"],
+                    ["type" => "text","text" => $sub,"size" => "sm","wrap" => true,"color" => "#6b7280"]
                 ]
             ],
             "footer" => [
-                "type" => "box","layout" => "vertical","spacing" => "md",
-                "contents" => [[
-                    "type" => "button","style" => "primary",
-                    "action" => ["type" => "uri","label" => "ไปที่เว็บไซต์","uri" => $url],
-                ]],
-                "flex" => 0
-            ]
+                "type" => "box","layout" => "vertical","contents" => [[
+                    "type" => "button","style" => "primary","color" => "#DC2626",
+                    "action" => ["type" => "uri","label" => "ไปที่เว็บไซต์","uri" => $url]
+                ]],"backgroundColor" => "#F3F4F6","paddingAll" => "14px"
+            ],
+            "styles" => ["body" => ["backgroundColor" => "#FFFFFF"],"footer" => ["separator" => true,"separatorColor" => "#E5E7EB"]]
         ];
     }
 
