@@ -55,6 +55,7 @@ class LineBotController extends Controller
                 $map = [
                     'FreeWiFi'               => 'wifi',
                     'เปิดอยู่ตอนนี้'        => 'open_now',
+                    'เปิดอยู่ตอนนี่'        => 'open_now',
                     'คาเฟ่ราคาย่อมเยา'      => 'cheap',
                     'คาเฟ่ราคาย่อมเยส'      => 'cheap', // รองรับสะกดพลาด
                     'เปิดใหม่'               => 'new',
