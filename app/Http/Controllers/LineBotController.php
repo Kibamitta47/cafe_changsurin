@@ -78,30 +78,11 @@ class LineBotController extends Controller
                             );
                         }
                     } else {
-                        // fallback: ร้านล่าสุดในสุรินทร์
-                        $fallback = DB::table('cafes')
-                            ->whereRaw("LOWER(COALESCE(status,''))='approved'")
-                            ->where('address', 'LIKE', '%สุรินทร์%')
-                            ->select('cafe_id','cafe_name','address','lat','lng','phone')
-                            ->orderByDesc('created_at')
-                            ->orderByDesc('cafe_id')
-                            ->limit(10)
-                            ->get();
-
-                        foreach ($fallback as $c) {
-                            $bubbles[] = $this->bubbleBasic(
-                                $c->cafe_name ?? '-', $c->address ?? '-', "⭐ แนะนำ",
-                                $c->phone ?? '-', $c->lat ?? null, $c->lng ?? null
-                            );
-                        }
-
-                        if (empty($fallback)) {
-                            $bubbles[] = $this->bubbleInfo(
-                                "ยังไม่มีข้อมูล Top10",
-                                "ลองดูข้อมูลล่าสุดบนเว็บไซต์",
-                                "https://nongchangsaren.com/"
-                            );
-                        }
+                        $bubbles[] = $this->bubbleInfo(
+                            "ยังไม่มีข้อมูล Top10",
+                            "ลองดูข้อมูลล่าสุดบนเว็บไซต์",
+                            "https://nongchangsaren.com/"
+                        );
                     }
 
                     $bubbles[] = $this->bubbleMore('ดูเพิ่มเติมบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
@@ -111,7 +92,8 @@ class LineBotController extends Controller
 
                 // ===== สไตล์ (ข้อความขึ้นต้น "สไตล์:") =====
                 if (mb_strpos($text, 'สไตล์:') === 0) {
-                    $styleName = trim(mb_substr($text, 7)); // "สไตล์:"
+                    // 🔧 แก้ index จาก 7 -> 6 เพื่อไม่ให้ตัด 'ม' ของ "มินิมอล"
+                    $styleName = trim(mb_substr($text, 6)); // "สไตล์:" ยาว 6 ตัว
                     $cafes = $this->findCafesByFilter('style:' . $styleName);
                     Log::info('[Style] query', ['style' => $styleName, 'count' => count($cafes)]);
 
@@ -337,13 +319,17 @@ class LineBotController extends Controller
     // ---------- Top10 ----------
     private function getTop10Cafes(): array
     {
-        $rows = DB::table('cafes as c')
+        // รอบแรก: จำกัดเฉพาะที่ status=approved และ (ถ้า address มีคำว่า สุรินทร์ ก็โอเค)
+        $base = DB::table('cafes as c')
             ->leftJoin('reviews as r', function ($join) {
                 $join->on('r.cafe_id', '=', 'c.cafe_id')
                      ->whereRaw("COALESCE(r.status,'approved')='approved'");
             })
-            ->whereRaw("LOWER(COALESCE(c.status,''))='approved'")
-            ->where('c.address', 'LIKE', '%สุรินทร์%') // ใช้ address ตามสคีม่า
+            ->whereRaw("LOWER(COALESCE(c.status,''))='approved'");
+
+        // ลอง query แบบ "กรองจังหวัด" ก่อน
+        $rows = (clone $base)
+            ->where('c.address', 'LIKE', '%สุรินทร์%')
             ->selectRaw("
                 c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
                 COALESCE(AVG(r.rating), 0) AS avg_rating,
@@ -358,11 +344,28 @@ class LineBotController extends Controller
             ->get()
             ->all();
 
+        // ถ้าไม่เจอ (เช่น address ไม่ได้บันทึกคำว่า "สุรินทร์") → รันอีกรอบ "ไม่กรอง address"
         if (empty($rows)) {
-            // ถ้าไม่มีรีวิวเลย → fallback เป็นร้านล่าสุดในสุรินทร์
+            $rows = (clone $base)
+                ->selectRaw("
+                    c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
+                    COALESCE(AVG(r.rating), 0) AS avg_rating,
+                    COUNT(r.cafe_id)           AS review_count
+                ")
+                ->groupBy('c.cafe_id','c.cafe_name','c.address','c.lat','c.lng','c.phone')
+                ->havingRaw("review_count >= 1 OR avg_rating > 0")
+                ->orderByDesc('avg_rating')
+                ->orderByDesc('review_count')
+                ->orderByDesc('c.cafe_id')
+                ->limit(10)
+                ->get()
+                ->all();
+        }
+
+        // ถ้ายังไม่เจออีกเลย → fallback เป็น “ร้านล่าสุด” (ไม่กรอง address เพื่อให้มีรายการแน่นอน)
+        if (empty($rows)) {
             return DB::table('cafes')
                 ->whereRaw("LOWER(COALESCE(status,''))='approved'")
-                ->where('address', 'LIKE', '%สุรินทร์%')
                 ->select('cafe_id','cafe_name','address','lat','lng','phone')
                 ->orderByDesc('created_at')
                 ->orderByDesc('cafe_id')
@@ -390,7 +393,7 @@ class LineBotController extends Controller
 
             return DB::table('cafes')
                 ->whereRaw("LOWER(COALESCE(status,''))='approved'")
-                ->where('address', 'LIKE', '%สุรินทร์%') // จำกัดพื้นที่ถ้าต้องการ
+                ->where('address', 'LIKE', '%สุรินทร์%') // คงกรองพื้นที่ไว้ เพราะอันนี้ในรูปใช้งานได้ปกติ
                 ->where(function($q) use ($like) {
                     $q->whereRaw("(JSON_VALID(cafe_styles) AND JSON_SEARCH(cafe_styles, 'one', ?) IS NOT NULL)", [$like])
                       ->orWhere('other_style', 'LIKE', $like);
