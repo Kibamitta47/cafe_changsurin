@@ -51,8 +51,8 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // เมนูหมวด "แนะนำคาเฟ่เมืองสุรินทร์"
-                if (in_array($text, ['แนะนำคาเฟ่เมืองสุรินทร์','เมนูแนะนำคาเฟ่','คาเฟ่เมืองสุรินทร์','recommend'], true)) {
+                // เมนูแนะนำคาเฟ่เมืองสุรินทร์ (ยืดหยุ่น)
+                if ($this->isRecommendTrigger($text)) {
                     $menu = $this->menuRecommendCarousel();
                     $this->replyFlex($replyToken, "เมนูแนะนำคาเฟ่เมืองสุรินทร์", $menu);
                     continue;
@@ -115,7 +115,7 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ===== ปุ่ม FAQ (map → query) =====
+                // ===== FAQ mapping =====
                 $map = [
                     'FreeWiFi'               => 'wifi',
                     'เปิดอยู่ตอนนี้'        => 'open_now',
@@ -239,6 +239,39 @@ class LineBotController extends Controller
         return response()->json(['status' => 'ok']);
     }
 
+    // ---------- Helper: Trigger ตรวจข้อความแนะนำคาเฟ่ ----------
+    private function isRecommendTrigger(string $text): bool
+    {
+        $raw = trim($text);
+        $noSpace = preg_replace('/\s+/u', '', $raw);
+
+        $aliases = [
+            'แนะนำคาเฟ่เมืองสุรินทร์',
+            'เมนูแนะนำคาเฟ่',
+            'คาเฟ่เมืองสุรินทร์',
+            'recommend',
+        ];
+        $aliasesNoSpace = array_map(fn($s) => preg_replace('/\s+/u', '', $s), $aliases);
+
+        if (in_array($raw, $aliases, true) || in_array($noSpace, $aliasesNoSpace, true)) {
+            return true;
+        }
+
+        $hasRecommend = mb_stripos($raw, 'แนะนำคาเฟ่') !== false;
+        $hasSurin1    = mb_stripos($raw, 'เมืองสุรินทร์') !== false;
+        $hasSurin2    = mb_stripos($raw, 'สุรินทร์') !== false;
+
+        if ($hasRecommend && ($hasSurin1 || $hasSurin2)) {
+            return true;
+        }
+
+        if (mb_stripos($raw, 'recommend') !== false && ($hasSurin1 || $hasSurin2)) {
+            return true;
+        }
+
+        return false;
+    }
+
     // ---------- Rich Menu ----------
     private function setUserRichMenu(?string $userId, ?string $richMenuId): void
     {
@@ -249,12 +282,10 @@ class LineBotController extends Controller
         ])->post("https://api.line.me/v2/bot/user/{$userId}/richmenu/{$richMenuId}");
     }
 
-    // ---------- เมนูแนะนำคาเฟ่ (Flex เมนูหมวด) ----------
+    // ---------- เมนูแนะนำคาเฟ่ ----------
     private function menuRecommendCarousel(): array
     {
         $bubbles = [];
-
-        // บับเบิล 1: หมวดหลัก
         $bubbles[] = [
             "type" => "bubble",
             "body" => [
@@ -284,17 +315,13 @@ class LineBotController extends Controller
             ],
             "styles" => ["footer" => ["separator" => true]]
         ];
-
-        // บับเบิล 2: ไปหน้าเว็บ
         $bubbles[] = $this->bubbleMore('ดูทั้งหมดบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
-
         return ["type" => "carousel", "contents" => $bubbles];
     }
 
     // ---------- Top10 Cafes ----------
     private function getTop10Cafes(): array
     {
-        // จัดอันดับ: avg_rating ↓, review_count ↓, และกัน null
         $rows = DB::select("
             SELECT
                 c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
@@ -311,7 +338,6 @@ class LineBotController extends Controller
             ORDER BY avg_rating DESC, review_count DESC, c.cafe_id DESC
             LIMIT 10
         ", ['%สุรินทร์%', '%สุรินทร์%']);
-
         return $rows;
     }
 
@@ -358,7 +384,7 @@ class LineBotController extends Controller
                       AND (
                         (close_time >= open_time AND ? BETWEEN open_time AND close_time)
                         OR
-                        (close_time <  open_time AND (? >= open_time OR ? <= close_time)) -- คร่อมเที่ยงคืน
+                        (close_time <  open_time AND (? >= open_time OR ? <= close_time))
                       )
                     ORDER BY cafe_id DESC
                     LIMIT 20
