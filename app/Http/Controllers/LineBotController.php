@@ -317,55 +317,70 @@ class LineBotController extends Controller
     }
 
     // ---------- Top10 ----------
-    // ---------- Top10 ----------
-private function getTop10Cafes(): array
-{
-    // รวมรีวิวเฉพาะที่สถานะ approved (ไม่ใช้ HAVING)
-    $reviewAgg = DB::table('reviews as r')
-        ->selectRaw("
-            r.cafe_id,
-            AVG(CASE WHEN LOWER(COALESCE(r.status,'approved'))='approved' THEN r.rating END)    AS avg_rating,
-            SUM(CASE WHEN LOWER(COALESCE(r.status,'approved'))='approved' THEN 1 ELSE 0 END)   AS review_count
-        ")
-        ->groupBy('r.cafe_id');
+    private function getTop10Cafes(): array
+    {
+        // รอบแรก: จำกัดเฉพาะที่ status=approved และ (ถ้า address มีคำว่า สุรินทร์ ก็โอเค)
+        $base = DB::table('cafes as c')
+            ->leftJoin('reviews as r', function ($join) {
+                $join->on('r.cafe_id', '=', 'c.cafe_id')
+                     ->whereRaw("COALESCE(r.status,'approved')='approved'");
+            })
+            ->whereRaw("LOWER(COALESCE(c.status,''))='approved'");
 
-    // จับคู่กับร้านที่ approved แล้วจัดอันดับ (ให้ร้านที่ไม่มีรีวิวได้คะแนน 0 แต่ยังติดลิสต์)
-    $rows = DB::table('cafes as c')
-        ->leftJoinSub($reviewAgg, 'ra', fn($j) => $j->on('ra.cafe_id','=','c.cafe_id'))
-        ->whereRaw("LOWER(COALESCE(c.status,''))='approved'")
-        ->selectRaw("
-            c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
-            COALESCE(ra.avg_rating, 0)   AS avg_rating,
-            COALESCE(ra.review_count, 0) AS review_count
-        ")
-        ->orderByDesc('avg_rating')
-        ->orderByDesc('review_count')
-        ->orderByDesc('c.cafe_id')
-        ->limit(10)
-        ->get()
-        ->all();
-
-    // Fallback: ถ้าไม่พบร้าน approved เลย (กรณีฐานข้อมูลว่าง)
-    if (empty($rows)) {
-        $rows = DB::table('cafes as c')
-            ->whereRaw("LOWER(COALESCE(c.status,''))='approved'")
-            ->select('c.cafe_id','c.cafe_name','c.address','c.lat','c.lng','c.phone')
-            ->orderByDesc('c.created_at')
+        // ลอง query แบบ "กรองจังหวัด" ก่อน
+        $rows = (clone $base)
+            ->where('c.address', 'LIKE', '%สุรินทร์%')
+            ->selectRaw("
+                c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
+                COALESCE(AVG(r.rating), 0) AS avg_rating,
+                COUNT(r.cafe_id)           AS review_count
+            ")
+            ->groupBy('c.cafe_id','c.cafe_name','c.address','c.lat','c.lng','c.phone')
+            ->havingRaw("review_count >= 1 OR avg_rating > 0")
+            ->orderByDesc('avg_rating')
+            ->orderByDesc('review_count')
             ->orderByDesc('c.cafe_id')
             ->limit(10)
             ->get()
-            ->map(function ($c) {
-                $c->avg_rating   = 0;
-                $c->review_count = 0;
-                return $c;
-            })
             ->all();
+
+        // ถ้าไม่เจอ (เช่น address ไม่ได้บันทึกคำว่า "สุรินทร์") → รันอีกรอบ "ไม่กรอง address"
+        if (empty($rows)) {
+            $rows = (clone $base)
+                ->selectRaw("
+                    c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
+                    COALESCE(AVG(r.rating), 0) AS avg_rating,
+                    COUNT(r.cafe_id)           AS review_count
+                ")
+                ->groupBy('c.cafe_id','c.cafe_name','c.address','c.lat','c.lng','c.phone')
+                ->havingRaw("review_count >= 1 OR avg_rating > 0")
+                ->orderByDesc('avg_rating')
+                ->orderByDesc('review_count')
+                ->orderByDesc('c.cafe_id')
+                ->limit(10)
+                ->get()
+                ->all();
+        }
+
+        // ถ้ายังไม่เจออีกเลย → fallback เป็น “ร้านล่าสุด” (ไม่กรอง address เพื่อให้มีรายการแน่นอน)
+        if (empty($rows)) {
+            return DB::table('cafes')
+                ->whereRaw("LOWER(COALESCE(status,''))='approved'")
+                ->select('cafe_id','cafe_name','address','lat','lng','phone')
+                ->orderByDesc('created_at')
+                ->orderByDesc('cafe_id')
+                ->limit(10)
+                ->get()
+                ->map(function ($c) {
+                    $c->avg_rating = 0;
+                    $c->review_count = 0;
+                    return $c;
+                })
+                ->all();
+        }
+
+        return $rows;
     }
-
-    Log::info('[Top10] result', ['count' => count($rows), 'sample' => array_slice(array_map(fn($x)=>$x->cafe_name,$rows),0,3)]);
-    return $rows;
-}
-
 
     // ---------- Filters (สไตล์/เปิดใหม่ ฯลฯ) ----------
     private function findCafesByFilter(string $type): array
