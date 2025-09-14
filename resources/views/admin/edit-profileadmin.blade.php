@@ -8,13 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary-light:#4a90e2; --secondary-light:#6dd5ed; --accent-light:#8e44ad;
-            --background-light:#f4f7f6; --card-light-bg:#ffffff; --text-dark:#333333;
-            --text-secondary-dark:#666666; --border-light-color:#e0e0e0;
-            --shadow-light-mild:0 4px 15px rgba(0,0,0,.08); --transition-smooth:.3s ease;
-            --sidebar-width:320px;
-        }
+        :root{--primary-light:#4a90e2;--secondary-light:#6dd5ed;--accent-light:#8e44ad;--background-light:#f4f7f6;--card-light-bg:#ffffff;--text-dark:#333;--text-secondary-dark:#666;--border-light-color:#e0e0e0;--shadow-light-mild:0 4px 15px rgba(0,0,0,.08);--transition-smooth:.3s ease;--sidebar-width:320px}
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:'Sarabun',sans-serif;background:var(--background-light);padding-top:80px;color:var(--text-dark);transition:padding-left .3s ease}
         body.sidebar-open{padding-left:var(--sidebar-width)}
@@ -57,6 +51,32 @@
 <body>
     @include('components.adminmenu')
 
+    <!-- Toast แจ้งเตือน -->
+    @if(session('success'))
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 1200">
+        <div id="successToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fa-solid fa-circle-check me-2"></i>{{ session('success') }}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+    @endif
+    @if(session('error'))
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 1200">
+        <div id="errorToast" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fa-solid fa-triangle-exclamation me-2"></i>{{ session('error') }}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <div class="main-content-wrapper container">
         <section class="mb-5">
             <h1 class="section-title text-center">
@@ -70,49 +90,34 @@
                         @method('PUT')
 
                         <div class="mb-3">
-                            <label class="form-label">
-                                <i class="fas fa-user"></i> ชื่อผู้ใช้
-                            </label>
+                            <label class="form-label"><i class="fas fa-user"></i> ชื่อผู้ใช้</label>
                             <input type="text" name="name" value="{{ Auth::guard('admin')->user()->UserName }}" class="form-control" required>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">
-                                <i class="fas fa-envelope"></i> อีเมล
-                            </label>
+                            <label class="form-label"><i class="fas fa-envelope"></i> อีเมล</label>
                             <input type="email" name="email" value="{{ Auth::guard('admin')->user()->Email }}" class="form-control" required>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">
-                                <i class="fas fa-image"></i> รูปโปรไฟล์
-                            </label><br>
-
-                            @php
-                                $profileImage = Auth::guard('admin')->user()->profile_image; // ตัวอย่าง: 'profile_images/xxx.webp'
-                            @endphp
-
+                            <label class="form-label"><i class="fas fa-image"></i> รูปโปรไฟล์</label><br>
+                            @php $profileImage = Auth::guard('admin')->user()->profile_image; @endphp
                             @if($profileImage && \Illuminate\Support\Facades\Storage::disk('public')->exists($profileImage))
                                 <img src="{{ asset('storage/'.$profileImage) }}" alt="รูปโปรไฟล์" class="profile-image mb-3">
                             @else
                                 <p class="text-muted">ยังไม่มีรูปโปรไฟล์</p>
                             @endif
-
                             <input type="file" name="profile_image" class="form-control" accept="image/*">
                             <small class="text-muted d-block mt-2">ระบบจะย่อเป็น 512×512 และบีบอัดเป็น .webp อัตโนมัติ</small>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">
-                                <i class="fas fa-lock"></i> รหัสผ่านใหม่ (ถ้าต้องการเปลี่ยน)
-                            </label>
+                            <label class="form-label"><i class="fas fa-lock"></i> รหัสผ่านใหม่ (ถ้าต้องการเปลี่ยน)</label>
                             <input type="password" name="password" class="form-control" placeholder="อย่างน้อย 8 ตัวอักษร">
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">
-                                <i class="fas fa-lock"></i> ยืนยันรหัสผ่านใหม่
-                            </label>
+                            <label class="form-label"><i class="fas fa-lock"></i> ยืนยันรหัสผ่านใหม่</label>
                             <input type="password" name="password_confirmation" class="form-control" placeholder="พิมพ์รหัสผ่านเดิมอีกครั้ง">
                         </div>
 
@@ -132,6 +137,15 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Toast แสดงอัตโนมัติเมื่อมี session
+        document.addEventListener('DOMContentLoaded', () => {
+            const ok = document.getElementById('successToast');
+            if (ok) new bootstrap.Toast(ok).show();
+            const er = document.getElementById('errorToast');
+            if (er) new bootstrap.Toast(er).show();
+        });
+
+        // ====== โค้ดเดิมควบคุม sidebar & active menu ======
         function toggleSidebar(){
             const s=document.getElementById('adminSidebar');
             const b=document.body;
@@ -142,7 +156,7 @@
         document.addEventListener('click',function(e){
             const s=document.getElementById('adminSidebar');
             const t=document.querySelector('.sidebar-toggle');
-            if(window.innerWidth>768 && !s.contains(e.target) && !t.contains(e.target) && s.classList.contains('show')){toggleSidebar();}
+            if(window.innerWidth>768 && s && t && !s.contains(e.target) && !t.contains(e.target) && s.classList.contains('show')){toggleSidebar();}
         });
         document.addEventListener('DOMContentLoaded',function(){
             const p=window.location.pathname;
@@ -152,19 +166,19 @@
             });
             if(localStorage.getItem('sidebarState')==='open' && window.innerWidth>768){
                 const s=document.getElementById('adminSidebar'); const b=document.body; const t=document.querySelector('.sidebar-toggle');
-                s.classList.add('show'); b.classList.add('sidebar-open'); t.classList.add('active');
+                if(s&&t){s.classList.add('show'); b.classList.add('sidebar-open'); t.classList.add('active');}
             }
         });
         document.querySelectorAll('.menu-item a, .menu-item button').forEach(i=>{
             i.addEventListener('click',function(){
                 document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('active'));
                 this.closest('.menu-item').classList.add('active');
-                if(window.innerWidth<=768 && document.getElementById('adminSidebar').classList.contains('show')){toggleSidebar();}
+                if(window.innerWidth<=768 && document.getElementById('adminSidebar')?.classList.contains('show')){toggleSidebar();}
             });
         });
         window.addEventListener('resize',function(){
             const b=document.body, s=document.getElementById('adminSidebar');
-            if(window.innerWidth<=768){b.classList.remove('sidebar-open');}else if(s.classList.contains('show')){b.classList.add('sidebar-open');}
+            if(window.innerWidth<=768){b.classList.remove('sidebar-open');}else if(s?.classList.contains('show')){b.classList.add('sidebar-open');}
         });
     </script>
 </body>

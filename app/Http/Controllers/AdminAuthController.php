@@ -20,7 +20,9 @@ use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
 
 class AdminAuthController extends Controller
 {
-    public function showRegister(){ return view('admin.register-admin'); }
+    public function showRegister() { 
+        return view('admin.register-admin'); 
+    }
 
     public function register(Request $request)
     {
@@ -39,7 +41,9 @@ class AdminAuthController extends Controller
         return redirect()->route('login.admin')->with('success', 'สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ');
     }
 
-    public function showLogin(){ return view('admin.login-admin'); }
+    public function showLogin() { 
+        return view('admin.login-admin'); 
+    }
 
     public function login(Request $request)
     {
@@ -64,7 +68,7 @@ class AdminAuthController extends Controller
     public function logout(Request $request)
     {
         if (Auth::guard('admin')->check()) {
-            Log::info('Admin logout: '.Auth::guard('admin')->user()->Email);
+            Log::info('Admin logout: ' . Auth::guard('admin')->user()->Email);
         }
         Auth::guard('admin')->logout();
         $request->session()->invalidate();
@@ -122,41 +126,44 @@ class AdminAuthController extends Controller
         $admin = Auth::guard('admin')->user();
 
         $request->validate([
-            'name'  => 'required|string|max:255',
-            'email' => ['required','email', Rule::unique('admin_id','Email')->ignore($admin->admin_id,'admin_id')],
+            'name'          => 'required|string|max:255',
+            'email'         => ['required','email', Rule::unique('admin_id','Email')->ignore($admin->admin_id,'admin_id')],
             'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
             'password'      => 'nullable|min:8|confirmed',
         ]);
 
-        $admin->UserName = $request->name;
-        $admin->Email    = $request->email;
+        try {
+            $admin->UserName = $request->name;
+            $admin->Email    = $request->email;
 
-        if ($request->filled('password')) {
-            $admin->password = Hash::make($request->password);
-        }
-
-        if ($request->hasFile('profile_image')) {
-            if (!empty($admin->profile_image) && Storage::disk('public')->exists($admin->profile_image)) {
-                Storage::disk('public')->delete($admin->profile_image);
+            if ($request->filled('password')) {
+                $admin->password = Hash::make($request->password);
             }
 
-            $uploaded = $request->file('profile_image');
+            if ($request->hasFile('profile_image')) {
+                if (!empty($admin->profile_image) && Storage::disk('public')->exists($admin->profile_image)) {
+                    Storage::disk('public')->delete($admin->profile_image);
+                }
 
-            // เลือก driver อัตโนมัติ: ถ้ามี imagick ใช้ imagick; ไม่งั้นใช้ GD
-            $driver  = extension_loaded('imagick') ? new ImagickDriver() : new GdDriver();
-            $manager = new ImageManager($driver);
+                $uploaded = $request->file('profile_image');
 
-            $image   = $manager->read($uploaded->getPathname());
-            $image   = $image->cover(512, 512);           // ทำเป็นจัตุรัส 512x512
-            $encoded = $image->toWebp(75);                // บีบอัดเป็น WebP
+                $driver  = extension_loaded('imagick') ? new ImagickDriver() : new GdDriver();
+                $manager = new ImageManager($driver);
 
-            $filename = 'profile_'.$admin->admin_id.'_'.time().'.webp';
-            Storage::disk('public')->put('profile_images/'.$filename, (string) $encoded);
-            $admin->profile_image = 'profile_images/'.$filename;
+                $image   = $manager->read($uploaded->getPathname())->cover(512, 512);
+                $encoded = $image->toWebp(75);
+
+                $filename = 'profile_'.$admin->admin_id.'_'.time().'.webp';
+                Storage::disk('public')->put('profile_images/'.$filename, (string) $encoded);
+                $admin->profile_image = 'profile_images/'.$filename;
+            }
+
+            $admin->save();
+
+            return back()->with('success','แก้ไขโปรไฟล์สำเร็จ');
+        } catch (\Throwable $e) {
+            Log::error('Update profile failed', ['error'=>$e->getMessage()]);
+            return back()->with('error','ไม่สามารถแก้ไขโปรไฟล์ได้ โปรดลองอีกครั้ง')->withInput();
         }
-
-        $admin->save();
-
-        return back()->with('success','อัปเดตข้อมูลโปรไฟล์เรียบร้อยแล้ว');
     }
 }
