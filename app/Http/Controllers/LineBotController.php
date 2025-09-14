@@ -36,43 +36,44 @@ class LineBotController extends Controller
             $userId     = $event['source']['userId'] ?? null;
 
             // ---------- TEXT ----------
-            if ($event['type'] === 'message' && $event['message']['type'] === 'text') {
-                $text = trim($event['message']['text']);
+            if (($event['type'] ?? '') === 'message' && ($event['message']['type'] ?? '') === 'text') {
+                $text = trim($event['message']['text'] ?? '');
 
-                // สลับ Rich Menu
-                if (in_array($text, ['เมนู','menu','เริ่มต้น'])) {
+                // Toggle Rich Menu
+                if (in_array($text, ['เมนู','menu','เริ่มต้น'], true)) {
                     $this->setUserRichMenu($userId, $this->richMain);
                     $this->replyText($replyToken, "เปิดเมนูหลักแล้วครับ 😊");
                     continue;
                 }
-                if (in_array($text, ['FAQ','คำถามที่พบบ่อย','เมนูคำตอบ'])) {
+                if (in_array($text, ['FAQ','คำถามที่พบบ่อย','เมนูคำตอบ'], true)) {
                     $this->setUserRichMenu($userId, $this->richFaq);
                     $this->replyText($replyToken, "เมนู FAQ พร้อมใช้งานครับ ❓");
                     continue;
                 }
 
-                // ===== เมนูแนะนำคาเฟ่ (ระดับหมวด) =====
-                if (in_array($text, ['แนะนำคาเฟ่เมืองสุรินทร์','เมนูแนะนำคาเฟ่','คาเฟ่เมืองสุรินทร์','recommend'])) {
+                // เมนูหมวด "แนะนำคาเฟ่เมืองสุรินทร์"
+                if (in_array($text, ['แนะนำคาเฟ่เมืองสุรินทร์','เมนูแนะนำคาเฟ่','คาเฟ่เมืองสุรินทร์','recommend'], true)) {
                     $menu = $this->menuRecommendCarousel();
                     $this->replyFlex($replyToken, "เมนูแนะนำคาเฟ่เมืองสุรินทร์", $menu);
                     continue;
                 }
 
                 // ===== หมวด Top10 =====
-                if (in_array($text, ['คาเฟ่Top10','Top10','Top 10','top10'])) {
-                    $cafes = $this->getTop10Cafes(); // อิงเรตติ้งเฉลี่ย + จำนวนรีวิว
-                    $bubbles = [];
+                if (in_array($text, ['คาเฟ่Top10','Top10','Top 10','top10'], true)) {
+                    $cafes = $this->getTop10Cafes(); // จัดอันดับ: avg_rating ↓, review_count ↓
 
+                    $bubbles = [];
                     if (!empty($cafes)) {
                         foreach ($cafes as $c) {
-                            $note = '⭐ ' . number_format((float)($c->avg_rating ?? 0), 1) . ' (' . (int)($c->review_count ?? 0) . ' รีวิว)';
+                            $note = '⭐ ' . number_format((float)($c->avg_rating ?? 0), 1)
+                                  . ' (' . (int)($c->review_count ?? 0) . ' รีวิว)';
                             $bubbles[] = $this->bubbleBasic(
                                 $c->cafe_name ?? '-',
-                                $c->address ?? '-',
+                                $c->address   ?? '-',
                                 $note,
-                                $c->phone ?? '-',
-                                $c->lat ?? null,
-                                $c->lng ?? null
+                                $c->phone     ?? '-',
+                                $c->lat       ?? null,
+                                $c->lng       ?? null
                             );
                         }
                     } else {
@@ -81,19 +82,20 @@ class LineBotController extends Controller
                             SELECT cafe_id,cafe_name,address,lat,lng,phone
                             FROM cafes
                             WHERE LOWER(COALESCE(status,''))='approved'
-                              AND address COLLATE utf8mb4_general_ci LIKE '%สุรินทร์%'
-                            ORDER BY created_at DESC
+                              AND (address LIKE ? OR province LIKE ?)
+                            ORDER BY created_at DESC, cafe_id DESC
                             LIMIT 10
-                        ");
+                        ", ['%สุรินทร์%', '%สุรินทร์%']);
+
                         if (!empty($fallback)) {
                             foreach ($fallback as $c) {
                                 $bubbles[] = $this->bubbleBasic(
                                     $c->cafe_name ?? '-',
-                                    $c->address ?? '-',
+                                    $c->address   ?? '-',
                                     "⭐ แนะนำ",
-                                    $c->phone ?? '-',
-                                    $c->lat ?? null,
-                                    $c->lng ?? null
+                                    $c->phone     ?? '-',
+                                    $c->lat       ?? null,
+                                    $c->lng       ?? null
                                 );
                             }
                         } else {
@@ -113,7 +115,7 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ===== ปุ่ม FAQ → ดึงจาก DB =====
+                // ===== ปุ่ม FAQ (map → query) =====
                 $map = [
                     'FreeWiFi'               => 'wifi',
                     'เปิดอยู่ตอนนี้'        => 'open_now',
@@ -127,7 +129,6 @@ class LineBotController extends Controller
 
                 if (isset($map[$text])) {
                     $cafes = $this->findCafesByFilter($map[$text]);
-                    Log::info("FAQ {$map[$text]} found", ['count' => count($cafes)]);
 
                     $bubbles = [];
                     if (!empty($cafes)) {
@@ -140,6 +141,7 @@ class LineBotController extends Controller
                                 'new'      => '🆕 ร้านเปิดใหม่',
                                 'parking'  => '🅿️ มีที่จอดรถ',
                                 'meeting'  => '🏢 มีห้องประชุม/ทำงาน',
+                                default    => '',
                             };
 
                             $mapUrl = ($c->lat !== null && $c->lng !== null)
@@ -147,8 +149,13 @@ class LineBotController extends Controller
                                 : "https://www.google.com/maps/search/".urlencode(($c->cafe_name ?? '').' '.($c->address ?? ''));
 
                             $bubbles[] = $this->bubbleBasic(
-                                $c->cafe_name ?? '-', $c->address ?? '-', $note,
-                                $c->phone ?? '-', $c->lat ?? null, $c->lng ?? null, $mapUrl
+                                $c->cafe_name ?? '-',
+                                $c->address   ?? '-',
+                                $note,
+                                $c->phone     ?? '-',
+                                $c->lat       ?? null,
+                                $c->lng       ?? null,
+                                $mapUrl
                             );
                         }
                     } else {
@@ -159,12 +166,7 @@ class LineBotController extends Controller
                         );
                     }
 
-                    $bubbles[] = $this->bubbleMore(
-                        'ดูเพิ่มเติมบนเว็บไซต์',
-                        'เปิดเว็บ น้องช้างสะเร็น',
-                        'https://nongchangsaren.com/'
-                    );
-
+                    $bubbles[] = $this->bubbleMore('ดูเพิ่มเติมบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
                     $this->replyFlex($replyToken, "ผลลัพธ์: {$text}", [
                         "type" => "carousel", "contents" => $bubbles
                     ]);
@@ -190,9 +192,13 @@ class LineBotController extends Controller
             }
 
             // ---------- LOCATION ----------
-            if ($event['type'] === 'message' && $event['message']['type'] === 'location') {
-                $lat = $event['message']['latitude'];
-                $lng = $event['message']['longitude'];
+            if (($event['type'] ?? '') === 'message' && ($event['message']['type'] ?? '') === 'location') {
+                $lat = $event['message']['latitude']  ?? null;
+                $lng = $event['message']['longitude'] ?? null;
+                if ($lat === null || $lng === null) {
+                    $this->replyText($replyToken, "ไม่พบพิกัดที่ส่งมา ลองส่งใหม่อีกครั้งนะครับ");
+                    continue;
+                }
 
                 $cafes = DB::select("
                     SELECT cafes.cafe_id, cafes.cafe_name, cafes.address, cafes.lat, cafes.lng, cafes.phone,
@@ -204,7 +210,7 @@ class LineBotController extends Controller
                     FROM cafes
                     WHERE LOWER(COALESCE(status,''))='approved'
                     HAVING distance < 5
-                    ORDER BY distance ASC
+                    ORDER BY distance ASC, cafe_id DESC
                     LIMIT 5
                 ", [$lat, $lng, $lat]);
 
@@ -288,21 +294,23 @@ class LineBotController extends Controller
     // ---------- Top10 Cafes ----------
     private function getTop10Cafes(): array
     {
+        // จัดอันดับ: avg_rating ↓, review_count ↓, และกัน null
         $rows = DB::select("
-            SELECT c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
-                   COALESCE(AVG(r.rating), 0)    AS avg_rating,
-                   COUNT(r.cafe_id)              AS review_count
+            SELECT
+                c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
+                COALESCE(AVG(r.rating), 0) AS avg_rating,
+                COUNT(r.cafe_id)           AS review_count
             FROM cafes c
-            LEFT JOIN reviews r 
-                   ON r.cafe_id = c.cafe_id 
-                  AND (COALESCE(r.status,'approved') = 'approved')
+            LEFT JOIN reviews r
+              ON r.cafe_id = c.cafe_id
+             AND COALESCE(r.status,'approved') = 'approved'
             WHERE LOWER(COALESCE(c.status,''))='approved'
-              AND c.address COLLATE utf8mb4_general_ci LIKE '%สุรินทร์%'
+              AND (c.address LIKE ? OR c.province LIKE ?)
             GROUP BY c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone
             HAVING review_count >= 1 OR avg_rating > 0
             ORDER BY avg_rating DESC, review_count DESC, c.cafe_id DESC
             LIMIT 10
-        ");
+        ", ['%สุรินทร์%', '%สุรินทร์%']);
 
         return $rows;
     }
@@ -328,12 +336,12 @@ class LineBotController extends Controller
                             JSON_SEARCH(CAST(other_services AS JSON),'one','%wifi%')  IS NOT NULL OR
                             JSON_SEARCH(CAST(other_services AS JSON),'one','%ไวไฟ%')  IS NOT NULL
                         )) OR
-                        facilities     COLLATE utf8mb4_general_ci LIKE '%wifi%' OR
-                        facilities     COLLATE utf8mb4_general_ci LIKE '%Wi-Fi%' OR
-                        facilities     COLLATE utf8mb4_general_ci LIKE '%ไวไฟ%' OR
-                        other_services COLLATE utf8mb4_general_ci LIKE '%wifi%' OR
-                        other_services COLLATE utf8mb4_general_ci LIKE '%Wi-Fi%' OR
-                        other_services COLLATE utf8mb4_general_ci LIKE '%ไวไฟ%'
+                        facilities     LIKE '%wifi%' OR
+                        facilities     LIKE '%Wi-Fi%' OR
+                        facilities     LIKE '%ไวไฟ%' OR
+                        other_services LIKE '%wifi%' OR
+                        other_services LIKE '%Wi-Fi%' OR
+                        other_services LIKE '%ไวไฟ%'
                     )
                     ORDER BY updated_at DESC, cafe_id DESC
                     LIMIT 20
@@ -348,10 +356,10 @@ class LineBotController extends Controller
                       AND open_time  IS NOT NULL
                       AND close_time IS NOT NULL
                       AND (
-                            (close_time >= open_time AND ? BETWEEN open_time AND close_time)
-                            OR
-                            (close_time <  open_time AND (? >= open_time OR ? <= close_time))
-                          )
+                        (close_time >= open_time AND ? BETWEEN open_time AND close_time)
+                        OR
+                        (close_time <  open_time AND (? >= open_time OR ? <= close_time)) -- คร่อมเที่ยงคืน
+                      )
                     ORDER BY cafe_id DESC
                     LIMIT 20
                 ", [$now, $now, $now]);
@@ -399,10 +407,10 @@ class LineBotController extends Controller
                     SELECT cafe_id,cafe_name,address,lat,lng,phone
                     FROM cafes
                     WHERE LOWER(COALESCE(status,''))='approved' AND (
-                        (JSON_VALID(facilities) AND JSON_SEARCH(CAST(facilities AS JSON),'one','%ที่จอดรถ%') IS NOT NULL)
+                        (JSON_VALID(facilities)     AND JSON_SEARCH(CAST(facilities AS JSON),'one','%ที่จอดรถ%')     IS NOT NULL)
                         OR (JSON_VALID(other_services) AND JSON_SEARCH(CAST(other_services AS JSON),'one','%ที่จอดรถ%') IS NOT NULL)
-                        OR facilities     COLLATE utf8mb4_general_ci LIKE '%ที่จอดรถ%'
-                        OR other_services COLLATE utf8mb4_general_ci LIKE '%ที่จอดรถ%'
+                        OR facilities     LIKE '%ที่จอดรถ%'
+                        OR other_services LIKE '%ที่จอดรถ%'
                         OR CAST(COALESCE(parking,0) AS UNSIGNED) = 1
                     )
                     ORDER BY updated_at DESC, cafe_id DESC
@@ -428,12 +436,12 @@ class LineBotController extends Controller
                             JSON_SEARCH(CAST(other_services AS JSON),'one','%co-work%')  IS NOT NULL OR
                             JSON_SEARCH(CAST(other_services AS JSON),'one','%cowork%')   IS NOT NULL
                         )) OR
-                        facilities     COLLATE utf8mb4_general_ci LIKE '%ห้องประชุม%' OR
-                        facilities     COLLATE utf8mb4_general_ci LIKE '%meeting%'   OR
-                        facilities     COLLATE utf8mb4_general_ci LIKE '%ประชุม%'    OR
-                        other_services COLLATE utf8mb4_general_ci LIKE '%ห้องประชุม%' OR
-                        other_services COLLATE utf8mb4_general_ci LIKE '%meeting%'   OR
-                        other_services COLLATE utf8mb4_general_ci LIKE '%ประชุม%'
+                        facilities     LIKE '%ห้องประชุม%' OR
+                        facilities     LIKE '%meeting%'   OR
+                        facilities     LIKE '%ประชุม%'    OR
+                        other_services LIKE '%ห้องประชุม%' OR
+                        other_services LIKE '%meeting%'   OR
+                        other_services LIKE '%ประชุม%'
                     )
                     ORDER BY updated_at DESC, cafe_id DESC
                     LIMIT 20
@@ -447,20 +455,17 @@ class LineBotController extends Controller
     // ---------- Flex Components ----------
     private function bubbleBasic($name, $addr, $sub, $phone, $lat, $lng, $mapUrl = null): array
     {
-        $mapUrl    = $mapUrl ?: "https://maps.google.com/?q={$lat},{$lng}";
+        $mapUrl    = $mapUrl ?: (($lat !== null && $lng !== null) ? "https://maps.google.com/?q={$lat},{$lng}" : "https://www.google.com/maps/search/".urlencode((string)$name.' '.(string)$addr));
         $phoneText = $phone ?: "ไม่มีข้อมูล";
         $telUri    = $this->buildTelUri($phone);
 
-        // สร้างปุ่มแบบอาเรย์ธรรมดา เพื่อตัดปัญหา parser
-        $buttons = [
-            [
-                "type" => "button",
-                "style" => "primary",
-                "height" => "sm",
-                "action" => ["type" => "uri", "label" => "เปิดแผนที่", "uri" => $mapUrl],
-                "color" => "#1E88E5"
-            ]
-        ];
+        $buttons = [[
+            "type" => "button",
+            "style" => "primary",
+            "height" => "sm",
+            "action" => ["type" => "uri", "label" => "เปิดแผนที่", "uri" => $mapUrl],
+            "color" => "#1E88E5"
+        ]];
         if ($telUri) {
             $buttons[] = [
                 "type" => "button",
@@ -483,13 +488,7 @@ class LineBotController extends Controller
                         "layout" => "vertical",
                         "spacing" => "8px",
                         "contents" => [
-                            [
-                                "type" => "text",
-                                "text" => (string)$name,
-                                "weight" => "bold",
-                                "size" => "lg",
-                                "wrap" => true
-                            ],
+                            ["type" => "text","text" => (string)$name,"weight" => "bold","size" => "lg","wrap" => true],
                             [
                                 "type" => "box",
                                 "layout" => "horizontal",
