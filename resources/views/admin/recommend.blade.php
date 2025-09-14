@@ -6,10 +6,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema; // <— ใช้เช็คตาราง reviews
 
 class LineBotController extends Controller
 {
+    // ไว้ดูใน log ว่าเป็นโค้ดชุดนี้จริง
+    private const BUILD = 'surin-2025-09-14-top10-style-v3';
+
     private string $token;
     private string $secret;
     private ?string $richMain;
@@ -25,6 +27,7 @@ class LineBotController extends Controller
 
     public function webhook(Request $request)
     {
+        Log::info('[WEBHOOK] BUILD='.self::BUILD); // <-- ดูบรรทัดนี้ใน log
         $data = $request->all();
         Log::info("Raw Webhook: " . json_encode($data, JSON_UNESCAPED_UNICODE));
 
@@ -58,47 +61,28 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ===== Top10 =====
+                // ===== Top10 (ไม่อิง reviews) =====
                 if (in_array($text, ['คาเฟ่Top10','Top10','Top 10','top10'], true)) {
                     $cafes = $this->getTop10Cafes();
-                    Log::info('[Top10] rows', ['count' => count($cafes)]);
+                    Log::info('[Top10] count='.count($cafes));
 
                     $bubbles = [];
                     if (!empty($cafes)) {
                         foreach ($cafes as $c) {
-                            $note = '⭐ ' . number_format((float)($c->avg_rating ?? 0), 1)
-                                  . ' (' . (int)($c->review_count ?? 0) . ' รีวิว)';
+                            $note = '⭐ ' . (isset($c->review_count) && $c->review_count>0
+                                    ? number_format((float)($c->avg_rating ?? 0), 1) . ' ('.$c->review_count.' รีวิว)'
+                                    : 'แนะนำ');
                             $bubbles[] = $this->bubbleBasic(
                                 $c->cafe_name ?? '-', $c->address ?? '-', $note,
                                 $c->phone ?? '-', $c->lat ?? null, $c->lng ?? null
                             );
                         }
                     } else {
-                        // fallback: ร้านล่าสุด
-                        $fallback = DB::table('cafes')
-                            ->whereRaw("LOWER(COALESCE(status,''))='approved'")
-                            ->select('cafe_id','cafe_name','address','lat','lng','phone')
-                            ->orderByDesc('is_recommended')
-                            ->orderByDesc('updated_at')
-                            ->orderByDesc('created_at')
-                            ->orderByDesc('cafe_id')
-                            ->limit(10)
-                            ->get();
-
-                        if ($fallback->isNotEmpty()) {
-                            foreach ($fallback as $c) {
-                                $bubbles[] = $this->bubbleBasic(
-                                    $c->cafe_name ?? '-', $c->address ?? '-', "⭐ แนะนำ",
-                                    $c->phone ?? '-', $c->lat ?? null, $c->lng ?? null
-                                );
-                            }
-                        } else {
-                            $bubbles[] = $this->bubbleInfo(
-                                "ยังไม่มีข้อมูล Top10",
-                                "ลองดูข้อมูลล่าสุดบนเว็บไซต์",
-                                "https://nongchangsaren.com/"
-                            );
-                        }
+                        $bubbles[] = $this->bubbleInfo(
+                            "ยังไม่มีข้อมูล Top10",
+                            "ลองดูข้อมูลล่าสุดบนเว็บไซต์",
+                            "https://nongchangsaren.com/"
+                        );
                     }
 
                     $bubbles[] = $this->bubbleMore('ดูเพิ่มเติมบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
@@ -106,12 +90,14 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ===== สไตล์ (ขึ้นต้น "สไตล์:") =====
+                // ===== สไตล์ (แก้บั๊ก “มินิมอล” ถูกกินตัว ม) =====
                 if (mb_strpos($text, 'สไตล์:') === 0) {
-                    // ลบ prefix ด้วย regex กันอักขระประกอบทำให้หลุดตัวหน้า เช่น “มินิมอล” กลายเป็น “ินิมอล”
+                    // ใช้ regex ตัด prefix อย่างปลอดภัย
                     $styleName = trim(preg_replace('/^\s*สไตล์:\s*/u', '', $text));
+                    Log::info('[Style] raw='.$text.' | parsed='.$styleName);
+
                     $cafes = $this->findCafesByFilter('style:' . $styleName);
-                    Log::info('[Style] query', ['style' => $styleName, 'count' => count($cafes)]);
+                    Log::info('[Style] result_count='.count($cafes));
 
                     $bubbles = [];
                     if (!empty($cafes)) {
@@ -140,9 +126,9 @@ class LineBotController extends Controller
                 // ===== เปิดใหม่ =====
                 if ($text === 'เปิดใหม่') {
                     $cafes = $this->findCafesByFilter('new');
-                    Log::info('[New] rows', ['count' => count($cafes)]);
-                    $bubbles = [];
+                    Log::info('[New] count='.count($cafes));
 
+                    $bubbles = [];
                     if (!empty($cafes)) {
                         foreach (array_slice($cafes, 0, 10) as $c) {
                             $bubbles[] = $this->bubbleBasic(
@@ -250,12 +236,12 @@ class LineBotController extends Controller
         ])->post("https://api.line.me/v2/bot/user/{$userId}/richmenu/{$richMenuId}");
     }
 
-    // ---------- เมนูแนะนำคาเฟ่ (Top10 / เปิดใหม่ / สไตล์ชิป) ----------
+    // ---------- เมนู (Top10 / เปิดใหม่ / สไตล์ชิป) ----------
     private function menuRecommendCarousel(): array
     {
         $bubbles = [];
 
-        // Bubble 1: Top10 / เปิดใหม่
+        // Bubble 1
         $bubbles[] = [
             "type" => "bubble",
             "body" => [
@@ -283,7 +269,7 @@ class LineBotController extends Controller
             "styles" => ["footer" => ["separator" => true]]
         ];
 
-        // Bubble 2: ชิปสไตล์
+        // Bubble 2 (ชิปสไตล์)
         $styleLabels = ['มินิมอล','โมเดิร์น','โคซี่/อบอุ่น','ยุโรป','ธรรมชาติ/สวน','ลอฟท์','อินดัสเทรียล','วินเทจ','อาร์ต/แกลเลอรี่'];
         $chips = [];
         foreach ($styleLabels as $label) {
@@ -295,12 +281,7 @@ class LineBotController extends Controller
                 "paddingAll" => "10px",
                 "action" => ["type" => "message","text" => "สไตล์:".$label],
                 "contents" => [[
-                    "type" => "text",
-                    "text" => "🎨 ".$label,
-                    "size" => "sm",
-                    "weight" => "bold",
-                    "color" => "#FFFFFF",
-                    "align" => "center"
+                    "type" => "text","text" => "🎨 ".$label,"size" => "sm","weight" => "bold","color" => "#FFFFFF","align" => "center"
                 ]]
             ];
         }
@@ -324,53 +305,23 @@ class LineBotController extends Controller
             ]
         ];
 
-        // Bubble 3: ไปหน้าเว็บ
+        // Bubble 3
         $bubbles[] = $this->bubbleMore('ดูทั้งหมดบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
 
         return ["type" => "carousel", "contents" => $bubbles];
     }
 
-    // ---------- Top10 ----------
+    // ---------- Top10: ไม่พึ่ง reviews ----------
     private function getTop10Cafes(): array
     {
-        // ถ้ามีตาราง reviews ให้รวมคะแนน; ถ้าไม่มี ให้ดึงจาก cafes ตรง ๆ
-        if (Schema::hasTable('reviews') && Schema::hasColumn('reviews','rating')) {
-            $rows = DB::table('cafes as c')
-                ->leftJoin('reviews as r', function ($join) {
-                    $join->on('r.cafe_id', '=', 'c.cafe_id')
-                         ->whereRaw("COALESCE(r.status,'approved')='approved'");
-                })
-                ->whereRaw("LOWER(COALESCE(c.status,''))='approved'")
-                ->selectRaw("
-                    c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
-                    COALESCE(AVG(r.rating), 0) AS avg_rating,
-                    COUNT(r.cafe_id)           AS review_count
-                ")
-                ->groupBy('c.cafe_id','c.cafe_name','c.address','c.lat','c.lng','c.phone')
-                // ไม่ใช้ HAVING เพื่อไม่กรองทิ้งเมื่อไม่มีรีวิว
-                ->orderByDesc('avg_rating')
-                ->orderByDesc('review_count')
-                ->orderByDesc('c.is_recommended')
-                ->orderByDesc('c.updated_at')
-                ->orderByDesc('c.cafe_id')
-                ->limit(10)
-                ->get()
-                ->all();
-
-            if (!empty($rows)) return $rows;
-        }
-
-        // fallback เมื่อไม่มี reviews หรือไม่มีคะแนนเลย
-        return DB::table('cafes as c')
-            ->whereRaw("LOWER(COALESCE(c.status,''))='approved'")
-            ->selectRaw("
-                c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
-                0 AS avg_rating, 0 AS review_count
-            ")
-            ->orderByDesc('c.is_recommended')
-            ->orderByDesc('c.updated_at')
-            ->orderByDesc('c.created_at')
-            ->orderByDesc('c.cafe_id')
+        // เอาให้ขึ้นแน่นอน: ร้านที่อนุมัติ เรียง is_recommended > updated_at > created_at > id
+        return DB::table('cafes')
+            ->whereRaw("LOWER(COALESCE(status,''))='approved'")
+            ->selectRaw("cafe_id,cafe_name,address,lat,lng,phone, 0 as avg_rating, 0 as review_count")
+            ->orderByDesc('is_recommended')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('created_at')
+            ->orderByDesc('cafe_id')
             ->limit(10)
             ->get()
             ->all();
@@ -379,7 +330,6 @@ class LineBotController extends Controller
     // ---------- Filters ----------
     private function findCafesByFilter(string $type): array
     {
-        // สไตล์
         if (str_starts_with($type, 'style:')) {
             $kw = trim(mb_substr($type, 6));
             if ($kw === '') return [];
@@ -387,10 +337,10 @@ class LineBotController extends Controller
 
             return DB::table('cafes')
                 ->whereRaw("LOWER(COALESCE(status,''))='approved'")
-                ->where(function($q) use ($like, $kw) {
-                    // ค้นหา element ใน JSON (exact) หรือ contains
-                    $q->whereRaw("(JSON_VALID(cafe_styles) AND (JSON_CONTAINS(cafe_styles, JSON_QUOTE(?), '$') OR JSON_SEARCH(cafe_styles, 'one', ?) IS NOT NULL))", [$kw, $like])
-                      ->orWhere('other_style', 'LIKE', $like);
+                ->where(function($q) use ($kw, $like) {
+                    // JSON ฝั่ง MySQL: ค้นหา exact และ contains
+                    $q->whereRaw("(JSON_VALID(cafe_styles) AND (JSON_CONTAINS(cafe_styles, JSON_QUOTE(?), '$') OR JSON_SEARCH(cafe_styles,'one', ?) IS NOT NULL))", [$kw, $like])
+                      ->orWhere('other_style','LIKE',$like);
                 })
                 ->select('cafe_id','cafe_name','address','lat','lng','phone')
                 ->orderByDesc('updated_at')->orderByDesc('cafe_id')
@@ -399,7 +349,6 @@ class LineBotController extends Controller
                 ->all();
         }
 
-        // เปิดใหม่
         if ($type === 'new') {
             return DB::table('cafes')
                 ->whereRaw("LOWER(COALESCE(status,''))='approved'")
@@ -424,17 +373,13 @@ class LineBotController extends Controller
         $telUri    = $this->buildTelUri($phone);
 
         $buttons = [[
-            "type" => "button",
-            "style" => "primary",
-            "height" => "sm",
+            "type" => "button","style" => "primary","height" => "sm",
             "action" => ["type" => "uri", "label" => "เปิดแผนที่", "uri" => $mapUrl],
             "color" => "#1E88E5"
         ]];
         if ($telUri) {
             $buttons[] = [
-                "type" => "button",
-                "style" => "secondary",
-                "height" => "sm",
+                "type" => "button","style" => "secondary","height" => "sm",
                 "action" => ["type" => "uri", "label" => "โทรเลย", "uri" => $telUri]
             ];
         }
@@ -442,66 +387,27 @@ class LineBotController extends Controller
         return [
             "type" => "bubble",
             "body" => [
-                "type" => "box",
-                "layout" => "vertical",
-                "paddingAll" => "16px",
-                "spacing" => "12px",
+                "type" => "box","layout" => "vertical","paddingAll" => "16px","spacing" => "12px",
                 "contents" => [
-                    [
-                        "type" => "box",
-                        "layout" => "vertical",
-                        "spacing" => "8px",
-                        "contents" => [
-                            ["type" => "text","text" => (string)$name,"weight" => "bold","size" => "lg","wrap" => true],
-                            [
-                                "type" => "box",
-                                "layout" => "horizontal",
-                                "spacing" => "sm",
-                                "contents" => [[
-                                    "type" => "box",
-                                    "layout" => "baseline",
-                                    "backgroundColor" => "#EEF7FF",
-                                    "cornerRadius" => "6px",
-                                    "paddingAll" => "6px",
-                                    "contents" => [[
-                                        "type" => "text",
-                                        "text" => (string)$sub,
-                                        "size" => "xs",
-                                        "color" => "#1E88E5",
-                                        "wrap" => true
-                                    ]]
-                                ]]
-                            ]
-                        ]
-                    ],
-                    [
-                        "type" => "box",
-                        "layout" => "horizontal",
-                        "spacing" => "sm",
-                        "contents" => [
-                            ["type" => "text","text" => "📍","size" => "sm","flex" => 0],
-                            ["type" => "text","text" => (string)($addr ?? "-"),"size" => "sm","color" => "#555555","wrap" => true]
-                        ]
-                    ],
-                    [
-                        "type" => "box",
-                        "layout" => "horizontal",
-                        "spacing" => "sm",
-                        "contents" => [
-                            ["type" => "text","text" => "☎","size" => "sm","flex" => 0],
-                            ["type" => "text","text" => $phoneText,"size" => "sm","color" => "#555555","wrap" => true]
-                        ]
-                    ],
+                    ["type" => "text","text" => (string)$name,"weight" => "bold","size" => "lg","wrap" => true],
+                    ["type" => "box","layout" => "horizontal","spacing" => "sm","contents" => [[
+                        "type" => "box","layout" => "baseline","backgroundColor" => "#EEF7FF","cornerRadius" => "6px","paddingAll" => "6px",
+                        "contents" => [["type" => "text","text" => (string)$sub,"size" => "xs","color" => "#1E88E5","wrap" => true]]
+                    ]]],
+                    ["type" => "box","layout" => "horizontal","spacing" => "sm","contents" => [
+                        ["type" => "text","text" => "📍","size" => "sm","flex" => 0],
+                        ["type" => "text","text" => (string)($addr ?? "-"),"size" => "sm","color" => "#555555","wrap" => true]
+                    ]],
+                    ["type" => "box","layout" => "horizontal","spacing" => "sm","contents" => [
+                        ["type" => "text","text" => "☎","size" => "sm","flex" => 0],
+                        ["type" => "text","text" => $phoneText,"size" => "sm","color" => "#555555","wrap" => true]
+                    ]],
                     ["type" => "separator","margin" => "12px"]
                 ]
             ],
             "footer" => [
-                "type" => "box",
-                "layout" => "horizontal",
-                "spacing" => "md",
-                "paddingAll" => "12px",
-                "contents" => $buttons,
-                "flex" => 0
+                "type" => "box","layout" => "horizontal","spacing" => "md","paddingAll" => "12px",
+                "contents" => $buttons,"flex" => 0
             ],
             "styles" => ["footer" => ["separator" => true]]
         ];
@@ -579,7 +485,6 @@ class LineBotController extends Controller
         ]);
     }
 
-    // ---------- Utils ----------
     private function buildTelUri(?string $raw): ?string
     {
         if (!$raw) return null;
