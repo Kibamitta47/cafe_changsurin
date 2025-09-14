@@ -1,495 +1,145 @@
-<?php
+<!DOCTYPE html>
+<html lang="th" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เลือกคาเฟ่แนะนำ - Admin Panel</title>
 
-namespace App\Http\Controllers;
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
+    <style>
+        body { font-family: 'Kanit', sans-serif; background-color: #F8F9FA; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #E5E7EB; padding: 12px; text-align: left; }
+        th { background-color: #F3F4F6; font-weight: 600; }
+        tr:nth-child(even) { background-color: #F9FAFB; }
 
-class LineBotController extends Controller
-{
-    // ไว้ดูใน log ว่าเป็นโค้ดชุดนี้จริง
-    private const BUILD = 'surin-2025-09-14-top10-style-v3';
-
-    private string $token;
-    private string $secret;
-    private ?string $richMain;
-    private ?string $richFaq;
-
-    public function __construct()
-    {
-        $this->token    = (string) config('services.line.channel_access_token');
-        $this->secret   = (string) config('services.line.channel_secret');
-        $this->richMain = config('services.line.richmenu_main_id');
-        $this->richFaq  = config('services.line.richmenu_faq_id');
-    }
-
-    public function webhook(Request $request)
-    {
-        Log::info('[WEBHOOK] BUILD='.self::BUILD); // <-- ดูบรรทัดนี้ใน log
-        $data = $request->all();
-        Log::info("Raw Webhook: " . json_encode($data, JSON_UNESCAPED_UNICODE));
-
-        $events = $data['events'] ?? [];
-        foreach ($events as $event) {
-            if (!isset($event['replyToken'])) continue;
-
-            $replyToken = $event['replyToken'];
-            $userId     = $event['source']['userId'] ?? null;
-
-            // ---------- TEXT ----------
-            if (($event['type'] ?? '') === 'message' && ($event['message']['type'] ?? '') === 'text') {
-                $text = trim($event['message']['text'] ?? '');
-
-                // Toggle Rich Menu
-                if (in_array($text, ['เมนู','menu','เริ่มต้น'], true)) {
-                    $this->setUserRichMenu($userId, $this->richMain);
-                    $this->replyText($replyToken, "เปิดเมนูหลักแล้วครับ 😊");
-                    continue;
-                }
-                if (in_array($text, ['FAQ','คำถามที่พบบ่อย','เมนูคำตอบ'], true)) {
-                    $this->setUserRichMenu($userId, $this->richFaq);
-                    $this->replyText($replyToken, "เมนู FAQ พร้อมใช้งานครับ ❓");
-                    continue;
-                }
-
-                // เมนูแนะนำคาเฟ่
-                if ($this->isRecommendTrigger($text)) {
-                    $menu = $this->menuRecommendCarousel();
-                    $this->replyFlex($replyToken, "เมนูแนะนำคาเฟ่เมืองสุรินทร์", $menu);
-                    continue;
-                }
-
-                // ===== Top10 (ไม่อิง reviews) =====
-                if (in_array($text, ['คาเฟ่Top10','Top10','Top 10','top10'], true)) {
-                    $cafes = $this->getTop10Cafes();
-                    Log::info('[Top10] count='.count($cafes));
-
-                    $bubbles = [];
-                    if (!empty($cafes)) {
-                        foreach ($cafes as $c) {
-                            $note = '⭐ ' . (isset($c->review_count) && $c->review_count>0
-                                    ? number_format((float)($c->avg_rating ?? 0), 1) . ' ('.$c->review_count.' รีวิว)'
-                                    : 'แนะนำ');
-                            $bubbles[] = $this->bubbleBasic(
-                                $c->cafe_name ?? '-', $c->address ?? '-', $note,
-                                $c->phone ?? '-', $c->lat ?? null, $c->lng ?? null
-                            );
-                        }
-                    } else {
-                        $bubbles[] = $this->bubbleInfo(
-                            "ยังไม่มีข้อมูล Top10",
-                            "ลองดูข้อมูลล่าสุดบนเว็บไซต์",
-                            "https://nongchangsaren.com/"
-                        );
-                    }
-
-                    $bubbles[] = $this->bubbleMore('ดูเพิ่มเติมบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
-                    $this->replyFlex($replyToken, "คาเฟ่ Top 10", ["type"=>"carousel","contents"=>$bubbles]);
-                    continue;
-                }
-
-                // ===== สไตล์ (แก้บั๊ก “มินิมอล” ถูกกินตัว ม) =====
-                if (mb_strpos($text, 'สไตล์:') === 0) {
-                    // ใช้ regex ตัด prefix อย่างปลอดภัย
-                    $styleName = trim(preg_replace('/^\s*สไตล์:\s*/u', '', $text));
-                    Log::info('[Style] raw='.$text.' | parsed='.$styleName);
-
-                    $cafes = $this->findCafesByFilter('style:' . $styleName);
-                    Log::info('[Style] result_count='.count($cafes));
-
-                    $bubbles = [];
-                    if (!empty($cafes)) {
-                        foreach (array_slice($cafes, 0, 9) as $c) {
-                            $mapUrl = ($c->lat !== null && $c->lng !== null)
-                                ? "https://maps.google.com/?q={$c->lat},{$c->lng}"
-                                : "https://www.google.com/maps/search/".urlencode(($c->cafe_name ?? '').' '.($c->address ?? ''));
-                            $bubbles[] = $this->bubbleBasic(
-                                $c->cafe_name ?? '-', $c->address ?? '-', '🎨 สไตล์: '.$styleName,
-                                $c->phone ?? '-', $c->lat ?? null, $c->lng ?? null, $mapUrl
-                            );
-                        }
-                    } else {
-                        $bubbles[] = $this->bubbleInfo(
-                            "ยังไม่พบตามสไตล์",
-                            "ลองเลือกสไตล์อื่นหรือดูทั้งหมดบนเว็บ",
-                            "https://nongchangsaren.com/"
-                        );
-                    }
-
-                    $bubbles[] = $this->bubbleMore('ดูเพิ่มเติมบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
-                    $this->replyFlex($replyToken, "คาเฟ่สไตล์: {$styleName}", ["type"=>"carousel","contents"=>$bubbles]);
-                    continue;
-                }
-
-                // ===== เปิดใหม่ =====
-                if ($text === 'เปิดใหม่') {
-                    $cafes = $this->findCafesByFilter('new');
-                    Log::info('[New] count='.count($cafes));
-
-                    $bubbles = [];
-                    if (!empty($cafes)) {
-                        foreach (array_slice($cafes, 0, 10) as $c) {
-                            $bubbles[] = $this->bubbleBasic(
-                                $c->cafe_name ?? '-', $c->address ?? '-', "🆕 ร้านเปิดใหม่",
-                                $c->phone ?? '-', $c->lat ?? null, $c->lng ?? null
-                            );
-                        }
-                    } else {
-                        $bubbles[] = $this->bubbleInfo(
-                            "ยังไม่พบร้านเปิดใหม่",
-                            "ลองดูบนเว็บไซต์เพื่ออัปเดตเพิ่มเติม",
-                            "https://nongchangsaren.com/"
-                        );
-                    }
-
-                    $bubbles[] = $this->bubbleMore('ดูเพิ่มเติมบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
-                    $this->replyFlex($replyToken, "คาเฟ่เปิดใหม่", ["type"=>"carousel","contents"=>$bubbles]);
-                    continue;
-                }
-
-                // default
-                $this->replyText($replyToken, "พิมพ์ “แนะนำคาเฟ่เมืองสุรินทร์” เพื่อเปิดเมนูแนะนำ หรือ “เมนู” เพื่อเปิดเมนูหลักครับ");
-                continue;
-            }
-
-            // ---------- LOCATION ----------
-            if (($event['type'] ?? '') === 'message' && ($event['message']['type'] ?? '') === 'location') {
-                $lat = $event['message']['latitude']  ?? null;
-                $lng = $event['message']['longitude'] ?? null;
-                if ($lat === null || $lng === null) {
-                    $this->replyText($replyToken, "ไม่พบพิกัดที่ส่งมา ลองส่งใหม่อีกครั้งนะครับ");
-                    continue;
-                }
-
-                $cafes = DB::select("
-                    SELECT cafes.cafe_id, cafes.cafe_name, cafes.address, cafes.lat, cafes.lng, cafes.phone,
-                           (6371 * acos(
-                               cos(radians(?)) * cos(radians(cafes.lat)) *
-                               cos(radians(cafes.lng) - radians(?)) +
-                               sin(radians(?)) * sin(radians(cafes.lat))
-                           )) AS distance
-                    FROM cafes
-                    WHERE LOWER(COALESCE(status,''))='approved'
-                    HAVING distance < 5
-                    ORDER BY distance ASC, cafe_id DESC
-                    LIMIT 5
-                ", [$lat, $lng, $lat]);
-
-                $bubbles = [];
-                if (!empty($cafes)) {
-                    foreach ($cafes as $c) {
-                        $bubbles[] = $this->bubbleBasic(
-                            $c->cafe_name, $c->address, "📍 ห่าง " . round($c->distance, 2) . " กม.",
-                            $c->phone, $c->lat, $c->lng
-                        );
-                    }
-                } else {
-                    $bubbles[] = $this->bubbleInfo(
-                        "ไม่พบคาเฟ่ในรัศมี 5 กม.",
-                        "ดูแผนที่ร้านทั้งหมดบนเว็บไซต์",
-                        "https://nongchangsaren.com/"
-                    );
-                }
-                $bubbles[] = $this->bubbleMore('ดูเพิ่มเติมบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
-                $this->replyFlex($replyToken, "คาเฟ่ใกล้คุณ", ["type"=>"carousel","contents"=>$bubbles]);
-            }
+        .shortcut-bar {
+            position: sticky;
+            top: 0;
+            background: #fff;
+            z-index: 50;
+            padding: 12px 0;
+            border-bottom: 1px solid #E5E7EB;
         }
+    </style>
+</head>
+<body class="min-h-screen">
 
-        return response()->json(['status' => 'ok']);
-    }
+    @include('components.adminmenu')
 
-    // ---------- Helper: Trigger ----------
-    private function isRecommendTrigger(string $text): bool
-    {
-        $raw = trim($text);
-        $noSpace = preg_replace('/\s+/u', '', $raw);
+    <main class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-4xl font-bold text-gray-800">เลือกคาเฟ่แนะนำ</h1>
+        </div>
+        
+        @if(session('success'))
+            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-lg mb-6" role="alert">
+                <p>{{ session('success') }}</p>
+            </div>
+        @endif
 
-        $aliases = [
-            'แนะนำคาเฟ่เมืองสุรินทร์',
-            'เมนูแนะนำคาเฟ่',
-            'คาเฟ่เมืองสุรินทร์',
-            'recommend',
-        ];
-        $aliasesNoSpace = array_map(fn($s) => preg_replace('/\s+/u', '', $s), $aliases);
+        <!-- ปุ่มลัด -->
+        <div class="shortcut-bar flex flex-wrap gap-3 mb-8">
+            <a href="#top-rated" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">⭐ ยอดนิยม</a>
+            <a href="#new-cafes" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">✨ เปิดใหม่</a>
+            
+            @foreach($cafesByStyle as $style => $cafes)
+                <a href="#style-{{ Str::slug($style) }}" class="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600">🎨 {{ $style }}</a>
+            @endforeach
 
-        if (in_array($raw, $aliases, true) || in_array($noSpace, $aliasesNoSpace, true)) return true;
+            @foreach($cafesByPrice as $price => $cafes)
+                <a href="#price-{{ Str::slug($price) }}" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600">💰 {{ $price }}</a>
+            @endforeach
 
-        $hasRecommend = mb_stripos($raw, 'แนะนำคาเฟ่') !== false;
-        $hasSurin1    = mb_stripos($raw, 'เมืองสุรินทร์') !== false;
-        $hasSurin2    = mb_stripos($raw, 'สุรินทร์') !== false;
+            @foreach($cafesByFacility as $facility => $cafes)
+                <a href="#facility-{{ Str::slug($facility) }}" class="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600">🛠 {{ $facility }}</a>
+            @endforeach
+        </div>
 
-        if ($hasRecommend && ($hasSurin1 || $hasSurin2)) return true;
-        if (mb_stripos($raw, 'recommend') !== false && ($hasSurin1 || $hasSurin2)) return true;
+        <!-- Top Rated -->
+        @if($topRatedCafes->isNotEmpty())
+        <section id="top-rated" class="mb-12">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">⭐ 10 อันดับคาเฟ่ยอดนิยม</h2>
+            <table class="rounded-xl shadow-md bg-white w-full">
+                <thead><tr><th>ชื่อคาเฟ่</th></tr></thead>
+                <tbody>
+                    @foreach($topRatedCafes as $cafe)
+                        <tr><td>{{ $cafe->cafe_name }}</td></tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </section>
+        @endif
 
-        return false;
-    }
+        <!-- New Cafes -->
+        @if($newCafes->isNotEmpty())
+        <section id="new-cafes" class="mb-12">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">✨ คาเฟ่เปิดใหม่</h2>
+            <table class="rounded-xl shadow-md bg-white w-full">
+                <thead><tr><th>ชื่อคาเฟ่</th></tr></thead>
+                <tbody>
+                    @foreach($newCafes as $cafe)
+                        <tr><td>{{ $cafe->cafe_name }}</td></tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </section>
+        @endif
 
-    // ---------- Rich Menu ----------
-    private function setUserRichMenu(?string $userId, ?string $richMenuId): void
-    {
-        if (!$userId || !$richMenuId) return;
+        <!-- Cafes by Style -->
+        @foreach($cafesByStyle as $style => $cafes)
+            @if($cafes->isNotEmpty())
+            <section id="style-{{ Str::slug($style) }}" class="mb-12">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6">🎨 สไตล์: {{ $style }}</h2>
+                <table class="rounded-xl shadow-md bg-white w-full">
+                    <thead><tr><th>ชื่อคาเฟ่</th></tr></thead>
+                    <tbody>
+                        @foreach($cafes as $cafe)
+                            <tr><td>{{ $cafe->cafe_name }}</td></tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </section>
+            @endif
+        @endforeach
 
-        Http::withHeaders([
-            'Authorization' => 'Bearer '.$this->token,
-        ])->post("https://api.line.me/v2/bot/user/{$userId}/richmenu/{$richMenuId}");
-    }
+        <!-- Cafes by Price -->
+        @foreach($cafesByPrice as $price => $cafes)
+            @if($cafes->isNotEmpty())
+            <section id="price-{{ Str::slug($price) }}" class="mb-12">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6">💰 ช่วงราคา: {{ $price }}</h2>
+                <table class="rounded-xl shadow-md bg-white w-full">
+                    <thead><tr><th>ชื่อคาเฟ่</th></tr></thead>
+                    <tbody>
+                        @foreach($cafes as $cafe)
+                            <tr><td>{{ $cafe->cafe_name }}</td></tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </section>
+            @endif
+        @endforeach
 
-    // ---------- เมนู (Top10 / เปิดใหม่ / สไตล์ชิป) ----------
-    private function menuRecommendCarousel(): array
-    {
-        $bubbles = [];
+        <!-- Cafes by Facility -->
+        @foreach($cafesByFacility as $facility => $cafes)
+            @if($cafes->isNotEmpty())
+            <section id="facility-{{ Str::slug($facility) }}" class="mb-12">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6">🛠 สิ่งอำนวยความสะดวก: {{ $facility }}</h2>
+                <table class="rounded-xl shadow-md bg-white w-full">
+                    <thead><tr><th>ชื่อคาเฟ่</th></tr></thead>
+                    <tbody>
+                        @foreach($cafes as $item)
+                            <tr><td>{{ $item['cafe']->cafe_name }}</td></tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </section>
+            @endif
+        @endforeach
 
-        // Bubble 1
-        $bubbles[] = [
-            "type" => "bubble",
-            "body" => [
-                "type" => "box",
-                "layout" => "vertical",
-                "paddingAll" => "16px",
-                "spacing" => "12px",
-                "contents" => [
-                    ["type" => "text","text" => "แนะนำคาเฟ่เมืองสุรินทร์","weight" => "bold","size" => "lg"],
-                    ["type" => "text","text" => "เลือกหมวดหรือสไตล์ที่ชอบได้เลยครับ","size" => "sm","color" => "#666666","wrap" => true],
-                    ["type" => "separator","margin" => "12px"]
-                ]
-            ],
-            "footer" => [
-                "type" => "box",
-                "layout" => "vertical",
-                "spacing" => "md",
-                "paddingAll" => "12px",
-                "contents" => [
-                    ["type" => "button","style" => "primary","action" => ["type" => "message","label" => "🔥 Top10","text" => "คาเฟ่Top10"],"color" => "#1E88E5"],
-                    ["type" => "button","style" => "primary","action" => ["type" => "message","label" => "✨ เปิดใหม่","text" => "เปิดใหม่"],"color" => "#2ECC71"],
-                ],
-                "flex" => 0
-            ],
-            "styles" => ["footer" => ["separator" => true]]
-        ];
-
-        // Bubble 2 (ชิปสไตล์)
-        $styleLabels = ['มินิมอล','โมเดิร์น','โคซี่/อบอุ่น','ยุโรป','ธรรมชาติ/สวน','ลอฟท์','อินดัสเทรียล','วินเทจ','อาร์ต/แกลเลอรี่'];
-        $chips = [];
-        foreach ($styleLabels as $label) {
-            $chips[] = [
-                "type" => "box",
-                "layout" => "vertical",
-                "cornerRadius" => "12px",
-                "backgroundColor" => "#8A63F6",
-                "paddingAll" => "10px",
-                "action" => ["type" => "message","text" => "สไตล์:".$label],
-                "contents" => [[
-                    "type" => "text","text" => "🎨 ".$label,"size" => "sm","weight" => "bold","color" => "#FFFFFF","align" => "center"
-                ]]
-            ];
-        }
-        $rows = array_chunk($chips, 3);
-        $gridRows = [];
-        foreach ($rows as $row) {
-            $gridRows[] = ["type"=>"box","layout"=>"horizontal","spacing"=>"8px","contents"=>$row];
-        }
-
-        $bubbles[] = [
-            "type" => "bubble",
-            "body" => [
-                "type" => "box",
-                "layout" => "vertical",
-                "paddingAll" => "16px",
-                "spacing" => "12px",
-                "contents" => array_merge(
-                    [["type"=>"text","text"=>"เลือกตามสไตล์ที่ชอบ","weight"=>"bold","size"=>"md"]],
-                    $gridRows
-                )
-            ]
-        ];
-
-        // Bubble 3
-        $bubbles[] = $this->bubbleMore('ดูทั้งหมดบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
-
-        return ["type" => "carousel", "contents" => $bubbles];
-    }
-
-    // ---------- Top10: ไม่พึ่ง reviews ----------
-    private function getTop10Cafes(): array
-    {
-        // เอาให้ขึ้นแน่นอน: ร้านที่อนุมัติ เรียง is_recommended > updated_at > created_at > id
-        return DB::table('cafes')
-            ->whereRaw("LOWER(COALESCE(status,''))='approved'")
-            ->selectRaw("cafe_id,cafe_name,address,lat,lng,phone, 0 as avg_rating, 0 as review_count")
-            ->orderByDesc('is_recommended')
-            ->orderByDesc('updated_at')
-            ->orderByDesc('created_at')
-            ->orderByDesc('cafe_id')
-            ->limit(10)
-            ->get()
-            ->all();
-    }
-
-    // ---------- Filters ----------
-    private function findCafesByFilter(string $type): array
-    {
-        if (str_starts_with($type, 'style:')) {
-            $kw = trim(mb_substr($type, 6));
-            if ($kw === '') return [];
-            $like = "%{$kw}%";
-
-            return DB::table('cafes')
-                ->whereRaw("LOWER(COALESCE(status,''))='approved'")
-                ->where(function($q) use ($kw, $like) {
-                    // JSON ฝั่ง MySQL: ค้นหา exact และ contains
-                    $q->whereRaw("(JSON_VALID(cafe_styles) AND (JSON_CONTAINS(cafe_styles, JSON_QUOTE(?), '$') OR JSON_SEARCH(cafe_styles,'one', ?) IS NOT NULL))", [$kw, $like])
-                      ->orWhere('other_style','LIKE',$like);
-                })
-                ->select('cafe_id','cafe_name','address','lat','lng','phone')
-                ->orderByDesc('updated_at')->orderByDesc('cafe_id')
-                ->limit(20)
-                ->get()
-                ->all();
-        }
-
-        if ($type === 'new') {
-            return DB::table('cafes')
-                ->whereRaw("LOWER(COALESCE(status,''))='approved'")
-                ->whereRaw('CAST(COALESCE(is_new_opening,0) AS UNSIGNED)=1')
-                ->select('cafe_id','cafe_name','address','lat','lng','phone')
-                ->orderByDesc('updated_at')->orderByDesc('created_at')->orderByDesc('cafe_id')
-                ->limit(20)
-                ->get()
-                ->all();
-        }
-
-        return [];
-    }
-
-    // ---------- Flex Components ----------
-    private function bubbleBasic($name, $addr, $sub, $phone, $lat, $lng, $mapUrl = null): array
-    {
-        $mapUrl    = $mapUrl ?: (($lat !== null && $lng !== null)
-            ? "https://maps.google.com/?q={$lat},{$lng}"
-            : "https://www.google.com/maps/search/".urlencode((string)$name.' '.(string)$addr));
-        $phoneText = $phone ?: "ไม่มีข้อมูล";
-        $telUri    = $this->buildTelUri($phone);
-
-        $buttons = [[
-            "type" => "button","style" => "primary","height" => "sm",
-            "action" => ["type" => "uri", "label" => "เปิดแผนที่", "uri" => $mapUrl],
-            "color" => "#1E88E5"
-        ]];
-        if ($telUri) {
-            $buttons[] = [
-                "type" => "button","style" => "secondary","height" => "sm",
-                "action" => ["type" => "uri", "label" => "โทรเลย", "uri" => $telUri]
-            ];
-        }
-
-        return [
-            "type" => "bubble",
-            "body" => [
-                "type" => "box","layout" => "vertical","paddingAll" => "16px","spacing" => "12px",
-                "contents" => [
-                    ["type" => "text","text" => (string)$name,"weight" => "bold","size" => "lg","wrap" => true],
-                    ["type" => "box","layout" => "horizontal","spacing" => "sm","contents" => [[
-                        "type" => "box","layout" => "baseline","backgroundColor" => "#EEF7FF","cornerRadius" => "6px","paddingAll" => "6px",
-                        "contents" => [["type" => "text","text" => (string)$sub,"size" => "xs","color" => "#1E88E5","wrap" => true]]
-                    ]]],
-                    ["type" => "box","layout" => "horizontal","spacing" => "sm","contents" => [
-                        ["type" => "text","text" => "📍","size" => "sm","flex" => 0],
-                        ["type" => "text","text" => (string)($addr ?? "-"),"size" => "sm","color" => "#555555","wrap" => true]
-                    ]],
-                    ["type" => "box","layout" => "horizontal","spacing" => "sm","contents" => [
-                        ["type" => "text","text" => "☎","size" => "sm","flex" => 0],
-                        ["type" => "text","text" => $phoneText,"size" => "sm","color" => "#555555","wrap" => true]
-                    ]],
-                    ["type" => "separator","margin" => "12px"]
-                ]
-            ],
-            "footer" => [
-                "type" => "box","layout" => "horizontal","spacing" => "md","paddingAll" => "12px",
-                "contents" => $buttons,"flex" => 0
-            ],
-            "styles" => ["footer" => ["separator" => true]]
-        ];
-    }
-
-    private function bubbleMore(string $title, string $sub, string $url): array
-    {
-        return [
-            "type" => "bubble",
-            "body" => [
-                "type" => "box","layout" => "vertical","paddingAll" => "16px","spacing" => "10px",
-                "contents" => [
-                    ["type" => "text","text" => $title,"weight" => "bold","size" => "lg","wrap" => true],
-                    ["type" => "text","text" => $sub,"size" => "sm","color" => "#666666","wrap" => true],
-                    ["type" => "separator","margin" => "12px"]
-                ]
-            ],
-            "footer" => [
-                "type" => "box","layout" => "vertical","spacing" => "md","paddingAll" => "12px",
-                "contents" => [[
-                    "type" => "button","style" => "primary",
-                    "action" => ["type" => "uri","label" => "ไปที่เว็บไซต์","uri" => $url],
-                    "color" => "#1E88E5"
-                ]],
-                "flex" => 0
-            ],
-            "styles" => ["footer" => ["separator" => true]]
-        ];
-    }
-
-    private function bubbleInfo(string $title, string $sub, string $url): array
-    {
-        return [
-            "type" => "bubble",
-            "body" => [
-                "type" => "box","layout" => "vertical","paddingAll" => "16px","spacing" => "10px",
-                "contents" => [
-                    ["type" => "text","text" => $title,"weight" => "bold","size" => "lg","wrap" => true],
-                    ["type" => "text","text" => $sub,"size" => "sm","color" => "#666666","wrap" => true],
-                    ["type" => "separator","margin" => "12px"]
-                ]
-            ],
-            "footer" => [
-                "type" => "box","layout" => "vertical","spacing" => "md","paddingAll" => "12px",
-                "contents" => [[
-                    "type" => "button","style" => "primary",
-                    "action" => ["type" => "uri","label" => "ไปที่เว็บไซต์","uri" => $url],
-                    "color" => "#1E88E5"
-                ]],
-                "flex" => 0
-            ],
-            "styles" => ["footer" => ["separator" => true]]
-        ];
-    }
-
-    // ---------- Reply Helpers ----------
-    private function replyText(string $replyToken, string $text): void
-    {
-        $this->replyMessage($replyToken, ["type" => "text", "text" => $text]);
-    }
-
-    private function replyFlex(string $replyToken, string $altText, array $contents): void
-    {
-        $this->replyMessage($replyToken, ["type" => "flex","altText" => $altText,"contents" => $contents]);
-    }
-
-    private function replyMessage(string $replyToken, array $message): void
-    {
-        Http::withHeaders([
-            'Content-Type'  => 'application/json',
-            'Authorization' => 'Bearer '.$this->token,
-        ])->post('https://api.line.me/v2/bot/message/reply', [
-            'replyToken' => $replyToken,
-            'messages'   => [$message]
-        ]);
-    }
-
-    private function buildTelUri(?string $raw): ?string
-    {
-        if (!$raw) return null;
-        $digits = preg_replace('/[^0-9+]/', '', $raw);
-        if (!$digits) return null;
-        return "tel:{$digits}";
-    }
-}
+    </main>
+</body>
+</html>
