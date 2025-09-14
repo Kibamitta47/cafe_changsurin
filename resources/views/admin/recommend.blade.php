@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema; // <— ใช้เช็คตาราง reviews
 
 class LineBotController extends Controller
 {
@@ -73,10 +74,12 @@ class LineBotController extends Controller
                             );
                         }
                     } else {
-                        // fallback: ร้านล่าสุด (ตัดตัวกรองจังหวัดทิ้ง)
+                        // fallback: ร้านล่าสุด
                         $fallback = DB::table('cafes')
                             ->whereRaw("LOWER(COALESCE(status,''))='approved'")
                             ->select('cafe_id','cafe_name','address','lat','lng','phone')
+                            ->orderByDesc('is_recommended')
+                            ->orderByDesc('updated_at')
                             ->orderByDesc('created_at')
                             ->orderByDesc('cafe_id')
                             ->limit(10)
@@ -104,10 +107,9 @@ class LineBotController extends Controller
                 }
 
                 // ===== สไตล์ (ขึ้นต้น "สไตล์:") =====
-                $stylePrefix = 'สไตล์:';
-                if (mb_strpos($text, $stylePrefix) === 0) {
-                    // ตัด prefix แบบไดนามิก (กันอักขระผสม/การันต์)
-                    $styleName = trim(mb_substr($text, mb_strlen($stylePrefix)));
+                if (mb_strpos($text, 'สไตล์:') === 0) {
+                    // ลบ prefix ด้วย regex กันอักขระประกอบทำให้หลุดตัวหน้า เช่น “มินิมอล” กลายเป็น “ินิมอล”
+                    $styleName = trim(preg_replace('/^\s*สไตล์:\s*/u', '', $text));
                     $cafes = $this->findCafesByFilter('style:' . $styleName);
                     Log::info('[Style] query', ['style' => $styleName, 'count' => count($cafes)]);
 
@@ -281,7 +283,7 @@ class LineBotController extends Controller
             "styles" => ["footer" => ["separator" => true]]
         ];
 
-        // Bubble 2: ชิปสไตล์ (3 คอลัมน์)
+        // Bubble 2: ชิปสไตล์
         $styleLabels = ['มินิมอล','โมเดิร์น','โคซี่/อบอุ่น','ยุโรป','ธรรมชาติ/สวน','ลอฟท์','อินดัสเทรียล','วินเทจ','อาร์ต/แกลเลอรี่'];
         $chips = [];
         foreach ($styleLabels as $label) {
@@ -331,37 +333,47 @@ class LineBotController extends Controller
     // ---------- Top10 ----------
     private function getTop10Cafes(): array
     {
-        $rows = DB::table('cafes as c')
-            ->leftJoin('reviews as r', function ($join) {
-                $join->on('r.cafe_id', '=', 'c.cafe_id')
-                     ->whereRaw("COALESCE(r.status,'approved')='approved'");
-            })
+        // ถ้ามีตาราง reviews ให้รวมคะแนน; ถ้าไม่มี ให้ดึงจาก cafes ตรง ๆ
+        if (Schema::hasTable('reviews') && Schema::hasColumn('reviews','rating')) {
+            $rows = DB::table('cafes as c')
+                ->leftJoin('reviews as r', function ($join) {
+                    $join->on('r.cafe_id', '=', 'c.cafe_id')
+                         ->whereRaw("COALESCE(r.status,'approved')='approved'");
+                })
+                ->whereRaw("LOWER(COALESCE(c.status,''))='approved'")
+                ->selectRaw("
+                    c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
+                    COALESCE(AVG(r.rating), 0) AS avg_rating,
+                    COUNT(r.cafe_id)           AS review_count
+                ")
+                ->groupBy('c.cafe_id','c.cafe_name','c.address','c.lat','c.lng','c.phone')
+                // ไม่ใช้ HAVING เพื่อไม่กรองทิ้งเมื่อไม่มีรีวิว
+                ->orderByDesc('avg_rating')
+                ->orderByDesc('review_count')
+                ->orderByDesc('c.is_recommended')
+                ->orderByDesc('c.updated_at')
+                ->orderByDesc('c.cafe_id')
+                ->limit(10)
+                ->get()
+                ->all();
+
+            if (!empty($rows)) return $rows;
+        }
+
+        // fallback เมื่อไม่มี reviews หรือไม่มีคะแนนเลย
+        return DB::table('cafes as c')
             ->whereRaw("LOWER(COALESCE(c.status,''))='approved'")
-            // ไม่กรองจังหวัด เพื่อไม่ให้ว่าง
             ->selectRaw("
                 c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
-                COALESCE(AVG(r.rating), 0) AS avg_rating,
-                COUNT(r.cafe_id)           AS review_count
+                0 AS avg_rating, 0 AS review_count
             ")
-            ->groupBy('c.cafe_id','c.cafe_name','c.address','c.lat','c.lng','c.phone')
-            ->havingRaw("review_count >= 1 OR avg_rating > 0")
-            ->orderByDesc('avg_rating')
-            ->orderByDesc('review_count')
+            ->orderByDesc('c.is_recommended')
+            ->orderByDesc('c.updated_at')
+            ->orderByDesc('c.created_at')
             ->orderByDesc('c.cafe_id')
             ->limit(10)
             ->get()
             ->all();
-
-        if (empty($rows)) {
-            // fallback: ร้านล่าสุดทั้งหมด
-            return DB::table('cafes')
-                ->whereRaw("LOWER(COALESCE(status,''))='approved'")
-                ->select('cafe_id','cafe_name','address','lat','lng','phone')
-                ->orderByDesc('created_at')->orderByDesc('cafe_id')->limit(10)->get()
-                ->map(function ($c) { $c->avg_rating = 0; $c->review_count = 0; return $c; })
-                ->all();
-        }
-        return $rows;
     }
 
     // ---------- Filters ----------
@@ -376,7 +388,7 @@ class LineBotController extends Controller
             return DB::table('cafes')
                 ->whereRaw("LOWER(COALESCE(status,''))='approved'")
                 ->where(function($q) use ($like, $kw) {
-                    // ค้นหา element ใน JSON ตรงตัว และแบบ contains
+                    // ค้นหา element ใน JSON (exact) หรือ contains
                     $q->whereRaw("(JSON_VALID(cafe_styles) AND (JSON_CONTAINS(cafe_styles, JSON_QUOTE(?), '$') OR JSON_SEARCH(cafe_styles, 'one', ?) IS NOT NULL))", [$kw, $like])
                       ->orWhere('other_style', 'LIKE', $like);
                 })
