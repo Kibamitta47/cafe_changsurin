@@ -67,7 +67,7 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ----- Top10 (จับแบบหลวม รองรับอีโมจิ/คีย์ผสม) -----
+                // ----- Top10 -----
                 if (preg_match('/top\s*10/u', $lower) || str_contains($nospace, 'คาเฟ่top10') || $nospace === 'top10') {
                     Log::info('[ROUTE] Top10');
                     try {
@@ -83,7 +83,6 @@ class LineBotController extends Controller
                                 );
                             }
                         } else {
-                            // fallback ล่าสุด
                             $fallback = $this->getLatestCafesForSurin();
                             if (!empty($fallback)) {
                                 foreach ($fallback as $c) {
@@ -290,7 +289,7 @@ class LineBotController extends Controller
 
         $hasRecommend = mb_stripos($raw, 'แนะนำคาเฟ่') !== false;
         $hasSurin1    = mb_stripos($raw, 'เมืองสุรินทร์') !== false;
-        $hasSurin2    = mb_stripos($raw, 'สุริน') !== false; // ยืดหยุ่นขึ้น
+        $hasSurin2    = mb_stripos($raw, 'สุริน') !== false;
 
         if ($hasRecommend && ($hasSurin1 || $hasSurin2)) return true;
         if (mb_stripos($raw, 'recommend') !== false && ($hasSurin1 || $hasSurin2)) return true;
@@ -389,7 +388,6 @@ class LineBotController extends Controller
     // ---------- Top10 ----------
     private function getTop10Cafes(): array
     {
-        // ทำฟิลเตอร์ "สุริน" แบบยืดหยุ่นและไม่พึ่ง COLLATE
         $rows = DB::select("
             SELECT c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
                    COALESCE(AVG(r.rating), 0) AS avg_rating,
@@ -399,9 +397,7 @@ class LineBotController extends Controller
                    ON r.cafe_id = c.cafe_id 
                   AND (COALESCE(r.status,'approved') = 'approved')
             WHERE LOWER(COALESCE(c.status,''))='approved'
-              AND (
-                c.address LIKE '%สุริน%' OR c.address LIKE '%สุรินทร์%' OR c.address IS NULL
-              )
+              AND (c.address LIKE '%สุริน%' OR c.address LIKE '%สุรินทร์%' OR c.address IS NULL)
             GROUP BY c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone
             HAVING review_count >= 1 OR avg_rating > 0
             ORDER BY avg_rating DESC, review_count DESC, c.cafe_id DESC
@@ -417,7 +413,7 @@ class LineBotController extends Controller
             FROM cafes
             WHERE LOWER(COALESCE(status,''))='approved'
               AND (address LIKE '%สุริน%' OR address LIKE '%สุรินทร์%' OR address IS NULL)
-            ORDER BY COALESCE(updated_at, created_at) DESC, cafe_id DESC
+            ORDER BY cafe_id DESC
             LIMIT 10
         ");
     }
@@ -425,33 +421,25 @@ class LineBotController extends Controller
     // ---------- Filters ----------
     private function findCafesByFilter(string $type): array
     {
-        // style:ชื่อสไตล์
+        // style:ชื่อสไตล์ (ป้องกัน JSON error)
         if (str_starts_with($type, 'style:')) {
             $kw = trim(mb_substr($type, 6));
             if ($kw === '') return [];
             $like = "%{$kw}%";
 
-            return DB::table('cafes')
-                ->whereRaw("LOWER(COALESCE(status,''))='approved'")
-                ->where(function($q){
-                    $q->whereNull('address')->orWhere('address','!=','');
-                })
-                ->where(function($q){
-                    $q->where('address','LIKE','%สุริน%')
-                      ->orWhere('address','LIKE','%สุรินทร์%')
-                      ->orWhereNull('address');
-                })
-                ->where(function($q) use ($like) {
-                    $q->whereRaw("(JSON_VALID(cafe_styles) AND JSON_SEARCH(cafe_styles, 'one', ?) IS NOT NULL)", [$like])
-                      ->orWhere('other_style', 'LIKE', $like)
-                      ->orWhere('style', 'LIKE', $like);
-                })
-                ->select('cafe_id','cafe_name','address','lat','lng','phone')
-                ->orderByDesc(DB::raw('COALESCE(updated_at, created_at)'))
-                ->orderByDesc('cafe_id')
-                ->limit(20)
-                ->get()
-                ->all();
+            return DB::select("
+                SELECT cafe_id,cafe_name,address,lat,lng,phone
+                FROM cafes
+                WHERE LOWER(COALESCE(status,''))='approved'
+                  AND (address LIKE '%สุริน%' OR address LIKE '%สุรินทร์%' OR address IS NULL)
+                  AND (
+                        (JSON_VALID(cafe_styles) AND JSON_SEARCH(CAST(cafe_styles AS JSON), 'one', ?) IS NOT NULL)
+                        OR other_style LIKE ?
+                        OR style LIKE ?
+                  )
+                ORDER BY cafe_id DESC
+                LIMIT 20
+            ", [$like, $like, $like]);
         }
 
         switch ($type) {
@@ -472,14 +460,10 @@ class LineBotController extends Controller
                             JSON_SEARCH(CAST(other_services AS JSON),'one','%wifi%')  IS NOT NULL OR
                             JSON_SEARCH(CAST(other_services AS JSON),'one','%ไวไฟ%')  IS NOT NULL
                         )) OR
-                        facilities     LIKE '%wifi%' OR
-                        facilities     LIKE '%Wi-Fi%' OR
-                        facilities     LIKE '%ไวไฟ%' OR
-                        other_services LIKE '%wifi%' OR
-                        other_services LIKE '%Wi-Fi%' OR
-                        other_services LIKE '%ไวไฟ%'
+                        facilities     LIKE '%wifi%' OR facilities LIKE '%Wi-Fi%' OR facilities LIKE '%ไวไฟ%' OR
+                        other_services LIKE '%wifi%' OR other_services LIKE '%Wi-Fi%' OR other_services LIKE '%ไวไฟ%'
                     )
-                    ORDER BY COALESCE(updated_at, created_at) DESC, cafe_id DESC
+                    ORDER BY cafe_id DESC
                     LIMIT 20
                 ");
 
@@ -493,8 +477,7 @@ class LineBotController extends Controller
                       AND close_time IS NOT NULL
                       AND (
                             (close_time >= open_time AND ? BETWEEN open_time AND close_time)
-                            OR
-                            (close_time <  open_time AND (? >= open_time OR ? <= close_time))
+                            OR (close_time < open_time  AND (? >= open_time OR ? <= close_time))
                           )
                     ORDER BY cafe_id DESC
                     LIMIT 20
@@ -505,10 +488,7 @@ class LineBotController extends Controller
                     SELECT cafe_id,cafe_name,address,lat,lng,phone,price_range
                     FROM cafes
                     WHERE LOWER(COALESCE(status,''))='approved'
-                    ORDER BY
-                        CASE WHEN price_range REGEXP 'ย่อมเยา|ถูก|ประหยัด|cheap|low' THEN 1 ELSE 9 END ASC,
-                        COALESCE(updated_at, created_at) DESC,
-                        cafe_id DESC
+                    ORDER BY cafe_id DESC
                     LIMIT 20
                 ");
 
@@ -518,7 +498,7 @@ class LineBotController extends Controller
                     FROM cafes
                     WHERE LOWER(COALESCE(status,''))='approved'
                       AND CAST(COALESCE(is_new_opening,0) AS UNSIGNED) = 1
-                    ORDER BY COALESCE(updated_at, created_at) DESC, cafe_id DESC
+                    ORDER BY cafe_id DESC
                     LIMIT 20
                 ");
 
@@ -533,7 +513,7 @@ class LineBotController extends Controller
                         OR other_services LIKE '%ที่จอดรถ%'
                         OR CAST(COALESCE(parking,0) AS UNSIGNED) = 1
                     )
-                    ORDER BY COALESCE(updated_at, created_at) DESC, cafe_id DESC
+                    ORDER BY cafe_id DESC
                     LIMIT 20
                 ");
 
@@ -556,14 +536,10 @@ class LineBotController extends Controller
                             JSON_SEARCH(CAST(other_services AS JSON),'one','%co-work%')  IS NOT NULL OR
                             JSON_SEARCH(CAST(other_services AS JSON),'one','%cowork%')   IS NOT NULL
                         )) OR
-                        facilities     LIKE '%ห้องประชุม%' OR
-                        facilities     LIKE '%meeting%'   OR
-                        facilities     LIKE '%ประชุม%'    OR
-                        other_services LIKE '%ห้องประชุม%' OR
-                        other_services LIKE '%meeting%'   OR
-                        other_services LIKE '%ประชุม%'
+                        facilities     LIKE '%ห้องประชุม%' OR facilities LIKE '%meeting%' OR facilities LIKE '%ประชุม%' OR
+                        other_services LIKE '%ห้องประชุม%' OR other_services LIKE '%meeting%' OR other_services LIKE '%ประชุม%'
                     )
-                    ORDER BY COALESCE(updated_at, created_at) DESC, cafe_id DESC
+                    ORDER BY cafe_id DESC
                     LIMIT 20
                 ");
 
@@ -709,17 +685,15 @@ class LineBotController extends Controller
         ];
     }
 
-    // ---------- Safe Reply Helpers ----------
+    // ---------- Safe Reply ----------
     private function safeReplyText(string $replyToken, string $text): void
     {
         $this->safeReplyMessage($replyToken, ["type" => "text", "text" => $text]);
     }
-
     private function safeReplyFlex(string $replyToken, string $altText, array $contents): void
     {
         $this->safeReplyMessage($replyToken, ["type" => "flex","altText" => $altText,"contents" => $contents]);
     }
-
     private function safeReplyMessage(string $replyToken, array $message): void
     {
         try {
