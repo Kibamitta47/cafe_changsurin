@@ -41,7 +41,7 @@ class LineBotController extends Controller
                 $textRaw = (string)($event['message']['text'] ?? '');
                 $text    = trim($textRaw);
 
-                // normalize
+                // normalize เข้มข้น
                 $lower   = mb_strtolower($text);
                 $norm1   = preg_replace('/[^\p{L}\p{N}:]+/u', '', $lower);
                 $nospace = preg_replace('/\s+/u', '', $norm1);
@@ -62,7 +62,7 @@ class LineBotController extends Controller
                 // ----- เมนูแนะนำคาเฟ่ -----
                 if ($this->isRecommendTrigger($text)) {
                     Log::info('[ROUTE] recommend menu');
-                    $menu = $this->menuRecommendCarousel();
+                    $menu = $this->menuRecommendCarousel(); // เมนูจากโค้ดที่ 2 (ตกแต่งใหม่)
                     $this->safeReplyFlex($replyToken, "เมนูแนะนำคาเฟ่เมืองสุรินทร์", $menu);
                     continue;
                 }
@@ -241,61 +241,21 @@ class LineBotController extends Controller
                         WHERE LOWER(COALESCE(status,''))='approved'
                         HAVING distance < 5
                         ORDER BY distance ASC, cafe_id DESC
-                        LIMIT 8
+                        LIMIT 5
                     ", [$lat, $lng, $lat]);
 
                     $bubbles = [];
-
-                    // Hero bubble สรุประยะค้นหา
-                    $bubbles[] = [
-                        "type" => "bubble",
-                        "body" => [
-                            "type" => "box",
-                            "layout" => "vertical",
-                            "paddingAll" => "18px",
-                            "spacing" => "14px",
-                            "backgroundColor" => "#F7FAFF",
-                            "contents" => [[
-                                "type" => "box",
-                                "layout" => "vertical",
-                                "cornerRadius" => "12px",
-                                "backgroundColor" => "#FFFFFF",
-                                "paddingAll" => "14px",
-                                "contents" => [
-                                    ["type" => "text","text" => "🐘 น้องช้างสะเร็น","size" => "xs","color" => "#8B8B8B"],
-                                    ["type" => "text","text" => "คาเฟ่ใกล้คุณ","weight" => "bold","size" => "lg","wrap" => true],
-                                    ["type" => "text","text" => "ผลลัพธ์ในรัศมี 5 กม.","size" => "sm","color" => "#666666","wrap" => true,"margin" => "sm"],
-                                    ["type" => "separator","margin" => "12px"],
-                                    [
-                                        "type" => "box","layout" => "vertical","spacing" => "8px",
-                                        "contents" => [[
-                                            "type" => "text",
-                                            "text" => "แตะ “นำทาง” เพื่อเปิด Google Maps หรือ “โทรเลย” เพื่อโทรหาคาเฟ่",
-                                            "size" => "xs","color" => "#8B8B8B","wrap" => true
-                                        ]]
-                                    ]
-                                ]
-                            ]]
-                        ]
-                    ];
-
                     if (!empty($cafes)) {
                         foreach ($cafes as $c) {
-                            $bubbles[] = $this->bubbleNearby(
-                                $c->cafe_name,
-                                $c->address,
-                                $this->formatDistance((float)$c->distance),
-                                $c->phone,
-                                $c->lat,
-                                $c->lng
+                            $bubbles[] = $this->bubbleBasic(
+                                $c->cafe_name, $c->address, "📍 ห่าง " . round($c->distance, 2) . " กม.",
+                                $c->phone, $c->lat, $c->lng
                             );
                         }
                     } else {
                         $bubbles[] = $this->bubbleInfo("ไม่พบคาเฟ่ในรัศมี 5 กม.","ดูแผนที่ร้านทั้งหมดบนเว็บไซต์","https://nongchangsaren.com/");
                     }
-
-                    $bubbles[] = $this->bubbleMore('ดูทั้งหมดบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
-
+                    $bubbles[] = $this->bubbleMore('ดูเพิ่มเติมบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
                     $this->safeReplyFlex($replyToken, "คาเฟ่ใกล้คุณ", ["type"=>"carousel","contents"=>$bubbles]);
                 } catch (Throwable $e) {
                     $eid = uniqid('loc_');
@@ -347,6 +307,7 @@ class LineBotController extends Controller
     // ---------- เมนูแนะนำคาเฟ่ (ตกแต่ง) ----------
     private function menuRecommendCarousel(): array
     {
+        // สีธีม
         $blue     = "#1E88E5";
         $green    = "#2ECC71";
         $lavender = "#8A63F6";
@@ -355,7 +316,7 @@ class LineBotController extends Controller
 
         $bubbles = [];
 
-        // Bubble 1
+        // Bubble 1: Hero + ปุ่มหมวด
         $bubbles[] = [
             "type" => "bubble",
             "body" => [
@@ -394,7 +355,7 @@ class LineBotController extends Controller
             "styles" => ["footer" => ["separator" => true]]
         ];
 
-        // Bubble 2: ชิปสไตล์
+        // Bubble 2: ชิปสไตล์ (Grid 3 คอลัมน์)
         $styleLabels = ['มินิมอล','โมเดิร์น','โคซี่/อบอุ่น','ยุโรป','ธรรมชาติ/สวน','ลอฟท์','อินดัสเทรียล','วินเทจ','อาร์ต/แกลเลอรี่'];
         $chips = [];
         foreach ($styleLabels as $i => $label) {
@@ -460,7 +421,7 @@ class LineBotController extends Controller
         return ["type" => "carousel", "contents" => $bubbles];
     }
 
-    // ---------- Top10 ----------
+    // ---------- Top10 (โค้ดที่ 2: popularity score) ----------
     private function getTop10Cafes(): array
     {
         $reviewsAgg = DB::raw("
@@ -706,7 +667,7 @@ class LineBotController extends Controller
         }
     }
 
-    // ---------- Flex Components ----------
+    // ---------- Flex Components (ตกแต่ง) ----------
     private function bubbleBasic($name, $addr, $sub, $phone, $lat, $lng, $mapUrl = null): array
     {
         $mapUrl    = $mapUrl ?: "https://maps.google.com/?q={$lat},{$lng}";
@@ -799,94 +760,6 @@ class LineBotController extends Controller
                 "spacing" => "md",
                 "paddingAll" => "12px",
                 "contents" => $buttons,
-                "flex" => 0
-            ],
-            "styles" => ["footer" => ["separator" => true]]
-        ];
-    }
-
-    private function bubbleNearby($name, $addr, $distanceText, $phone, $lat, $lng): array
-    {
-        $primary   = "#1E88E5";
-        $softTagBg = "#EEF7FF";
-        $mapUrl    = "https://www.google.com/maps/dir/?api=1&destination={$lat},{$lng}";
-        $telUri    = $this->buildTelUri($phone);
-        $phoneText = $phone ?: "ไม่มีข้อมูล";
-
-        return [
-            "type" => "bubble",
-            "body" => [
-                "type" => "box",
-                "layout" => "vertical",
-                "paddingAll" => "16px",
-                "spacing" => "14px",
-                "contents" => [
-                    [
-                        "type" => "box",
-                        "layout" => "vertical",
-                        "cornerRadius" => "12px",
-                        "backgroundColor" => "#FFFFFF",
-                        "paddingAll" => "14px",
-                        "contents" => [
-                            ["type" => "text","text" => (string)$name,"weight" => "bold","size" => "lg","wrap" => true],
-                            [
-                                "type" => "box",
-                                "layout" => "horizontal",
-                                "spacing" => "sm",
-                                "contents" => [[
-                                    "type" => "box",
-                                    "layout" => "baseline",
-                                    "backgroundColor" => $softTagBg,
-                                    "cornerRadius" => "999px",
-                                    "paddingAll" => "6px",
-                                    "contents" => [[
-                                        "type" => "text",
-                                        "text" => "📍 ห่าง " . $distanceText,
-                                        "size" => "xs",
-                                        "color" => $primary
-                                    ]]
-                                ]]
-                            ],
-                            ["type" => "separator","margin" => "12px"],
-                            [
-                                "type" => "box","layout" => "vertical","spacing" => "6px",
-                                "contents" => [
-                                    [
-                                        "type" => "box","layout" => "horizontal","spacing" => "sm",
-                                        "contents" => [
-                                            ["type" => "text","text" => "📌","size" => "sm","flex" => 0],
-                                            ["type" => "text","text" => (string)($addr ?? "-"),"size" => "sm","color" => "#555555","wrap" => true]
-                                        ]
-                                    ],
-                                    [
-                                        "type" => "box","layout" => "horizontal","spacing" => "sm",
-                                        "contents" => [
-                                            ["type" => "text","text" => "☎","size" => "sm","flex" => 0],
-                                            ["type" => "text","text" => $phoneText,"size" => "sm","color" => "#555555","wrap" => true]
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
-            ],
-            "footer" => [
-                "type" => "box",
-                "layout" => "horizontal",
-                "spacing" => "md",
-                "paddingAll" => "12px",
-                "contents" => array_values(array_filter([
-                    [
-                        "type" => "button","style" => "primary","height" => "sm",
-                        "action" => ["type" => "uri","label" => "🗺️ นำทาง","uri" => $mapUrl],
-                        "color" => $primary
-                    ],
-                    $telUri ? [
-                        "type" => "button","style" => "secondary","height" => "sm",
-                        "action" => ["type" => "uri","label" => "📞 โทรเลย","uri" => $telUri]
-                    ] : null
-                ])),
                 "flex" => 0
             ],
             "styles" => ["footer" => ["separator" => true]]
@@ -986,14 +859,5 @@ class LineBotController extends Controller
         $digits = preg_replace('/[^0-9+]/', '', $raw);
         if (!$digits) return null;
         return "tel:{$digits}";
-    }
-
-    private function formatDistance(float $km): string
-    {
-        if ($km < 1) {
-            $m = round($km * 1000);
-            return $m . " เมตร";
-        }
-        return number_format($km, 1) . " กม.";
     }
 }
