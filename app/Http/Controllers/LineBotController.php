@@ -36,12 +36,13 @@ class LineBotController extends Controller
             $replyToken = $event['replyToken'];
             $userId     = $event['source']['userId'] ?? null;
 
-            // ---------- POSTBACK ----------
+            // ---------- POSTBACK (จากปุ่มใน Rich Menu/QuickReply) ----------
             if (($event['type'] ?? '') === 'postback') {
                 $dataStr = $event['postback']['data'] ?? '';
                 parse_str($dataStr, $pb);
                 $action = $pb['action'] ?? '';
 
+                // map postback -> ข้อความเดิมที่เราใช้
                 $map = [
                     'open_main'  => 'เมนู',
                     'open_faq'   => 'FAQ',
@@ -58,10 +59,12 @@ class LineBotController extends Controller
 
                 $text = $map[$action] ?? '';
                 if ($text !== '') {
+                    // ทำเหมือน message type=text
                     $this->dispatchText($replyToken, $userId, $text);
                     continue;
                 }
 
+                // ถ้าเป็น postback ส่งโลเคชัน (บาง template จะส่งใน params)
                 if (isset($event['postback']['params']['latitude'], $event['postback']['params']['longitude'])) {
                     $lat = (float) $event['postback']['params']['latitude'];
                     $lng = (float) $event['postback']['params']['longitude'];
@@ -94,21 +97,21 @@ class LineBotController extends Controller
     }
 
     // =========================================================
-    // Dispatcher
+    // Dispatcher สำหรับข้อความ
     // =========================================================
     private function dispatchText(string $replyToken, ?string $userId, string $text): void
     {
-        // Rich Menu: เมนูหลัก
+        // Toggle Rich Menu
         if (in_array($text, ['เมนู','menu','เริ่มต้น'], true)) {
             $this->setUserRichMenu($userId, $this->richMain);
             $this->replyText($replyToken, "เปิดเมนูหลักแล้วครับ 😊");
             return;
         }
 
-        // Rich Menu: FAQ  >>> แก้ให้โชว์เมนูรูปที่ 2
+        // ✅ แก้เฉพาะส่วน FAQ: กดแล้วแสดง "เมนู FAQ" แบบรูปที่ 2
         if (in_array($text, ['FAQ','คำถามที่พบบ่อย','เมนูคำตอบ'], true)) {
-            $this->setUserRichMenu($userId, $this->richFaq);                 // คงพฤติกรรมเดิม
-            $this->replyFlex($replyToken, 'เมนู FAQ', $this->faqMenuBubble()); // แสดง Flex เมนู FAQ
+            $this->setUserRichMenu($userId, $this->richFaq);                 // คงพฤติกรรมผูก Rich Menu
+            $this->replyFlex($replyToken, 'เมนู FAQ', $this->faqMenuBubble()); // ส่ง Flex เมนู FAQ
             return;
         }
 
@@ -134,6 +137,7 @@ class LineBotController extends Controller
             $cafes = $this->findCafesByAmenity($key, 10);
 
             $bubbles = [];
+            // หัว FAQ (อธิบายสั้น)
             $bubbles[] = $this->bubbleFaq($faq['title'], $faq['lines'], $faq['buttons']);
 
             if (!empty($cafes)) {
@@ -262,15 +266,16 @@ class LineBotController extends Controller
     }
 
     // =========================================================
-    // FAQ Menu Flex (รูปที่ 2)
+    // ✅ เมนู FAQ (Flex bubble แบบรูปที่ 2)
     // =========================================================
     private function faqMenuBubble(): array
     {
+        // ปุ่มสี่เหลี่ยม
         $tile = function(string $label, string $msg) {
             return [
                 "type" => "box",
                 "layout" => "vertical",
-                "cornerRadius" => "16px",
+                "cornerRadius" => "14px",
                 "backgroundColor" => "#2D7BF2",
                 "paddingAll" => "14px",
                 "action" => ["type" => "message", "text" => $msg],
@@ -306,7 +311,7 @@ class LineBotController extends Controller
                                 "spacing" => "12px",
                                 "contents" => [
                                     $tile("FreeWiFi", "FreeWiFi"),
-                                    $tile("เปิดอยู่ตอนนี้", "เปิดอยู่ตอนนี้"),
+                                    $tile("เปิดอยู่ตอนนี้", "คาเฟ่Top10"), // ชั่วคราวให้กดแล้วมีผล
                                     $tile("คาเฟ่ราคาย่อมเยา", "ย่อมเยา"),
                                 ]
                             ],
@@ -384,7 +389,7 @@ class LineBotController extends Controller
     }
 
     // =========================================================
-    // Triggers / Rich Menu
+    // Trigger ตรวจจับเมนูแนะนำ
     // =========================================================
     private function isRecommendTrigger(string $text): bool
     {
@@ -405,12 +410,16 @@ class LineBotController extends Controller
         $hasSurin1    = mb_stripos($raw, 'เมืองสุรินทร์') !== false;
         $hasSurin2    = mb_stripos($raw, 'สุรินทร์') !== false;
 
+        if ($hasRecommend && ($hasSur1 ?? false)) {} // noop
         if ($hasRecommend && ($hasSurin1 || $hasSurin2)) return true;
         if (mb_stripos($raw, 'recommend') !== false && ($hasSurin1 || $hasSurin2)) return true;
 
         return false;
     }
 
+    // =========================================================
+    // Rich Menu binder
+    // =========================================================
     private function setUserRichMenu(?string $userId, ?string $richMenuId): void
     {
         if (!$userId || !$richMenuId) return;
@@ -421,12 +430,13 @@ class LineBotController extends Controller
     }
 
     // =========================================================
-    // Menus / Flex parts
+    // เมนูแนะนำ (Top10 / เปิดใหม่ / สไตล์)
     // =========================================================
     private function menuRecommendCarousel(): array
     {
         $bubbles = [];
 
+        // Bubble 1: Top10 / เปิดใหม่ / ใกล้ฉัน
         $bubbles[] = [
             "type" => "bubble",
             "body" => [
@@ -455,6 +465,7 @@ class LineBotController extends Controller
             "styles" => ["footer" => ["separator" => true]]
         ];
 
+        // Bubble 2: ชิปสไตล์
         $styleLabels = ['มินิมอล','โมเดิร์น','โคซี่/อบอุ่น','ยุโรป','ธรรมชาติ/สวน','ลอฟท์','อินดัสเทรียล','วินเทจ','อาร์ต/แกลเลอรี่'];
         $chips = [];
         foreach ($styleLabels as $label) {
@@ -495,11 +506,15 @@ class LineBotController extends Controller
             ]
         ];
 
+        // Bubble 3: ไปหน้าเว็บ
         $bubbles[] = $this->bubbleMore('ดูทั้งหมดบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
 
         return ["type" => "carousel", "contents" => $bubbles];
     }
 
+    // =========================================================
+    // Top10 (ไม่ใช้ reviews.status และไม่บังคับต้องมีรีวิว)
+    // =========================================================
     private function getTop10Cafes(): array
     {
         $base = DB::table('cafes as c')
@@ -512,6 +527,7 @@ class LineBotController extends Controller
             COUNT(r.rating)            AS review_count
         ";
 
+        // กรองพื้นที่ 'สุรินทร์' ก่อน
         $rows = (clone $base)
             ->where('c.address', 'LIKE', '%สุรินทร์%')
             ->selectRaw($select)
@@ -523,6 +539,7 @@ class LineBotController extends Controller
             ->get()
             ->all();
 
+        // ถ้าไม่เจอ: ไม่กรอง address
         if (empty($rows)) {
             $rows = (clone $base)
                 ->selectRaw($select)
@@ -535,6 +552,7 @@ class LineBotController extends Controller
                 ->all();
         }
 
+        // ถ้ายังไม่เจอ: fallback ร้านล่าสุด
         if (empty($rows)) {
             return DB::table('cafes')
                 ->whereRaw("LOWER(COALESCE(status,''))='approved'")
@@ -554,6 +572,9 @@ class LineBotController extends Controller
         return $rows;
     }
 
+    // =========================================================
+    // FAQ Data
+    // =========================================================
     private function getFaqEntry(string $key): array
     {
         $map = [
@@ -652,13 +673,19 @@ class LineBotController extends Controller
         };
     }
 
+    // =========================================================
+    // ค้นหาร้านตาม Amenity (ตรวจคอลัมน์ที่มีจริงก่อน)
+    // =========================================================
     private function findCafesByAmenity(string $amenity, int $limit = 10): array
     {
         $q = DB::table('cafes')->whereRaw("LOWER(COALESCE(status,''))='approved'");
+        // โฟกัสพื้นที่สุรินทร์ก่อน
         $q->where('address', 'LIKE', '%สุรินทร์%');
 
+        // ตัวช่วยตรวจคอลัมน์
         $has = fn(string $col) => Schema::hasColumn('cafes', $col);
 
+        // สร้างเงื่อนไขอย่างปลอดภัย (ถ้ามีคอลัมน์จึงค่อยอ้าง)
         $likeColumns = array_values(array_filter([
             $has('tags')        ? 'tags'        : null,
             $has('features')    ? 'features'    : null,
@@ -666,6 +693,7 @@ class LineBotController extends Controller
             $has('other_style') ? 'other_style' : null,
         ]));
 
+        // ฟังก์ชัน OR LIKE หลายคอลัมน์
         $orLike = function($builder, array $cols, array $words) {
             $builder->where(function($inner) use ($cols, $words) {
                 foreach ($cols as $c) {
@@ -739,8 +767,12 @@ class LineBotController extends Controller
                  ->all();
     }
 
+    // =========================================================
+    // ตัวกรองอื่น ๆ (สไตล์/เปิดใหม่)
+    // =========================================================
     private function findCafesByFilter(string $type): array
     {
+        // สไตล์
         if (str_starts_with($type, 'style:')) {
             $kw = trim(mb_substr($type, 6));
             if ($kw === '') return [];
@@ -784,7 +816,7 @@ class LineBotController extends Controller
     }
 
     // =========================================================
-    // Flex Components (basic)
+    // Flex Components
     // =========================================================
     private function bubbleFaq(string $title, array $lines, array $buttons): array
     {
@@ -970,7 +1002,7 @@ class LineBotController extends Controller
     }
 
     // =========================================================
-    // HTTP Reply helpers
+    // Reply helpers
     // =========================================================
     private function replyText(string $replyToken, string $text): void
     {
