@@ -62,7 +62,7 @@ class LineBotController extends Controller
                 // ----- เมนูแนะนำคาเฟ่ -----
                 if ($this->isRecommendTrigger($text)) {
                     Log::info('[ROUTE] recommend menu');
-                    $menu = $this->menuRecommendCarousel(); // <<< ใช้เวอร์ชันจาก "โค้ดที่ 2"
+                    $menu = $this->menuRecommendCarousel(); // ใช้เมนูจากโค้ดที่ 2
                     $this->safeReplyFlex($replyToken, "เมนูแนะนำคาเฟ่เมืองสุรินทร์", $menu);
                     continue;
                 }
@@ -106,36 +106,30 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ----- สไตล์: ... -----
-                if (preg_match('/^\s*สไตล์\s*:\s*(.+)$/u', $text, $m)) {
-                    $styleName = trim($m[1]);
-                    Log::info('[ROUTE] style', ['style'=>$styleName]);
+                // ===== สไตล์ (นำเงื่อนไขและการสร้างผลลัพธ์จากโค้ดที่ 2) =====
+                if (mb_strpos($text, 'สไตล์:') === 0) {
+                    $styleName = trim(mb_substr($text, 6)); // "สไตล์:" ยาว 6 ตัว
+                    Log::info('[ROUTE] style (v2)', ['style'=>$styleName]);
 
-                    try {
-                        $cafes = $this->findCafesByFilter('style:'.$styleName);
-                        $bubbles = [];
-                        if (!empty($cafes)) {
-                            $cafes = array_slice($cafes, 0, 9);
-                            foreach ($cafes as $c) {
-                                $mapUrl = ($c->lat !== null && $c->lng !== null)
-                                    ? "https://maps.google.com/?q={$c->lat},{$c->lng}"
-                                    : "https://www.google.com/maps/search/".urlencode(($c->cafe_name ?? '').' '.($c->address ?? ''));
-                                $bubbles[] = $this->bubbleBasic(
-                                    $c->cafe_name ?? '-', $c->address ?? '-', '🎨 สไตล์: '.$styleName,
-                                    $c->phone ?? '-', $c->lat ?? null, $c->lng ?? null, $mapUrl
-                                );
-                            }
-                        } else {
-                            $bubbles[] = $this->bubbleInfo("ยังไม่พบตามสไตล์","ลองเลือกสไตล์อื่นหรือดูทั้งหมดบนเว็บ","https://nongchangsaren.com/");
+                    $cafes = $this->findCafesByFilter('style:' . $styleName);
+                    $bubbles = [];
+                    if (!empty($cafes)) {
+                        $cafes = array_slice($cafes, 0, 9);
+                        foreach ($cafes as $c) {
+                            $mapUrl = ($c->lat !== null && $c->lng !== null)
+                                ? "https://maps.google.com/?q={$c->lat},{$c->lng}"
+                                : "https://www.google.com/maps/search/".urlencode(($c->cafe_name ?? '').' '.($c->address ?? ''));
+                            $bubbles[] = $this->bubbleBasic(
+                                $c->cafe_name ?? '-', $c->address ?? '-', '🎨 สไตล์: '.$styleName,
+                                $c->phone ?? '-', $c->lat ?? null, $c->lng ?? null, $mapUrl
+                            );
                         }
-
-                        $bubbles[] = $this->bubbleMore('ดูเพิ่มเติมบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
-                        $this->safeReplyFlex($replyToken, "คาเฟ่สไตล์: {$styleName}", ["type"=>"carousel","contents"=>$bubbles]);
-                    } catch (Throwable $e) {
-                        $eid = uniqid('style_');
-                        Log::error("STYLE ERROR {$eid}: ".$e->getMessage());
-                        $this->safeReplyText($replyToken, "ขออภัย ระบบดึงสไตล์มีปัญหา (#{$eid})");
+                    } else {
+                        $bubbles[] = $this->bubbleInfo("ยังไม่พบตามสไตล์","ลองเลือกสไตล์อื่นหรือดูทั้งหมดบนเว็บ","https://nongchangsaren.com/");
                     }
+
+                    $bubbles[] = $this->bubbleMore('ดูเพิ่มเติมบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
+                    $this->safeReplyFlex($replyToken, "คาเฟ่สไตล์: {$styleName}", ["type"=>"carousel","contents"=>$bubbles]);
                     continue;
                 }
 
@@ -421,24 +415,18 @@ class LineBotController extends Controller
     // ---------- Filters ----------
     private function findCafesByFilter(string $type): array
     {
-        // === STYLE: แข็งแรง + fallback ===
+        // ===== STYLE (โค้ดที่ 2) =====
         if (str_starts_with($type, 'style:')) {
             $kw = trim(mb_substr($type, 6));
             if ($kw === '') return [];
             $like = "%{$kw}%";
 
-            // primary: JSON cafe_styles + other_style + style
-            $rows = DB::table('cafes')
+            return DB::table('cafes')
                 ->whereRaw("LOWER(COALESCE(status,''))='approved'")
-                ->where(function ($q) {
-                    $q->where('address', 'LIKE', '%สุรินทร์%')
-                      ->orWhere('address', 'LIKE', '%สุริน%')
-                      ->orWhereNull('address');
-                })
-                ->where(function ($q) use ($like) {
-                    $q->whereRaw("(JSON_VALID(cafe_styles) AND JSON_SEARCH(CAST(cafe_styles AS JSON), 'one', ?) IS NOT NULL)", [$like])
-                      ->orWhereRaw("other_style COLLATE utf8mb4_general_ci LIKE ?", [$like])
-                      ->orWhereRaw("style       COLLATE utf8mb4_general_ci LIKE ?", [$like]);
+                ->where('address', 'LIKE', '%สุรินทร์%')
+                ->where(function($q) use ($like) {
+                    $q->whereRaw("(JSON_VALID(cafe_styles) AND JSON_SEARCH(cafe_styles, 'one', ?) IS NOT NULL)", [$like])
+                      ->orWhere('other_style', 'LIKE', $like);
                 })
                 ->select('cafe_id','cafe_name','address','lat','lng','phone')
                 ->orderByDesc('updated_at')
@@ -446,28 +434,6 @@ class LineBotController extends Controller
                 ->limit(20)
                 ->get()
                 ->all();
-
-            // fallback: ค้นชื่อ/ที่อยู่
-            if (empty($rows)) {
-                $rows = DB::table('cafes')
-                    ->whereRaw("LOWER(COALESCE(status,''))='approved'")
-                    ->where(function ($q) {
-                        $q->where('address', 'LIKE', '%สุรินทร์%')
-                          ->orWhere('address', 'LIKE', '%สุริน%')
-                          ->orWhereNull('address');
-                    })
-                    ->where(function ($q) use ($like) {
-                        $q->whereRaw("cafe_name COLLATE utf8mb4_general_ci LIKE ?", [$like])
-                          ->orWhereRaw("address   COLLATE utf8mb4_general_ci LIKE ?", [$like]);
-                    })
-                    ->select('cafe_id','cafe_name','address','lat','lng','phone')
-                    ->orderByDesc('cafe_id')
-                    ->limit(20)
-                    ->get()
-                    ->all();
-            }
-
-            return $rows;
         }
 
         switch ($type) {
