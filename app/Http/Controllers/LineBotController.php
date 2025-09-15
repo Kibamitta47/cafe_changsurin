@@ -40,8 +40,9 @@ class LineBotController extends Controller
                 $textRaw = (string)($event['message']['text'] ?? '');
                 $text    = trim($textRaw);
 
-                // ทำ normalized key เพื่อกันช่องว่าง/ตัวพิมพ์
+                // normalize: ตัดช่องว่างทั้งหมด + ตัวเล็ก
                 $key = mb_strtolower(preg_replace('/\s+/u', '', $text));
+                Log::info('[TEXT]', ['text' => $text, 'key' => $key]);
 
                 // สลับ Rich Menu
                 if (in_array($text, ['เมนู','menu','เริ่มต้น'], true) || in_array($key, ['เมนู','menu','เริ่มต้น'], true)) {
@@ -55,19 +56,20 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ===== เมนูแนะนำคาเฟ่เมืองสุรินทร์ (ใช้ trigger แบบยืดหยุ่น) =====
+                // ===== เมนูแนะนำคาเฟ่เมืองสุรินทร์ =====
                 if ($this->isRecommendTrigger($text)) {
                     $menu = $this->menuRecommendCarousel();
                     $this->replyFlex($replyToken, "เมนูแนะนำคาเฟ่เมืองสุรินทร์", $menu);
                     continue;
                 }
 
-                // ===== หมวด Top10 (เพิ่มการตรวจด้วย key แบบ normalize) =====
+                // ===== Top10 (ทนทานต่อช่องว่าง/ตัวพิมพ์) =====
+                // รองรับ: "คาเฟ่Top10", "Top10", "Top 10", "top10", "top 10"
                 if (
-                    in_array($text, ['คาเฟ่Top10','Top10','Top 10','top10'], true) ||
-                    in_array($key, ['คาเฟ่top10','top10','top10'], true)
+                    in_array($text, ['คาเฟ่Top10','Top10','Top 10','top10','top 10'], true) ||
+                    in_array($key,  ['คาเฟ่top10','top10','top10'], true)
                 ) {
-                    $cafes = $this->getTop10Cafes();
+                    $cafes = $this->getTop10Cafes(); // อิงเรตติ้งเฉลี่ย + จำนวนรีวิว
                     $bubbles = [];
 
                     if (!empty($cafes)) {
@@ -112,19 +114,17 @@ class LineBotController extends Controller
                         }
                     }
 
-                    // ปุ่มไปเว็บ
                     $bubbles[] = $this->bubbleMore('ดูเพิ่มเติมบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
-                    $this->replyFlex($replyToken, "คาเฟ่ Top 10 เมืองสุรินทร์", [
-                        "type" => "carousel", "contents" => $bubbles
-                    ]);
+                    $this->replyFlex($replyToken, "คาเฟ่ Top 10 เมืองสุรินทร์", ["type"=>"carousel","contents"=>$bubbles]);
                     continue;
                 }
 
-                // ===== จับ "สไตล์: ..." จากปุ่มกด =====
+                // ===== สไตล์: ... (ยอมรับเว้นวรรคก่อน/หลัง :) =====
                 if (preg_match('/^\s*สไตล์\s*:\s*(.+)$/u', $text, $m)) {
                     $styleName = trim($m[1]);
-                    $cafes = $this->findCafesByFilter('style:'.$styleName);
+                    Log::info('[STYLE]', ['style' => $styleName]);
 
+                    $cafes = $this->findCafesByFilter('style:'.$styleName);
                     $bubbles = [];
                     if (!empty($cafes)) {
                         $cafes = array_slice($cafes, 0, 9);
@@ -150,7 +150,7 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ===== ปุ่ม FAQ → ดึงจาก DB (คงเดิมจากโค้ดแรก) =====
+                // ===== ปุ่ม FAQ → ดึงจาก DB =====
                 $map = [
                     'FreeWiFi'               => 'wifi',
                     'เปิดอยู่ตอนนี้'        => 'open_now',
@@ -161,22 +161,35 @@ class LineBotController extends Controller
                     'ที่จอดรถ'               => 'parking',
                     'มีห้องประชุมทำงานได้'   => 'meeting',
                 ];
+                // ลองเช็คแบบ normalize ด้วย
+                $mapNorm = [
+                    'freewifi'        => 'wifi',
+                    'เปิดอยู่ตอนนี้'  => 'open_now',
+                    'เปิดอยู่ตอนนี่'  => 'open_now',
+                    'คาเฟ่ราคาย่อมเยา'=> 'cheap',
+                    'คาเฟ่ราคาย่อมเยส'=> 'cheap',
+                    'เปิดใหม่'        => 'new',
+                    'ที่จอดรถ'        => 'parking',
+                    'มีห้องประชุมทำงานได้' => 'meeting',
+                ];
 
-                if (isset($map[$text])) {
-                    $cafes = $this->findCafesByFilter($map[$text]);
-                    Log::info("FAQ {$map[$text]} found", ['count' => count($cafes)]);
+                if (isset($map[$text]) || isset($mapNorm[$key])) {
+                    $filterKey = $map[$text] ?? $mapNorm[$key];
+                    $cafes = $this->findCafesByFilter($filterKey);
+                    Log::info("[FAQ {$filterKey}]", ['count' => count($cafes)]);
 
                     $bubbles = [];
                     if (!empty($cafes)) {
                         $cafes = array_slice($cafes, 0, 9);
                         foreach ($cafes as $c) {
-                            $note = match ($map[$text]) {
+                            $note = match ($filterKey) {
                                 'wifi'     => '📶 Free Wi-Fi',
                                 'open_now' => '🟢 เปิดอยู่ตอนนี้',
                                 'cheap'    => '💸 ราคาย่อมเยา',
                                 'new'      => '🆕 ร้านเปิดใหม่',
                                 'parking'  => '🅿️ มีที่จอดรถ',
                                 'meeting'  => '🏢 มีห้องประชุม/ทำงาน',
+                                default    => '⭐ แนะนำ'
                             };
 
                             $mapUrl = ($c->lat !== null && $c->lng !== null)
@@ -202,13 +215,11 @@ class LineBotController extends Controller
                         'https://nongchangsaren.com/'
                     );
 
-                    $this->replyFlex($replyToken, "ผลลัพธ์: {$text}", [
-                        "type" => "carousel", "contents" => $bubbles
-                    ]);
+                    $this->replyFlex($replyToken, "ผลลัพธ์: {$text}", ["type"=>"carousel","contents"=>$bubbles]);
                     continue;
                 }
 
-                // ค้นหาคาเฟ่ใกล้ฉัน (คงเดิม)
+                // ค้นหาคาเฟ่ใกล้ฉัน
                 if ($text === 'ค้นหาคาเฟ่ใกล้ฉัน' || $key === 'ค้นหาคาเฟ่ใกล้ฉัน') {
                     $this->replyMessage($replyToken, [
                         "type" => "text",
@@ -411,7 +422,7 @@ class LineBotController extends Controller
         return $rows;
     }
 
-    // ---------- FAQ / Filters ----------
+    // ---------- Filters ----------
     private function findCafesByFilter(string $type): array
     {
         // รองรับ "style:ชื่อสไตล์"
@@ -420,7 +431,6 @@ class LineBotController extends Controller
             if ($kw === '') return [];
             $like = "%{$kw}%";
 
-            // รองรับทั้ง JSON cafe_styles และคอลัมน์อื่นที่ใส่สไตล์
             return DB::table('cafes')
                 ->whereRaw("LOWER(COALESCE(status,''))='approved'")
                 ->where('address', 'LIKE', '%สุรินทร์%')
@@ -609,13 +619,7 @@ class LineBotController extends Controller
                         "layout" => "vertical",
                         "spacing" => "8px",
                         "contents" => [
-                            [
-                                "type" => "text",
-                                "text" => (string)$name,
-                                "weight" => "bold",
-                                "size" => "lg",
-                                "wrap" => true
-                            ],
+                            ["type" => "text","text" => (string)$name,"weight" => "bold","size" => "lg","wrap" => true],
                             [
                                 "type" => "box",
                                 "layout" => "horizontal",
@@ -627,11 +631,7 @@ class LineBotController extends Controller
                                     "cornerRadius" => "6px",
                                     "paddingAll" => "6px",
                                     "contents" => [[
-                                        "type" => "text",
-                                        "text" => (string)$sub,
-                                        "size" => "xs",
-                                        "color" => "#1E88E5",
-                                        "wrap" => true
+                                        "type" => "text","text" => (string)$sub,"size" => "xs","color" => "#1E88E5","wrap" => true
                                     ]]
                                 ]]
                             ]
