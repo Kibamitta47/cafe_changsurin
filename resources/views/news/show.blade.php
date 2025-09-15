@@ -90,6 +90,13 @@
                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 shadow-sm">
               <i class="fa-brands fa-line"></i> LINE
             </a>
+            {{-- ปุ่มเปิดลิงก์ข่าว --}}
+            @if(!empty($newsItem->link_url))
+              <a href="{{ $newsItem->link_url }}" target="_blank" rel="noopener"
+                 class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 shadow-sm">
+                <i class="fa-solid fa-up-right-from-square"></i> เปิดลิงก์ข่าว
+              </a>
+            @endif
           </div>
         </div>
       </header>
@@ -125,6 +132,21 @@
             <div id="articleContent" class="prose prose-slate max-w-none reading text-[1.06rem] leading-relaxed whitespace-pre-wrap">
               {{ $newsItem->content }}
             </div>
+
+            {{-- กล่องแหล่งที่มา --}}
+            @if(!empty($newsItem->link_url))
+              <div class="mt-8 p-4 rounded-xl border border-slate-200 bg-slate-50">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="inline-block w-2.5 h-2.5 rounded-sm bg-brand-500"></span>
+                  <span class="text-sm font-semibold text-slate-700">แหล่งที่มา / อ่านเพิ่มเติม</span>
+                </div>
+                <a href="{{ $newsItem->link_url }}" target="_blank" rel="noopener"
+                   class="text-brand-600 hover:underline break-all inline-flex items-center gap-2">
+                  <i class="fa-solid fa-link"></i>
+                  <span>{{ $newsItem->link_url }}</span>
+                </a>
+              </div>
+            @endif
 
             {{-- แกลเลอรี --}}
             @if(isset($newsItem->images) && count($newsItem->images) > 1)
@@ -267,6 +289,34 @@
       window.addEventListener('scroll', onScroll, {passive:true});
       window.addEventListener('resize', onScroll);
       onScroll();
+    })();
+
+    // ออโต้ลิงก์ในเนื้อหา
+    (function(){
+      const el = document.getElementById('articleContent');
+      if(!el) return;
+      const urlRe = /(https?:\/\/[^\s<>"']+)/g;
+      const raw = el.textContent;
+      el.innerHTML = '';
+      let lastIndex = 0, match;
+      while ((match = urlRe.exec(raw)) !== null) {
+        const [url] = match;
+        const start = match.index;
+        if (start > lastIndex) {
+          el.appendChild(document.createTextNode(raw.slice(lastIndex, start)));
+        }
+        const a = document.createElement('a');
+        a.href = url;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.className = 'text-brand-600 underline break-all';
+        a.textContent = url;
+        el.appendChild(a);
+        lastIndex = start + url.length;
+      }
+      if (lastIndex < raw.length) {
+        el.appendChild(document.createTextNode(raw.slice(lastIndex)));
+      }
     })();
   </script>
 </body>
