@@ -62,38 +62,35 @@ class LineBotController extends Controller
                 // ----- เมนูแนะนำคาเฟ่ -----
                 if ($this->isRecommendTrigger($text)) {
                     Log::info('[ROUTE] recommend menu');
-                    $menu = $this->menuRecommendCarousel(); // ใช้เมนูจากโค้ดที่ 2
+                    $menu = $this->menuRecommendCarousel(); // เมนูจากโค้ดที่ 2
                     $this->safeReplyFlex($replyToken, "เมนูแนะนำคาเฟ่เมืองสุรินทร์", $menu);
                     continue;
                 }
 
-                // ----- Top10 -----
-                if (preg_match('/top\s*10/u', $lower) || str_contains($nospace, 'คาเฟ่top10') || $nospace === 'top10') {
-                    Log::info('[ROUTE] Top10');
+                // ===== Top10 (ใช้ลอจิกจากโค้ดที่ 2) =====
+                if (
+                    in_array($text, ['คาเฟ่Top10','Top10','Top 10','top10'], true) ||
+                    preg_match('/top\s*10/u', $lower) ||
+                    str_contains($nospace, 'คาเฟ่top10') ||
+                    $nospace === 'top10'
+                ) {
+                    Log::info('[ROUTE] Top10 (v2 logic)');
                     try {
-                        $cafes = $this->getTop10Cafes();
+                        $cafes = $this->getTop10Cafes(); // popularity_score จาก avg+reviews+likes
                         $bubbles = [];
 
                         if (!empty($cafes)) {
                             foreach ($cafes as $c) {
-                                $note = '⭐ ' . number_format((float)($c->avg_rating ?? 0), 1) . ' (' . (int)($c->review_count ?? 0) . ' รีวิว)';
+                                $note = '⭐ ' . number_format((float)($c->avg_rating ?? 0), 1)
+                                      . ' • ❤ ' . (int)($c->like_count ?? 0)
+                                      . ' • รีวิว ' . (int)($c->review_count ?? 0);
                                 $bubbles[] = $this->bubbleBasic(
                                     $c->cafe_name ?? '-', $c->address ?? '-', $note,
                                     $c->phone ?? '-', $c->lat ?? null, $c->lng ?? null
                                 );
                             }
                         } else {
-                            $fallback = $this->getLatestCafesForSurin();
-                            if (!empty($fallback)) {
-                                foreach ($fallback as $c) {
-                                    $bubbles[] = $this->bubbleBasic(
-                                        $c->cafe_name ?? '-', $c->address ?? '-', "⭐ แนะนำ",
-                                        $c->phone ?? '-', $c->lat ?? null, $c->lng ?? null
-                                    );
-                                }
-                            } else {
-                                $bubbles[] = $this->bubbleInfo("ยังไม่มีข้อมูล Top10","ลองดูข้อมูลล่าสุดบนเว็บไซต์","https://nongchangsaren.com/");
-                            }
+                            $bubbles[] = $this->bubbleInfo("ยังไม่มีข้อมูล Top10","ลองดูข้อมูลล่าสุดบนเว็บไซต์","https://nongchangsaren.com/");
                         }
 
                         $bubbles[] = $this->bubbleMore('ดูเพิ่มเติมบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
@@ -106,30 +103,36 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ===== สไตล์ (นำเงื่อนไขและการสร้างผลลัพธ์จากโค้ดที่ 2) =====
+                // ===== สไตล์ (ใช้สัญญาณ "สไตล์:" แบบโค้ดที่ 2) =====
                 if (mb_strpos($text, 'สไตล์:') === 0) {
                     $styleName = trim(mb_substr($text, 6)); // "สไตล์:" ยาว 6 ตัว
                     Log::info('[ROUTE] style (v2)', ['style'=>$styleName]);
 
-                    $cafes = $this->findCafesByFilter('style:' . $styleName);
-                    $bubbles = [];
-                    if (!empty($cafes)) {
-                        $cafes = array_slice($cafes, 0, 9);
-                        foreach ($cafes as $c) {
-                            $mapUrl = ($c->lat !== null && $c->lng !== null)
-                                ? "https://maps.google.com/?q={$c->lat},{$c->lng}"
-                                : "https://www.google.com/maps/search/".urlencode(($c->cafe_name ?? '').' '.($c->address ?? ''));
-                            $bubbles[] = $this->bubbleBasic(
-                                $c->cafe_name ?? '-', $c->address ?? '-', '🎨 สไตล์: '.$styleName,
-                                $c->phone ?? '-', $c->lat ?? null, $c->lng ?? null, $mapUrl
-                            );
+                    try {
+                        $cafes = $this->findCafesByFilter('style:' . $styleName);
+                        $bubbles = [];
+                        if (!empty($cafes)) {
+                            $cafes = array_slice($cafes, 0, 9);
+                            foreach ($cafes as $c) {
+                                $mapUrl = ($c->lat !== null && $c->lng !== null)
+                                    ? "https://maps.google.com/?q={$c->lat},{$c->lng}"
+                                    : "https://www.google.com/maps/search/".urlencode(($c->cafe_name ?? '').' '.($c->address ?? ''));
+                                $bubbles[] = $this->bubbleBasic(
+                                    $c->cafe_name ?? '-', $c->address ?? '-', '🎨 สไตล์: '.$styleName,
+                                    $c->phone ?? '-', $c->lat ?? null, $c->lng ?? null, $mapUrl
+                                );
+                            }
+                        } else {
+                            $bubbles[] = $this->bubbleInfo("ยังไม่พบตามสไตล์","ลองเลือกสไตล์อื่นหรือดูทั้งหมดบนเว็บ","https://nongchangsaren.com/");
                         }
-                    } else {
-                        $bubbles[] = $this->bubbleInfo("ยังไม่พบตามสไตล์","ลองเลือกสไตล์อื่นหรือดูทั้งหมดบนเว็บ","https://nongchangsaren.com/");
-                    }
 
-                    $bubbles[] = $this->bubbleMore('ดูเพิ่มเติมบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
-                    $this->safeReplyFlex($replyToken, "คาเฟ่สไตล์: {$styleName}", ["type"=>"carousel","contents"=>$bubbles]);
+                        $bubbles[] = $this->bubbleMore('ดูเพิ่มเติมบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
+                        $this->safeReplyFlex($replyToken, "คาเฟ่สไตล์: {$styleName}", ["type"=>"carousel","contents"=>$bubbles]);
+                    } catch (Throwable $e) {
+                        $eid = uniqid('style_');
+                        Log::error("STYLE ERROR {$eid}: ".$e->getMessage());
+                        $this->safeReplyText($replyToken, "ขออภัย ระบบดึงสไตล์มีปัญหา (#{$eid})");
+                    }
                     continue;
                 }
 
@@ -379,24 +382,87 @@ class LineBotController extends Controller
         return ["type" => "carousel", "contents" => $bubbles];
     }
 
-    // ---------- Top10 ----------
+    // ---------- Top10 (โค้ดที่ 2: popularity score จาก avg + reviews + likes) ----------
     private function getTop10Cafes(): array
     {
-        $rows = DB::select("
-            SELECT c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
-                   COALESCE(AVG(r.rating), 0) AS avg_rating,
-                   COUNT(r.cafe_id)           AS review_count
-            FROM cafes c
-            LEFT JOIN reviews r 
-                   ON r.cafe_id = c.cafe_id 
-                  AND (COALESCE(r.status,'approved') = 'approved')
-            WHERE LOWER(COALESCE(c.status,''))='approved'
-              AND (c.address LIKE '%สุริน%' OR c.address LIKE '%สุรินทร์%' OR c.address IS NULL)
-            GROUP BY c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone
-            HAVING review_count >= 1 OR avg_rating > 0
-            ORDER BY avg_rating DESC, review_count DESC, c.cafe_id DESC
-            LIMIT 10
+        // รวมค่าแบบ aggregate ด้วยซับเควรี (กันค่าซ้ำจากการ join ทับกัน)
+        $reviewsAgg = DB::raw("
+            (SELECT cafe_id, AVG(rating) AS avg_rating, COUNT(*) AS review_count
+             FROM reviews
+             GROUP BY cafe_id) r
         ");
+        $likesAgg = DB::raw("
+            (SELECT cafe_id, COUNT(*) AS like_count
+             FROM cafe_likes
+             GROUP BY cafe_id) l
+        ");
+
+        $base = DB::table('cafes as c')
+            ->leftJoin($reviewsAgg, 'r.cafe_id', '=', 'c.cafe_id')
+            ->leftJoin($likesAgg,   'l.cafe_id', '=', 'c.cafe_id')
+            ->whereRaw("LOWER(COALESCE(c.status,''))='approved'");
+
+        $select = [
+            'c.cafe_id', 'c.cafe_name', 'c.address', 'c.lat', 'c.lng', 'c.phone',
+            DB::raw('COALESCE(r.avg_rating, 0) AS avg_rating'),
+            DB::raw('COALESCE(r.review_count, 0) AS review_count'),
+            DB::raw('COALESCE(l.like_count, 0) AS like_count'),
+            DB::raw('
+                (COALESCE(r.avg_rating, 0) * 2.0) +
+                (LEAST(COALESCE(r.review_count, 0), 20) * 0.8) +
+                (LEAST(COALESCE(l.like_count, 0), 50) * 0.5) AS popularity_score
+            ')
+        ];
+
+        // ลองกรองเฉพาะสุรินทร์ก่อน
+        $rows = (clone $base)
+            ->where(function ($q) {
+                $q->where('c.address', 'LIKE', '%สุรินทร์%')
+                  ->orWhere('c.address', 'LIKE', '%สุริน%');
+            })
+            ->select($select)
+            ->orderByDesc('popularity_score')
+            ->orderByDesc('avg_rating')
+            ->orderByDesc('review_count')
+            ->orderByDesc('like_count')
+            ->orderByDesc('c.cafe_id')
+            ->limit(10)
+            ->get()
+            ->all();
+
+        // ถ้าไม่เจอ: ไม่กรอง address
+        if (empty($rows)) {
+            $rows = (clone $base)
+                ->select($select)
+                ->orderByDesc('popularity_score')
+                ->orderByDesc('avg_rating')
+                ->orderByDesc('review_count')
+                ->orderByDesc('like_count')
+                ->orderByDesc('c.cafe_id')
+                ->limit(10)
+                ->get()
+                ->all();
+        }
+
+        // ถ้ายังไม่เจอ: fallback ร้านล่าสุด
+        if (empty($rows)) {
+            return DB::table('cafes')
+                ->whereRaw("LOWER(COALESCE(status,''))='approved'")
+                ->select('cafe_id','cafe_name','address','lat','lng','phone')
+                ->orderByDesc('created_at')
+                ->orderByDesc('cafe_id')
+                ->limit(10)
+                ->get()
+                ->map(function ($c) {
+                    $c->avg_rating = 0;
+                    $c->review_count = 0;
+                    $c->like_count = 0;
+                    $c->popularity_score = 0;
+                    return $c;
+                })
+                ->all();
+        }
+
         return $rows;
     }
 
@@ -415,15 +481,20 @@ class LineBotController extends Controller
     // ---------- Filters ----------
     private function findCafesByFilter(string $type): array
     {
-        // ===== STYLE (โค้ดที่ 2) =====
+        // ===== STYLE (โค้ดที่ 2 แบบเสริม fallback) =====
         if (str_starts_with($type, 'style:')) {
             $kw = trim(mb_substr($type, 6));
             if ($kw === '') return [];
             $like = "%{$kw}%";
 
-            return DB::table('cafes')
+            // primary
+            $rows = DB::table('cafes')
                 ->whereRaw("LOWER(COALESCE(status,''))='approved'")
-                ->where('address', 'LIKE', '%สุรินทร์%')
+                ->where(function ($q) {
+                    $q->where('address', 'LIKE', '%สุรินทร์%')
+                      ->orWhere('address', 'LIKE', '%สุริน%')
+                      ->orWhereNull('address');
+                })
                 ->where(function($q) use ($like) {
                     $q->whereRaw("(JSON_VALID(cafe_styles) AND JSON_SEARCH(cafe_styles, 'one', ?) IS NOT NULL)", [$like])
                       ->orWhere('other_style', 'LIKE', $like);
@@ -434,6 +505,28 @@ class LineBotController extends Controller
                 ->limit(20)
                 ->get()
                 ->all();
+
+            // fallback: ชื่อ/ที่อยู่
+            if (empty($rows)) {
+                $rows = DB::table('cafes')
+                    ->whereRaw("LOWER(COALESCE(status,''))='approved'")
+                    ->where(function ($q) {
+                        $q->where('address', 'LIKE', '%สุรินทร์%')
+                          ->orWhere('address', 'LIKE', '%สุริน%')
+                          ->orWhereNull('address');
+                    })
+                    ->where(function ($q) use ($like) {
+                        $q->where('cafe_name', 'LIKE', $like)
+                          ->orWhere('address',   'LIKE', $like);
+                    })
+                    ->select('cafe_id','cafe_name','address','lat','lng','phone')
+                    ->orderByDesc('cafe_id')
+                    ->limit(20)
+                    ->get()
+                    ->all();
+            }
+
+            return $rows;
         }
 
         switch ($type) {
