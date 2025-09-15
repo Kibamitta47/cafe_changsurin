@@ -60,14 +60,16 @@ class LineBotController extends Controller
 
                 // ===== Top10 =====
                 if (in_array($text, ['คาเฟ่Top10','Top10','Top 10','top10'], true)) {
-                    $cafes = $this->getTop10Cafes(); // อิง avg_rating + review_count
+                    $cafes = $this->getTop10Cafes(); // ใช้คะแนนรวม popularity
                     Log::info('[Top10] rows', ['count' => count($cafes)]);
 
                     $bubbles = [];
                     if (!empty($cafes)) {
                         foreach ($cafes as $c) {
+                            // แสดงคะแนนคร่าว ๆ: ★avg + (likes)
                             $note = '⭐ ' . number_format((float)($c->avg_rating ?? 0), 1)
-                                  . ' (' . (int)($c->review_count ?? 0) . ' รีวิว)';
+                                  . ' • ❤ ' . (int)($c->like_count ?? 0)
+                                  . ' • รีวิว ' . (int)($c->review_count ?? 0);
                             $bubbles[] = $this->bubbleBasic(
                                 $c->cafe_name ?? '-',
                                 $c->address   ?? '-',
@@ -90,10 +92,9 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ===== สไตล์ (ข้อความขึ้นต้น "สไตล์:") =====
+                // ===== สไตล์ (ขึ้นต้น "สไตล์:") =====
                 if (mb_strpos($text, 'สไตล์:') === 0) {
-                    // "สไตล์:" ยาว 6 ตัว
-                    $styleName = trim(mb_substr($text, 6));
+                    $styleName = trim(mb_substr($text, 6)); // "สไตล์:" ยาว 6 ตัว
                     $cafes = $this->findCafesByFilter('style:' . $styleName);
                     Log::info('[Style] query', ['style' => $styleName, 'count' => count($cafes)]);
 
@@ -236,7 +237,7 @@ class LineBotController extends Controller
         ])->post("https://api.line.me/v2/bot/user/{$userId}/richmenu/{$richMenuId}");
     }
 
-    // ---------- เมนูแนะนำคาเฟ่ (Top10 / เปิดใหม่ / สไตล์ชิป) ----------
+    // ---------- เมนูแนะนำคาเฟ่ ----------
     private function menuRecommendCarousel(): array
     {
         $bubbles = [];
@@ -316,17 +317,29 @@ class LineBotController extends Controller
         return ["type" => "carousel", "contents" => $bubbles];
     }
 
-    // ---------- Top10 (ไม่ใช้ reviews.status และไม่บังคับต้องมีรีวิว) ----------
+    /**
+     * Top10 ที่คำนวณจากหลายปัจจัย: avg_rating, review_count, like_count
+     * - ไม่ใช้ reviews.status
+     * - ถ้าไม่มีข้อมูลเลย จะ fallback เป็นร้านล่าสุด
+     */
     private function getTop10Cafes(): array
     {
+        // นับไลก์ (ทั้งหมด) ถ้าอยากจำกัดช่วงเวลา ให้เติมเงื่อนไข created_at >= NOW() - INTERVAL 180 DAY
         $base = DB::table('cafes as c')
             ->leftJoin('reviews as r', 'r.cafe_id', '=', 'c.cafe_id')
+            ->leftJoin('cafe_likes as l', 'l.cafe_id', '=', 'c.cafe_id')
             ->whereRaw("LOWER(COALESCE(c.status,''))='approved'");
 
         $select = "
             c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
-            COALESCE(AVG(r.rating), 0) AS avg_rating,
-            COUNT(r.rating)            AS review_count
+            COALESCE(AVG(r.rating), 0)         AS avg_rating,
+            COUNT(r.rating)                    AS review_count,
+            COUNT(l.cafe_id)                   AS like_count,
+            (
+                COALESCE(AVG(r.rating), 0) * 2.0       -- น้ำหนักให้คะแนนเฉลี่ย
+              + LEAST(COUNT(r.rating), 20) * 0.8       -- รีวิวช่วยดัน แต่จำกัดผลกระทบ
+              + LEAST(COUNT(l.cafe_id), 50) * 0.5      -- ไลก์ช่วยดันเล็กน้อย
+            ) AS popularity_score
         ";
 
         // กรองพื้นที่ 'สุรินทร์' ก่อน
@@ -334,8 +347,10 @@ class LineBotController extends Controller
             ->where('c.address', 'LIKE', '%สุรินทร์%')
             ->selectRaw($select)
             ->groupBy('c.cafe_id','c.cafe_name','c.address','c.lat','c.lng','c.phone')
+            ->orderByDesc('popularity_score')
             ->orderByDesc('avg_rating')
             ->orderByDesc('review_count')
+            ->orderByDesc('like_count')
             ->orderByDesc('c.cafe_id')
             ->limit(10)
             ->get()
@@ -346,8 +361,10 @@ class LineBotController extends Controller
             $rows = (clone $base)
                 ->selectRaw($select)
                 ->groupBy('c.cafe_id','c.cafe_name','c.address','c.lat','c.lng','c.phone')
+                ->orderByDesc('popularity_score')
                 ->orderByDesc('avg_rating')
                 ->orderByDesc('review_count')
+                ->orderByDesc('like_count')
                 ->orderByDesc('c.cafe_id')
                 ->limit(10)
                 ->get()
@@ -364,8 +381,10 @@ class LineBotController extends Controller
                 ->limit(10)
                 ->get()
                 ->map(function ($c) {
-                    $c->avg_rating = 0;
-                    $c->review_count = 0;
+                    $c->avg_rating    = 0;
+                    $c->review_count  = 0;
+                    $c->like_count    = 0;
+                    $c->popularity_score = 0;
                     return $c;
                 })
                 ->all();
@@ -374,10 +393,9 @@ class LineBotController extends Controller
         return $rows;
     }
 
-    // ---------- Filters (สไตล์/เปิดใหม่ ฯลฯ) ----------
+    // ---------- Filters ----------
     private function findCafesByFilter(string $type): array
     {
-        // สไตล์
         if (str_starts_with($type, 'style:')) {
             $kw = trim(mb_substr($type, 6));
             if ($kw === '') return [];
@@ -410,7 +428,6 @@ class LineBotController extends Controller
                     ->limit(20)
                     ->get()
                     ->all();
-
             default:
                 return [];
         }
