@@ -92,8 +92,8 @@ class LineBotController extends Controller
 
                 // ===== สไตล์ (ข้อความขึ้นต้น "สไตล์:") =====
                 if (mb_strpos($text, 'สไตล์:') === 0) {
-                    // 🔧 แก้ index จาก 7 -> 6 เพื่อไม่ให้ตัด 'ม' ของ "มินิมอล"
-                    $styleName = trim(mb_substr($text, 6)); // "สไตล์:" ยาว 6 ตัว
+                    // "สไตล์:" ยาว 6 ตัว
+                    $styleName = trim(mb_substr($text, 6));
                     $cafes = $this->findCafesByFilter('style:' . $styleName);
                     Log::info('[Style] query', ['style' => $styleName, 'count' => count($cafes)]);
 
@@ -316,27 +316,24 @@ class LineBotController extends Controller
         return ["type" => "carousel", "contents" => $bubbles];
     }
 
-    // ---------- Top10 ----------
+    // ---------- Top10 (ไม่ใช้ reviews.status และไม่บังคับต้องมีรีวิว) ----------
     private function getTop10Cafes(): array
     {
-        // รอบแรก: จำกัดเฉพาะที่ status=approved และ (ถ้า address มีคำว่า สุรินทร์ ก็โอเค)
         $base = DB::table('cafes as c')
-            ->leftJoin('reviews as r', function ($join) {
-                $join->on('r.cafe_id', '=', 'c.cafe_id')
-                     ->whereRaw("COALESCE(r.status,'approved')='approved'");
-            })
+            ->leftJoin('reviews as r', 'r.cafe_id', '=', 'c.cafe_id')
             ->whereRaw("LOWER(COALESCE(c.status,''))='approved'");
 
-        // ลอง query แบบ "กรองจังหวัด" ก่อน
+        $select = "
+            c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
+            COALESCE(AVG(r.rating), 0) AS avg_rating,
+            COUNT(r.rating)            AS review_count
+        ";
+
+        // กรองพื้นที่ 'สุรินทร์' ก่อน
         $rows = (clone $base)
             ->where('c.address', 'LIKE', '%สุรินทร์%')
-            ->selectRaw("
-                c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
-                COALESCE(AVG(r.rating), 0) AS avg_rating,
-                COUNT(r.cafe_id)           AS review_count
-            ")
+            ->selectRaw($select)
             ->groupBy('c.cafe_id','c.cafe_name','c.address','c.lat','c.lng','c.phone')
-            ->havingRaw("review_count >= 1 OR avg_rating > 0")
             ->orderByDesc('avg_rating')
             ->orderByDesc('review_count')
             ->orderByDesc('c.cafe_id')
@@ -344,16 +341,11 @@ class LineBotController extends Controller
             ->get()
             ->all();
 
-        // ถ้าไม่เจอ (เช่น address ไม่ได้บันทึกคำว่า "สุรินทร์") → รันอีกรอบ "ไม่กรอง address"
+        // ถ้าไม่เจอ: ไม่กรอง address
         if (empty($rows)) {
             $rows = (clone $base)
-                ->selectRaw("
-                    c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
-                    COALESCE(AVG(r.rating), 0) AS avg_rating,
-                    COUNT(r.cafe_id)           AS review_count
-                ")
+                ->selectRaw($select)
                 ->groupBy('c.cafe_id','c.cafe_name','c.address','c.lat','c.lng','c.phone')
-                ->havingRaw("review_count >= 1 OR avg_rating > 0")
                 ->orderByDesc('avg_rating')
                 ->orderByDesc('review_count')
                 ->orderByDesc('c.cafe_id')
@@ -362,7 +354,7 @@ class LineBotController extends Controller
                 ->all();
         }
 
-        // ถ้ายังไม่เจออีกเลย → fallback เป็น “ร้านล่าสุด” (ไม่กรอง address เพื่อให้มีรายการแน่นอน)
+        // ถ้ายังไม่เจอ: fallback ร้านล่าสุด
         if (empty($rows)) {
             return DB::table('cafes')
                 ->whereRaw("LOWER(COALESCE(status,''))='approved'")
@@ -393,7 +385,7 @@ class LineBotController extends Controller
 
             return DB::table('cafes')
                 ->whereRaw("LOWER(COALESCE(status,''))='approved'")
-                ->where('address', 'LIKE', '%สุรินทร์%') // คงกรองพื้นที่ไว้ เพราะอันนี้ในรูปใช้งานได้ปกติ
+                ->where('address', 'LIKE', '%สุรินทร์%')
                 ->where(function($q) use ($like) {
                     $q->whereRaw("(JSON_VALID(cafe_styles) AND JSON_SEARCH(cafe_styles, 'one', ?) IS NOT NULL)", [$like])
                       ->orWhere('other_style', 'LIKE', $like);
