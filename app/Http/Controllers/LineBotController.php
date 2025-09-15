@@ -47,7 +47,31 @@ class LineBotController extends Controller
                 }
                 if (in_array($text, ['FAQ','คำถามที่พบบ่อย','เมนูคำตอบ'], true)) {
                     $this->setUserRichMenu($userId, $this->richFaq);
-                    $this->replyText($replyToken, "เมนู FAQ พร้อมใช้งานครับ ❓");
+                    $this->replyText($replyToken, "เมนู FAQ พร้อมใช้งานครับ ❓\nพิมพ์: ที่จอดรถ / FreeWiFi / มีห้องประชุม / ย่อมเยา / เงียบ / แอร์");
+                    continue;
+                }
+
+                // ===== FAQ Keywords =====
+                // ทำ mapping คีย์เวิร์ด -> คีย์ FAQ ภายใน
+                $faqKeywords = [
+                    // ที่จอดรถ
+                    'ที่จอดรถ' => 'parking', 'จอดรถ' => 'parking', 'parking' => 'parking',
+                    // WiFi
+                    'FreeWiFi' => 'wifi', 'freewifi' => 'wifi', 'ฟรีwifi' => 'wifi', 'wifi' => 'wifi', 'ไวไฟ' => 'wifi',
+                    // ห้องประชุม/ทำงาน
+                    'มีห้องประชุม' => 'meeting', 'ห้องประชุม' => 'meeting', 'ทำงานได้' => 'meeting', 'work' => 'meeting',
+                    // ย่อมเยา/ราคาถูก
+                    'ย่อมเยา' => 'cheap', 'ราคาย่อมเยา' => 'cheap', 'ถูก' => 'cheap', 'ประหยัด' => 'cheap',
+                    // เงียบ/อ่านหนังสือ
+                    'เงียบ' => 'quiet', 'อ่านหนังสือ' => 'quiet', 'สงบ' => 'quiet',
+                    // แอร์/เครื่องปรับอากาศ
+                    'แอร์' => 'aircon', 'เครื่องปรับอากาศ' => 'aircon', 'aircon' => 'aircon',
+                ];
+
+                $key = $faqKeywords[$text] ?? null;
+                if ($key) {
+                    $faq = $this->getFaqEntry($key);
+                    $this->replyFlex($replyToken, $faq['alt'], $this->bubbleFaq($faq['title'], $faq['lines'], $faq['buttons']));
                     continue;
                 }
 
@@ -60,7 +84,7 @@ class LineBotController extends Controller
 
                 // ===== Top10 =====
                 if (in_array($text, ['คาเฟ่Top10','Top10','Top 10','top10'], true)) {
-                    $cafes = $this->getTop10Cafes(); // อิง avg_rating + review_count
+                    $cafes = $this->getTop10Cafes(); // อิง avg_rating + review_count (ไม่ใช้ reviews.status)
                     Log::info('[Top10] rows', ['count' => count($cafes)]);
 
                     $bubbles = [];
@@ -92,8 +116,7 @@ class LineBotController extends Controller
 
                 // ===== สไตล์ (ข้อความขึ้นต้น "สไตล์:") =====
                 if (mb_strpos($text, 'สไตล์:') === 0) {
-                    // "สไตล์:" ยาว 6 ตัว
-                    $styleName = trim(mb_substr($text, 6));
+                    $styleName = trim(mb_substr($text, 6)); // "สไตล์:" ยาว 6 ตัว
                     $cafes = $this->findCafesByFilter('style:' . $styleName);
                     Log::info('[Style] query', ['style' => $styleName, 'count' => count($cafes)]);
 
@@ -150,7 +173,10 @@ class LineBotController extends Controller
                 }
 
                 // default
-                $this->replyText($replyToken, "พิมพ์ “แนะนำคาเฟ่เมืองสุรินทร์” เพื่อเปิดเมนูแนะนำ หรือ “เมนู” เพื่อเปิดเมนูหลักครับ");
+                $this->replyText(
+                    $replyToken,
+                    "พิมพ์ “แนะนำคาเฟ่เมืองสุรินทร์” เพื่อเปิดเมนูแนะนำ หรือ “เมนู” เพื่อเปิดเมนูหลักครับ\nหรือถาม FAQ: ที่จอดรถ / FreeWiFi / มีห้องประชุม / ย่อมเยา / เงียบ / แอร์"
+                );
                 continue;
             }
 
@@ -374,6 +400,134 @@ class LineBotController extends Controller
         return $rows;
     }
 
+    // ---------- FAQ data + Flex ----------
+    private function getFaqEntry(string $key): array
+    {
+        // NOTE: URLs สามารถเปลี่ยนให้ชี้ไปหน้าฟิลเตอร์จริงในเว็บได้
+        $map = [
+            'parking' => [
+                'alt'    => 'FAQ: มีที่จอดรถไหม',
+                'title'  => 'ที่จอดรถ',
+                'lines'  => [
+                    'หลายคาเฟ่มีที่จอดรถด้านหน้า/ข้างร้านครับ',
+                    'หากไปช่วงเสาร์-อาทิตย์ แนะนำเผื่อเวลาหรือโทรเช็คก่อน',
+                ],
+                'buttons'=> [
+                    ['label' => 'ดูร้านที่มีที่จอดรถ', 'uri' => 'https://nongchangsaren.com/'],
+                    ['label' => 'เปิดเมนูแนะนำ', 'message' => 'แนะนำคาเฟ่เมืองสุรินทร์'],
+                ]
+            ],
+            'wifi' => [
+                'alt'   => 'FAQ: Free WiFi',
+                'title' => 'Free WiFi',
+                'lines' => [
+                    'ส่วนใหญ่มี Free WiFi ให้บริการ',
+                    'ความเร็วและเงื่อนไขขึ้นกับแต่ละร้าน',
+                ],
+                'buttons'=> [
+                    ['label' => 'ดูร้าน WiFi ดี', 'uri' => 'https://nongchangsaren.com/'],
+                    ['label' => 'คาเฟ่Top10', 'message' => 'คาเฟ่Top10'],
+                ]
+            ],
+            'meeting' => [
+                'alt'   => 'FAQ: มีห้องประชุม/ทำงาน',
+                'title' => 'มีห้องประชุม / ทำงานได้',
+                'lines' => [
+                    'มีหลายร้านที่มีปลั๊กไฟ/โต๊ะยาว/ห้องประชุมเล็ก',
+                    'แนะนำจองล่วงหน้าในวันที่คนเยอะ',
+                ],
+                'buttons'=> [
+                    ['label' => 'ค้นหาร้านสำหรับทำงาน', 'uri' => 'https://nongchangsaren.com/'],
+                    ['label' => 'เปิดเมนูแนะนำ', 'message' => 'แนะนำคาเฟ่เมืองสุรินทร์'],
+                ]
+            ],
+            'cheap' => [
+                'alt'   => 'FAQ: ราคาย่อมเยา',
+                'title' => 'คาเฟ่ราคาย่อมเยา',
+                'lines' => [
+                    'มีตัวเลือกเริ่มต้น ~35-50 บาทในหลายร้าน',
+                    'โปรโมชันอาจเปลี่ยนแปลงตามช่วงเวลา',
+                ],
+                'buttons'=> [
+                    ['label' => 'ดูร้านราคาย่อมเยา', 'uri' => 'https://nongchangsaren.com/'],
+                    ['label' => 'คาเฟ่Top10', 'message' => 'คาเฟ่Top10'],
+                ]
+            ],
+            'quiet' => [
+                'alt'   => 'FAQ: ร้านเงียบ',
+                'title' => 'บรรยากาศเงียบ/อ่านหนังสือ',
+                'lines' => [
+                    'แนะนำช่วงเช้า/วันธรรมดา คนจะน้อย',
+                    'บางร้านมีโซนเงียบ – ถามพนักงานได้ครับ',
+                ],
+                'buttons'=> [
+                    ['label' => 'ค้นหาร้านบรรยากาศเงียบ', 'uri' => 'https://nongchangsaren.com/'],
+                    ['label' => 'เปิดเมนูแนะนำ', 'message' => 'แนะนำคาเฟ่เมืองสุรินทร์'],
+                ]
+            ],
+            'aircon' => [
+                'alt'   => 'FAQ: มีแอร์',
+                'title' => 'เครื่องปรับอากาศ',
+                'lines' => [
+                    'ส่วนใหญ่มีแอร์ทั้งร้านหรือบางโซน',
+                    'ถ้าต้องการเย็นจัด แนะนำเลือกที่นั่งด้านใน',
+                ],
+                'buttons'=> [
+                    ['label' => 'ดูร้านมีแอร์', 'uri' => 'https://nongchangsaren.com/'],
+                    ['label' => 'คาเฟ่Top10', 'message' => 'คาเฟ่Top10'],
+                ]
+            ],
+        ];
+
+        return $map[$key] ?? [
+            'alt'   => 'FAQ',
+            'title' => 'FAQ',
+            'lines' => ['ยังไม่มีคำตอบสำหรับหัวข้อนี้', 'ลองเปิดเมนูแนะนำดูได้นะครับ'],
+            'buttons'=> [['label'=>'เปิดเมนูแนะนำ','message'=>'แนะนำคาเฟ่เมืองสุรินทร์']]
+        ];
+    }
+
+    private function bubbleFaq(string $title, array $lines, array $buttons): array
+    {
+        $lineBoxes = [];
+        foreach ($lines as $t) {
+            $lineBoxes[] = ["type"=>"text","text"=>$t,"size"=>"sm","color"=>"#555555","wrap"=>true];
+        }
+
+        $btns = [];
+        foreach ($buttons as $b) {
+            if (isset($b['uri'])) {
+                $btns[] = [
+                    "type"=>"button","style"=>"primary","height"=>"sm",
+                    "action"=>["type"=>"uri","label"=>$b['label'],"uri"=>$b['uri']],
+                    "color"=>"#1E88E5"
+                ];
+            } else {
+                $btns[] = [
+                    "type"=>"button","style"=>"secondary","height"=>"sm",
+                    "action"=>["type"=>"message","label"=>$b['label'],"text"=>$b['message']]
+                ];
+            }
+        }
+
+        return [
+            "type"=>"bubble",
+            "body"=>[
+                "type"=>"box","layout"=>"vertical","paddingAll"=>"16px","spacing"=>"10px",
+                "contents"=>array_merge(
+                    [["type"=>"text","text"=>$title,"weight"=>"bold","size"=>"lg","wrap"=>true]],
+                    $lineBoxes,
+                    [["type"=>"separator","margin"=>"12px"]]
+                )
+            ],
+            "footer"=>[
+                "type"=>"box","layout"=>"vertical","spacing"=>"md","paddingAll"=>"12px",
+                "contents"=>$btns,"flex"=>0
+            ],
+            "styles"=>["footer"=>["separator"=>true]]
+        ];
+    }
+
     // ---------- Filters (สไตล์/เปิดใหม่ ฯลฯ) ----------
     private function findCafesByFilter(string $type): array
     {
@@ -385,7 +539,7 @@ class LineBotController extends Controller
 
             return DB::table('cafes')
                 ->whereRaw("LOWER(COALESCE(status,''))='approved'")
-                ->where('address', 'LIKE', '%สุรินทร์%')
+                ->where('address', 'LIKE', '%สุรินทร์%') // พื้นที่
                 ->where(function($q) use ($like) {
                     $q->whereRaw("(JSON_VALID(cafe_styles) AND JSON_SEARCH(cafe_styles, 'one', ?) IS NOT NULL)", [$like])
                       ->orWhere('other_style', 'LIKE', $like);
@@ -567,6 +721,11 @@ class LineBotController extends Controller
 
     private function replyFlex(string $replyToken, string $altText, array $contents): void
     {
+        // $contents เป็น bubble เดียวหรือ carousel ก็ได้
+        if (!isset($contents['type'])) {
+            // เผื่อส่งมาเป็น bubble เดี่ยว -> ห่อเป็น carousel ให้
+            $contents = ["type"=>"carousel","contents"=>[$contents]];
+        }
         $this->replyMessage($replyToken, ["type" => "flex","altText" => $altText,"contents" => $contents]);
     }
 
