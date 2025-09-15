@@ -41,7 +41,7 @@ class LineBotController extends Controller
                 $textRaw = (string)($event['message']['text'] ?? '');
                 $text    = trim($textRaw);
 
-                // normalize เข้มข้น
+                // normalize
                 $lower   = mb_strtolower($text);
                 $norm1   = preg_replace('/[^\p{L}\p{N}:]+/u', '', $lower);
                 $nospace = preg_replace('/\s+/u', '', $norm1);
@@ -62,7 +62,7 @@ class LineBotController extends Controller
                 // ----- เมนูแนะนำคาเฟ่ -----
                 if ($this->isRecommendTrigger($text)) {
                     Log::info('[ROUTE] recommend menu');
-                    $menu = $this->menuRecommendCarousel(); // เมนูจากโค้ดที่ 2 (ตกแต่งใหม่)
+                    $menu = $this->menuRecommendCarousel();
                     $this->safeReplyFlex($replyToken, "เมนูแนะนำคาเฟ่เมืองสุรินทร์", $menu);
                     continue;
                 }
@@ -219,7 +219,7 @@ class LineBotController extends Controller
                 continue;
             }
 
-            // ---------- LOCATION ----------
+            // ---------- LOCATION (ตกแต่ง + เพิ่มรายละเอียด) ----------
             if (($event['type'] ?? '') === 'message' && ($event['message']['type'] ?? '') === 'location') {
                 $lat = $event['message']['latitude']  ?? null;
                 $lng = $event['message']['longitude'] ?? null;
@@ -230,27 +230,41 @@ class LineBotController extends Controller
                 }
 
                 try {
+                    // รวมระยะทาง + คะแนน + รายละเอียดหลัก
                     $cafes = DB::select("
-                        SELECT cafes.cafe_id, cafes.cafe_name, cafes.address, cafes.lat, cafes.lng, cafes.phone,
-                               (6371 * acos(
-                                   cos(radians(?)) * cos(radians(cafes.lat)) *
-                                   cos(radians(cafes.lng) - radians(?)) +
-                                   sin(radians(?)) * sin(radians(cafes.lat))
-                               )) AS distance
-                        FROM cafes
-                        WHERE LOWER(COALESCE(status,''))='approved'
+                        SELECT
+                            c.cafe_id, c.cafe_name, c.address, c.lat, c.lng, c.phone,
+                            c.price_range, c.open_time, c.close_time,
+                            c.facilities, c.other_services, c.website,
+                            COALESCE(r.avg_rating,0)  AS avg_rating,
+                            COALESCE(r.review_count,0) AS review_count,
+                            COALESCE(l.like_count,0)   AS like_count,
+                            (6371 * acos(
+                                cos(radians(?)) * cos(radians(c.lat)) *
+                                cos(radians(c.lng) - radians(?)) +
+                                sin(radians(?)) * sin(radians(c.lat))
+                            )) AS distance
+                        FROM cafes c
+                        LEFT JOIN (
+                            SELECT cafe_id, AVG(rating) AS avg_rating, COUNT(*) AS review_count
+                            FROM reviews
+                            GROUP BY cafe_id
+                        ) r ON r.cafe_id = c.cafe_id
+                        LEFT JOIN (
+                            SELECT cafe_id, COUNT(*) AS like_count
+                            FROM cafe_likes
+                            GROUP BY cafe_id
+                        ) l ON l.cafe_id = c.cafe_id
+                        WHERE LOWER(COALESCE(c.status,''))='approved'
                         HAVING distance < 5
-                        ORDER BY distance ASC, cafe_id DESC
-                        LIMIT 5
+                        ORDER BY distance ASC, avg_rating DESC, review_count DESC, like_count DESC, c.cafe_id DESC
+                        LIMIT 6
                     ", [$lat, $lng, $lat]);
 
                     $bubbles = [];
                     if (!empty($cafes)) {
                         foreach ($cafes as $c) {
-                            $bubbles[] = $this->bubbleBasic(
-                                $c->cafe_name, $c->address, "📍 ห่าง " . round($c->distance, 2) . " กม.",
-                                $c->phone, $c->lat, $c->lng
-                            );
+                            $bubbles[] = $this->bubbleNearbyDetail($c);
                         }
                     } else {
                         $bubbles[] = $this->bubbleInfo("ไม่พบคาเฟ่ในรัศมี 5 กม.","ดูแผนที่ร้านทั้งหมดบนเว็บไซต์","https://nongchangsaren.com/");
@@ -307,10 +321,8 @@ class LineBotController extends Controller
     // ---------- เมนูแนะนำคาเฟ่ (ตกแต่ง) ----------
     private function menuRecommendCarousel(): array
     {
-        // สีธีม
         $blue     = "#1E88E5";
         $green    = "#2ECC71";
-        $lavender = "#8A63F6";
         $bgSoft   = "#F7FAFF";
         $chipBg   = ["#8A63F6","#00BCD4","#FF7043","#26A69A","#5C6BC0","#AB47BC","#42A5F5","#7CB342","#EC407A"];
 
@@ -325,21 +337,19 @@ class LineBotController extends Controller
                 "paddingAll" => "18px",
                 "spacing" => "14px",
                 "backgroundColor" => $bgSoft,
-                "contents" => [
-                    [
-                        "type" => "box",
-                        "layout" => "vertical",
-                        "cornerRadius" => "12px",
-                        "backgroundColor" => "#FFFFFF",
-                        "paddingAll" => "14px",
-                        "contents" => [
-                            ["type" => "text","text" => "🐘 น้องช้างสะเร็น","size" => "xs","color" => "#8B8B8B"],
-                            ["type" => "text","text" => "แนะนำคาเฟ่เมืองสุรินทร์","weight" => "bold","size" => "lg","wrap" => true],
-                            ["type" => "text","text" => "เลือกหมวดหรือสไตล์ที่ชอบได้เลยครับ","size" => "sm","color" => "#666666","wrap" => true, "margin"=>"sm"],
-                            ["type" => "separator","margin" => "12px"]
-                        ]
-                    ],
-                ]
+                "contents" => [[
+                    "type" => "box",
+                    "layout" => "vertical",
+                    "cornerRadius" => "12px",
+                    "backgroundColor" => "#FFFFFF",
+                    "paddingAll" => "14px",
+                    "contents" => [
+                        ["type" => "text","text" => "🐘 น้องช้างสะเร็น","size" => "xs","color" => "#8B8B8B"],
+                        ["type" => "text","text" => "แนะนำคาเฟ่เมืองสุรินทร์","weight" => "bold","size" => "lg","wrap" => true],
+                        ["type" => "text","text" => "เลือกหมวดหรือสไตล์ที่ชอบได้เลยครับ","size" => "sm","color" => "#666666","wrap" => true, "margin"=>"sm"],
+                        ["type" => "separator","margin" => "12px"]
+                    ]
+                ]]
             ],
             "footer" => [
                 "type" => "box",
@@ -355,7 +365,7 @@ class LineBotController extends Controller
             "styles" => ["footer" => ["separator" => true]]
         ];
 
-        // Bubble 2: ชิปสไตล์ (Grid 3 คอลัมน์)
+        // Bubble 2: ชิปสไตล์
         $styleLabels = ['มินิมอล','โมเดิร์น','โคซี่/อบอุ่น','ยุโรป','ธรรมชาติ/สวน','ลอฟท์','อินดัสเทรียล','วินเทจ','อาร์ต/แกลเลอรี่'];
         $chips = [];
         foreach ($styleLabels as $i => $label) {
@@ -379,12 +389,7 @@ class LineBotController extends Controller
         $rows = array_chunk($chips, 3);
         $gridRows = [];
         foreach ($rows as $row) {
-            $gridRows[] = [
-                "type"=>"box",
-                "layout"=>"horizontal",
-                "spacing"=>"8px",
-                "contents"=>$row
-            ];
+            $gridRows[] = ["type"=>"box","layout"=>"horizontal","spacing"=>"8px","contents"=>$row];
         }
 
         $bubbles[] = [
@@ -396,20 +401,14 @@ class LineBotController extends Controller
                 "spacing" => "12px",
                 "backgroundColor" => $bgSoft,
                 "contents" => array_merge(
-                    [
-                        [
-                            "type"=>"box",
-                            "layout"=>"vertical",
-                            "cornerRadius"=>"12px",
-                            "backgroundColor"=>"#FFFFFF",
-                            "paddingAll"=>"14px",
-                            "contents"=>[
-                                ["type"=>"text","text"=>"เลือกตามสไตล์ที่ชอบ","weight"=>"bold","size"=>"md"],
-                                ["type"=>"text","text"=>"แตะเพื่อค้นหาโดยอัตโนมัติ","size"=>"xs","color"=>"#8B8B8B","margin"=>"sm"],
-                                ["type"=>"separator","margin"=>"12px"]
-                            ]
+                    [[
+                        "type"=>"box","layout"=>"vertical","cornerRadius"=>"12px","backgroundColor"=>"#FFFFFF","paddingAll"=>"14px",
+                        "contents"=>[
+                            ["type"=>"text","text"=>"เลือกตามสไตล์ที่ชอบ","weight"=>"bold","size"=>"md"],
+                            ["type"=>"text","text"=>"แตะเพื่อค้นหาโดยอัตโนมัติ","size"=>"xs","color"=>"#8B8B8B","margin"=>"sm"],
+                            ["type"=>"separator","margin"=>"12px"]
                         ]
-                    ],
+                    ]],
                     $gridRows
                 )
             ]
@@ -421,7 +420,7 @@ class LineBotController extends Controller
         return ["type" => "carousel", "contents" => $bubbles];
     }
 
-    // ---------- Top10 (โค้ดที่ 2: popularity score) ----------
+    // ---------- Top10 ----------
     private function getTop10Cafes(): array
     {
         $reviewsAgg = DB::raw("
@@ -667,7 +666,7 @@ class LineBotController extends Controller
         }
     }
 
-    // ---------- Flex Components (ตกแต่ง) ----------
+    // ---------- Flex Components เดิม ----------
     private function bubbleBasic($name, $addr, $sub, $phone, $lat, $lng, $mapUrl = null): array
     {
         $mapUrl    = $mapUrl ?: "https://maps.google.com/?q={$lat},{$lng}";
@@ -824,6 +823,167 @@ class LineBotController extends Controller
             ],
             "styles" => ["footer" => ["separator" => true]]
         ];
+    }
+
+    // ---------- Flex สำหรับ "คาเฟ่ใกล้ฉัน" แบบละเอียด ----------
+    private function bubbleNearbyDetail(object $c): array
+    {
+        $primary   = "#1E88E5";
+        $chipBG    = "#EEF7FF";
+        $rating    = (float)($c->avg_rating ?? 0);
+        $reviews   = (int)($c->review_count ?? 0);
+        $likes     = (int)($c->like_count ?? 0);
+        $distance  = isset($c->distance) ? round((float)$c->distance, 2) : null;
+
+        // สถานะเปิดปิด
+        $openLabel = $this->formatOpenStatus($c->open_time ?? null, $c->close_time ?? null);
+
+        // ช่วงราคา
+        $priceText = $this->formatPriceRange($c->price_range ?? null);
+
+        // ปุ่มโทร/แผนที่/เว็บ
+        $mapUrl  = ($c->lat !== null && $c->lng !== null)
+            ? "https://maps.google.com/?q={$c->lat},{$c->lng}"
+            : "https://www.google.com/maps/search/".urlencode(($c->cafe_name ?? '').' '.($c->address ?? ''));
+        $telUri  = $this->buildTelUri($c->phone ?? null);
+        $siteUrl = $c->website ?? null;
+
+        // Badges (ระยะทาง/เรตติ้ง/ไลก์/เวลา)
+        $badges = [];
+        if ($distance !== null) {
+            $badges[] = $this->chip("📍 {$distance} กม.", $chipBG, $primary);
+        }
+        $badges[] = $this->chip("⭐ ".number_format($rating,1), $chipBG, $primary);
+        if ($reviews > 0) $badges[] = $this->chip("รีวิว {$reviews}", $chipBG, $primary);
+        if ($likes   > 0) $badges[] = $this->chip("❤ {$likes}", $chipBG, $primary);
+        if ($openLabel)   $badges[] = $this->chip($openLabel, $chipBG, $primary);
+        if ($priceText)   $badges[] = $this->chip($priceText, $chipBG, $primary);
+
+        // สิ่งอำนวยความสะดวกย่อ
+        $facilityChips = $this->buildFacilityChips($c->facilities ?? null, $c->other_services ?? null, $chipBG, $primary);
+
+        $buttons = [[
+            "type" => "button","style" => "primary","height" => "sm","color" => $primary,
+            "action" => ["type" => "uri","label" => "🗺️ แผนที่","uri" => $mapUrl]
+        ]];
+        if ($telUri) {
+            $buttons[] = ["type"=>"button","style"=>"secondary","height"=>"sm","action"=>["type"=>"uri","label"=>"📞 โทร","uri"=>$telUri]];
+        }
+        if ($siteUrl) {
+            $buttons[] = ["type"=>"button","style"=>"secondary","height"=>"sm","action"=>["type"=>"uri","label"=>"🌐 เว็บไซต์","uri"=>$siteUrl]];
+        }
+
+        // แบ่ง badge เป็นหลายบรรทัด (สูงสุด 3 ต่อแถว)
+        $rows = array_chunk($badges, 3);
+        $badgeRows = array_map(fn($row) => ["type"=>"box","layout"=>"horizontal","spacing"=>"8px","contents"=>$row], $rows);
+        $facilityRows = [];
+        if (!empty($facilityChips)) {
+            foreach (array_chunk($facilityChips, 3) as $row) {
+                $facilityRows[] = ["type"=>"box","layout"=>"horizontal","spacing"=>"8px","contents"=>$row];
+            }
+        }
+
+        return [
+            "type" => "bubble",
+            "body" => [
+                "type" => "box",
+                "layout" => "vertical",
+                "paddingAll" => "16px",
+                "spacing" => "12px",
+                "contents" => array_values(array_filter([
+                    [
+                        "type"=>"text","text" => (string)($c->cafe_name ?? "-"),
+                        "weight"=>"bold","size"=>"lg","wrap"=>true
+                    ],
+                    ...$badgeRows,
+                    [
+                        "type"=>"box","layout"=>"horizontal","spacing"=>"sm",
+                        "contents" => [
+                            ["type"=>"text","text"=>"📍","size"=>"sm","flex"=>0],
+                            ["type"=>"text","text"=>(string)($c->address ?? "-"),"size"=>"sm","color"=>"#555555","wrap"=>true]
+                        ]
+                    ],
+                    [
+                        "type"=>"box","layout"=>"horizontal","spacing"=>"sm",
+                        "contents" => [
+                            ["type"=>"text","text"=>"☎","size"=>"sm","flex"=>0],
+                            ["type"=>"text","text"=>(string)($c->phone ?? "ไม่มีข้อมูล"),"size"=>"sm","color"=>"#555555","wrap"=>true]
+                        ]
+                    ],
+                    !empty($facilityRows) ? ["type"=>"separator","margin"=>"12px"] : null,
+                    ...$facilityRows
+                ]))
+            ],
+            "footer" => [
+                "type" => "box",
+                "layout" => "horizontal",
+                "spacing" => "md",
+                "paddingAll" => "12px",
+                "contents" => $buttons,
+                "flex" => 0
+            ],
+            "styles" => ["footer" => ["separator" => true]]
+        ];
+    }
+
+    // ชิปสวยๆ
+    private function chip(string $text, string $bg, string $color): array
+    {
+        return [
+            "type"=>"box","layout"=>"baseline","backgroundColor"=>$bg,"cornerRadius"=>"999px",
+            "paddingAll"=>"6px","contents"=>[["type"=>"text","text"=>$text,"size"=>"xs","color"=>$color,"wrap"=>true]]
+        ];
+    }
+
+    private function formatOpenStatus($open, $close): ?string
+    {
+        if (!$open || !$close) return null;
+        try {
+            $now = Carbon::now('Asia/Bangkok')->format('H:i:s');
+            $openS  = (string)$open;
+            $closeS = (string)$close;
+
+            $isOpen = false;
+            if ($closeS >= $openS) {
+                // วันเดียวกัน
+                $isOpen = ($now >= $openS && $now <= $closeS);
+            } else {
+                // ข้ามเที่ยงคืน
+                $isOpen = ($now >= $openS || $now <= $closeS);
+            }
+            $label = $isOpen ? "🟢 เปิดอยู่" : "🔴 ปิดอยู่";
+            return $label." ($openS-$closeS)";
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function formatPriceRange($priceRange): ?string
+    {
+        if ($priceRange === null || $priceRange === '') return null;
+        // แสดงแบบย่อ
+        return "💸 ราคา: ".(string)$priceRange;
+    }
+
+    private function buildFacilityChips($facilities, $other, string $bg, string $color): array
+    {
+        $txt = mb_strtolower(trim(($facilities ?? '').' '.($other ?? '')));
+        if ($txt === '') return [];
+
+        $chips = [];
+        $has = function(array $keys) use ($txt): bool {
+            foreach ($keys as $k) {
+                if (mb_strpos($txt, $k) !== false) return true;
+            }
+            return false;
+        };
+
+        if ($has(['wifi','wi-fi','ไวไฟ'])) $chips[] = $this->chip("📶 Wi-Fi", $bg, $color);
+        if ($has(['จอดรถ','ที่จอดรถ','parking'])) $chips[] = $this->chip("🅿️ ที่จอดรถ", $bg, $color);
+        if ($has(['ห้องประชุม','meeting','cowork','co-work','co work'])) $chips[] = $this->chip("🏢 ห้องประชุม/ทำงาน", $bg, $color);
+        if ($has(['บัตรเครดิต','credit','เดบิต','qr','พร้อมเพย์','promptpay'])) $chips[] = $this->chip("💳 รับบัตร/QR", $bg, $color);
+
+        return $chips;
     }
 
     // ---------- Safe Reply ----------
