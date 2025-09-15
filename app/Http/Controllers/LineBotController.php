@@ -43,7 +43,7 @@ class LineBotController extends Controller
 
                 // normalize เข้มข้น
                 $lower   = mb_strtolower($text);
-                $norm1   = preg_replace('/[^\p{L}\p{N}:]+/u', '', $lower); // เก็บเฉพาะอักษร/ตัวเลข/โคลอน
+                $norm1   = preg_replace('/[^\p{L}\p{N}:]+/u', '', $lower);
                 $nospace = preg_replace('/\s+/u', '', $norm1);
                 Log::info('[TEXT]', ['raw'=>$text, 'lower'=>$lower, 'norm1'=>$norm1, 'nospace'=>$nospace]);
 
@@ -62,12 +62,12 @@ class LineBotController extends Controller
                 // ----- เมนูแนะนำคาเฟ่ -----
                 if ($this->isRecommendTrigger($text)) {
                     Log::info('[ROUTE] recommend menu');
-                    $menu = $this->menuRecommendCarousel(); // เมนูจากโค้ดที่ 2
+                    $menu = $this->menuRecommendCarousel(); // เมนูจากโค้ดที่ 2 (ตกแต่งใหม่)
                     $this->safeReplyFlex($replyToken, "เมนูแนะนำคาเฟ่เมืองสุรินทร์", $menu);
                     continue;
                 }
 
-                // ===== Top10 (ใช้ลอจิกจากโค้ดที่ 2) =====
+                // ===== Top10 =====
                 if (
                     in_array($text, ['คาเฟ่Top10','Top10','Top 10','top10'], true) ||
                     preg_match('/top\s*10/u', $lower) ||
@@ -76,7 +76,7 @@ class LineBotController extends Controller
                 ) {
                     Log::info('[ROUTE] Top10 (v2 logic)');
                     try {
-                        $cafes = $this->getTop10Cafes(); // popularity_score จาก avg+reviews+likes
+                        $cafes = $this->getTop10Cafes();
                         $bubbles = [];
 
                         if (!empty($cafes)) {
@@ -103,9 +103,9 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ===== สไตล์ (ใช้สัญญาณ "สไตล์:" แบบโค้ดที่ 2) =====
+                // ===== สไตล์ =====
                 if (mb_strpos($text, 'สไตล์:') === 0) {
-                    $styleName = trim(mb_substr($text, 6)); // "สไตล์:" ยาว 6 ตัว
+                    $styleName = trim(mb_substr($text, 6));
                     Log::info('[ROUTE] style (v2)', ['style'=>$styleName]);
 
                     try {
@@ -304,23 +304,41 @@ class LineBotController extends Controller
         ])->post("https://api.line.me/v2/bot/user/{$userId}/richmenu/{$richMenuId}");
     }
 
-    // ---------- เมนูแนะนำคาเฟ่ (จากโค้ดที่ 2) ----------
+    // ---------- เมนูแนะนำคาเฟ่ (ตกแต่ง) ----------
     private function menuRecommendCarousel(): array
     {
+        // สีธีม
+        $blue     = "#1E88E5";
+        $green    = "#2ECC71";
+        $lavender = "#8A63F6";
+        $bgSoft   = "#F7FAFF";
+        $chipBg   = ["#8A63F6","#00BCD4","#FF7043","#26A69A","#5C6BC0","#AB47BC","#42A5F5","#7CB342","#EC407A"];
+
         $bubbles = [];
 
-        // Bubble 1: Top10 / เปิดใหม่
+        // Bubble 1: Hero + ปุ่มหมวด
         $bubbles[] = [
             "type" => "bubble",
             "body" => [
                 "type" => "box",
                 "layout" => "vertical",
-                "paddingAll" => "16px",
-                "spacing" => "12px",
+                "paddingAll" => "18px",
+                "spacing" => "14px",
+                "backgroundColor" => $bgSoft,
                 "contents" => [
-                    ["type" => "text","text" => "แนะนำคาเฟ่เมืองสุรินทร์","weight" => "bold","size" => "lg"],
-                    ["type" => "text","text" => "เลือกหมวดหรือสไตล์ที่ชอบได้เลยครับ","size" => "sm","color" => "#666666","wrap" => true],
-                    ["type" => "separator","margin" => "12px"]
+                    [
+                        "type" => "box",
+                        "layout" => "vertical",
+                        "cornerRadius" => "12px",
+                        "backgroundColor" => "#FFFFFF",
+                        "paddingAll" => "14px",
+                        "contents" => [
+                            ["type" => "text","text" => "🐘 น้องช้างสะเร็น","size" => "xs","color" => "#8B8B8B"],
+                            ["type" => "text","text" => "แนะนำคาเฟ่เมืองสุรินทร์","weight" => "bold","size" => "lg","wrap" => true],
+                            ["type" => "text","text" => "เลือกหมวดหรือสไตล์ที่ชอบได้เลยครับ","size" => "sm","color" => "#666666","wrap" => true, "margin"=>"sm"],
+                            ["type" => "separator","margin" => "12px"]
+                        ]
+                    ],
                 ]
             ],
             "footer" => [
@@ -329,23 +347,23 @@ class LineBotController extends Controller
                 "spacing" => "md",
                 "paddingAll" => "12px",
                 "contents" => [
-                    ["type" => "button","style" => "primary","action" => ["type" => "message","label" => "🔥 Top10","text" => "คาเฟ่Top10"],"color" => "#1E88E5"],
-                    ["type" => "button","style" => "primary","action" => ["type" => "message","label" => "✨ เปิดใหม่","text" => "เปิดใหม่"],"color" => "#2ECC71"],
+                    ["type" => "button","style" => "primary","action" => ["type" => "message","label" => "🔥 Top 10","text" => "คาเฟ่Top10"],"color" => $blue, "height"=>"sm"],
+                    ["type" => "button","style" => "primary","action" => ["type" => "message","label" => "✨ เปิดใหม่","text" => "เปิดใหม่"],"color" => $green, "height"=>"sm"],
                 ],
                 "flex" => 0
             ],
             "styles" => ["footer" => ["separator" => true]]
         ];
 
-        // Bubble 2: ชิปสไตล์
+        // Bubble 2: ชิปสไตล์ (Grid 3 คอลัมน์)
         $styleLabels = ['มินิมอล','โมเดิร์น','โคซี่/อบอุ่น','ยุโรป','ธรรมชาติ/สวน','ลอฟท์','อินดัสเทรียล','วินเทจ','อาร์ต/แกลเลอรี่'];
         $chips = [];
-        foreach ($styleLabels as $label) {
+        foreach ($styleLabels as $i => $label) {
             $chips[] = [
                 "type" => "box",
                 "layout" => "vertical",
-                "cornerRadius" => "12px",
-                "backgroundColor" => "#8A63F6",
+                "cornerRadius" => "999px",
+                "backgroundColor" => $chipBg[$i % count($chipBg)],
                 "paddingAll" => "10px",
                 "action" => ["type" => "message","text" => "สไตล์:".$label],
                 "contents" => [[
@@ -360,17 +378,38 @@ class LineBotController extends Controller
         }
         $rows = array_chunk($chips, 3);
         $gridRows = [];
-        foreach ($rows as $row) { $gridRows[] = ["type"=>"box","layout"=>"horizontal","spacing"=>"8px","contents"=>$row]; }
+        foreach ($rows as $row) {
+            $gridRows[] = [
+                "type"=>"box",
+                "layout"=>"horizontal",
+                "spacing"=>"8px",
+                "contents"=>$row
+            ];
+        }
 
         $bubbles[] = [
             "type" => "bubble",
             "body" => [
                 "type" => "box",
                 "layout" => "vertical",
-                "paddingAll" => "16px",
+                "paddingAll" => "18px",
                 "spacing" => "12px",
+                "backgroundColor" => $bgSoft,
                 "contents" => array_merge(
-                    [["type"=>"text","text"=>"เลือกตามสไตล์ที่ชอบ","weight"=>"bold","size"=>"md"]],
+                    [
+                        [
+                            "type"=>"box",
+                            "layout"=>"vertical",
+                            "cornerRadius"=>"12px",
+                            "backgroundColor"=>"#FFFFFF",
+                            "paddingAll"=>"14px",
+                            "contents"=>[
+                                ["type"=>"text","text"=>"เลือกตามสไตล์ที่ชอบ","weight"=>"bold","size"=>"md"],
+                                ["type"=>"text","text"=>"แตะเพื่อค้นหาโดยอัตโนมัติ","size"=>"xs","color"=>"#8B8B8B","margin"=>"sm"],
+                                ["type"=>"separator","margin"=>"12px"]
+                            ]
+                        ]
+                    ],
                     $gridRows
                 )
             ]
@@ -382,10 +421,9 @@ class LineBotController extends Controller
         return ["type" => "carousel", "contents" => $bubbles];
     }
 
-    // ---------- Top10 (โค้ดที่ 2: popularity score จาก avg + reviews + likes) ----------
+    // ---------- Top10 (โค้ดที่ 2: popularity score) ----------
     private function getTop10Cafes(): array
     {
-        // รวมค่าแบบ aggregate ด้วยซับเควรี (กันค่าซ้ำจากการ join ทับกัน)
         $reviewsAgg = DB::raw("
             (SELECT cafe_id, AVG(rating) AS avg_rating, COUNT(*) AS review_count
              FROM reviews
@@ -414,7 +452,6 @@ class LineBotController extends Controller
             ')
         ];
 
-        // ลองกรองเฉพาะสุรินทร์ก่อน
         $rows = (clone $base)
             ->where(function ($q) {
                 $q->where('c.address', 'LIKE', '%สุรินทร์%')
@@ -430,7 +467,6 @@ class LineBotController extends Controller
             ->get()
             ->all();
 
-        // ถ้าไม่เจอ: ไม่กรอง address
         if (empty($rows)) {
             $rows = (clone $base)
                 ->select($select)
@@ -444,7 +480,6 @@ class LineBotController extends Controller
                 ->all();
         }
 
-        // ถ้ายังไม่เจอ: fallback ร้านล่าสุด
         if (empty($rows)) {
             return DB::table('cafes')
                 ->whereRaw("LOWER(COALESCE(status,''))='approved'")
@@ -481,13 +516,11 @@ class LineBotController extends Controller
     // ---------- Filters ----------
     private function findCafesByFilter(string $type): array
     {
-        // ===== STYLE (โค้ดที่ 2 แบบเสริม fallback) =====
         if (str_starts_with($type, 'style:')) {
             $kw = trim(mb_substr($type, 6));
             if ($kw === '') return [];
             $like = "%{$kw}%";
 
-            // primary
             $rows = DB::table('cafes')
                 ->whereRaw("LOWER(COALESCE(status,''))='approved'")
                 ->where(function ($q) {
@@ -506,7 +539,6 @@ class LineBotController extends Controller
                 ->get()
                 ->all();
 
-            // fallback: ชื่อ/ที่อยู่
             if (empty($rows)) {
                 $rows = DB::table('cafes')
                     ->whereRaw("LOWER(COALESCE(status,''))='approved'")
@@ -635,26 +667,29 @@ class LineBotController extends Controller
         }
     }
 
-    // ---------- Flex Components ----------
+    // ---------- Flex Components (ตกแต่ง) ----------
     private function bubbleBasic($name, $addr, $sub, $phone, $lat, $lng, $mapUrl = null): array
     {
         $mapUrl    = $mapUrl ?: "https://maps.google.com/?q={$lat},{$lng}";
         $phoneText = $phone ?: "ไม่มีข้อมูล";
         $telUri    = $this->buildTelUri($phone);
 
+        $primary = "#1E88E5";
+        $softTagBg = "#EEF7FF";
+
         $buttons = [[
             "type" => "button",
             "style" => "primary",
             "height" => "sm",
-            "action" => ["type" => "uri", "label" => "เปิดแผนที่", "uri" => $mapUrl],
-            "color" => "#1E88E5"
+            "action" => ["type" => "uri", "label" => "🗺️ เปิดแผนที่", "uri" => $mapUrl],
+            "color" => $primary
         ]];
         if ($telUri) {
             $buttons[] = [
                 "type" => "button",
                 "style" => "secondary",
                 "height" => "sm",
-                "action" => ["type" => "uri", "label" => "โทรเลย", "uri" => $telUri]
+                "action" => ["type" => "uri", "label" => "📞 โทรเลย", "uri" => $telUri]
             ];
         }
 
@@ -664,12 +699,14 @@ class LineBotController extends Controller
                 "type" => "box",
                 "layout" => "vertical",
                 "paddingAll" => "16px",
-                "spacing" => "12px",
+                "spacing" => "14px",
                 "contents" => [
                     [
                         "type" => "box",
                         "layout" => "vertical",
-                        "spacing" => "8px",
+                        "cornerRadius" => "12px",
+                        "backgroundColor" => "#FFFFFF",
+                        "paddingAll" => "14px",
                         "contents" => [
                             ["type" => "text","text" => (string)$name,"weight" => "bold","size" => "lg","wrap" => true],
                             [
@@ -679,35 +716,42 @@ class LineBotController extends Controller
                                 "contents" => [[
                                     "type" => "box",
                                     "layout" => "baseline",
-                                    "backgroundColor" => "#EEF7FF",
-                                    "cornerRadius" => "6px",
+                                    "backgroundColor" => $softTagBg,
+                                    "cornerRadius" => "999px",
                                     "paddingAll" => "6px",
                                     "contents" => [[
-                                        "type" => "text","text" => (string)$sub,"size" => "xs","color" => "#1E88E5","wrap" => true
+                                        "type" => "text","text" => (string)$sub,"size" => "xs","color" => $primary,"wrap" => true
                                     ]]
                                 ]]
+                            ],
+                            ["type" => "separator","margin" => "12px"],
+                            [
+                                "type" => "box",
+                                "layout" => "vertical",
+                                "spacing" => "6px",
+                                "contents" => [
+                                    [
+                                        "type" => "box",
+                                        "layout" => "horizontal",
+                                        "spacing" => "sm",
+                                        "contents" => [
+                                            ["type" => "text","text" => "📍","size" => "sm","flex" => 0],
+                                            ["type" => "text","text" => (string)($addr ?? "-"),"size" => "sm","color" => "#555555","wrap" => true]
+                                        ]
+                                    ],
+                                    [
+                                        "type" => "box",
+                                        "layout" => "horizontal",
+                                        "spacing" => "sm",
+                                        "contents" => [
+                                            ["type" => "text","text" => "☎","size" => "sm","flex" => 0],
+                                            ["type" => "text","text" => $phoneText,"size" => "sm","color" => "#555555","wrap" => true]
+                                        ]
+                                    ]
+                                ]
                             ]
                         ]
-                    ],
-                    [
-                        "type" => "box",
-                        "layout" => "horizontal",
-                        "spacing" => "sm",
-                        "contents" => [
-                            ["type" => "text","text" => "📍","size" => "sm","flex" => 0],
-                            ["type" => "text","text" => (string)($addr ?? "-"),"size" => "sm","color" => "#555555","wrap" => true]
-                        ]
-                    ],
-                    [
-                        "type" => "box",
-                        "layout" => "horizontal",
-                        "spacing" => "sm",
-                        "contents" => [
-                            ["type" => "text","text" => "☎","size" => "sm","flex" => 0],
-                            ["type" => "text","text" => $phoneText,"size" => "sm","color" => "#555555","wrap" => true]
-                        ]
-                    ],
-                    ["type" => "separator","margin" => "12px"]
+                    ]
                 ]
             ],
             "footer" => [
@@ -727,19 +771,24 @@ class LineBotController extends Controller
         return [
             "type" => "bubble",
             "body" => [
-                "type" => "box","layout" => "vertical","paddingAll" => "16px","spacing" => "10px",
+                "type" => "box","layout" => "vertical","paddingAll" => "16px","spacing" => "12px",
                 "contents" => [
-                    ["type" => "text","text" => $title,"weight" => "bold","size" => "lg","wrap" => true],
-                    ["type" => "text","text" => $sub,"size" => "sm","color" => "#666666","wrap" => true],
-                    ["type" => "separator","margin" => "12px"]
+                    [
+                        "type"=>"box","layout"=>"vertical","cornerRadius"=>"12px","backgroundColor"=>"#FFFFFF","paddingAll"=>"14px",
+                        "contents"=>[
+                            ["type" => "text","text" => $title,"weight" => "bold","size" => "lg","wrap" => true],
+                            ["type" => "text","text" => $sub,"size" => "sm","color" => "#666666","wrap" => true],
+                            ["type" => "separator","margin" => "12px"]
+                        ]
+                    ]
                 ]
             ],
             "footer" => [
                 "type" => "box","layout" => "vertical","spacing" => "md","paddingAll" => "12px",
                 "contents" => [[
                     "type" => "button","style" => "primary",
-                    "action" => ["type" => "uri","label" => "ไปที่เว็บไซต์","uri" => $url],
-                    "color" => "#1E88E5"
+                    "action" => ["type" => "uri","label" => "🌐 ไปที่เว็บไซต์","uri" => $url],
+                    "color" => "#1E88E5","height"=>"sm"
                 ]],
                 "flex" => 0
             ],
@@ -752,19 +801,24 @@ class LineBotController extends Controller
         return [
             "type" => "bubble",
             "body" => [
-                "type" => "box","layout" => "vertical","paddingAll" => "16px","spacing" => "10px",
+                "type" => "box","layout" => "vertical","paddingAll" => "16px","spacing" => "12px",
                 "contents" => [
-                    ["type" => "text","text" => $title,"weight" => "bold","size" => "lg","wrap" => true],
-                    ["type" => "text","text" => $sub,"size" => "sm","color" => "#666666","wrap" => true],
-                    ["type" => "separator","margin" => "12px"]
+                    [
+                        "type"=>"box","layout"=>"vertical","cornerRadius"=>"12px","backgroundColor"=>"#FFFFFF","paddingAll"=>"14px",
+                        "contents"=>[
+                            ["type" => "text","text" => $title,"weight" => "bold","size" => "lg","wrap" => true],
+                            ["type" => "text","text" => $sub,"size" => "sm","color" => "#666666","wrap" => true],
+                            ["type" => "separator","margin" => "12px"]
+                        ]
+                    ]
                 ]
             ],
             "footer" => [
                 "type" => "box","layout" => "vertical","spacing" => "md","paddingAll" => "12px",
                 "contents" => [[
                     "type" => "button","style" => "primary",
-                    "action" => ["type" => "uri","label" => "ไปที่เว็บไซต์","uri" => $url],
-                    "color" => "#1E88E5"
+                    "action" => ["type" => "uri","label" => "🌐 ไปที่เว็บไซต์","uri" => $url],
+                    "color" => "#1E88E5","height"=>"sm"
                 ]],
                 "flex" => 0
             ],
