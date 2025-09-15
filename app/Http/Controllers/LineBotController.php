@@ -36,16 +36,20 @@ class LineBotController extends Controller
             $userId     = $event['source']['userId'] ?? null;
 
             // ---------- TEXT ----------
-            if ($event['type'] === 'message' && $event['message']['type'] === 'text') {
-                $text = trim($event['message']['text']);
+            if (($event['type'] ?? '') === 'message' && ($event['message']['type'] ?? '') === 'text') {
+                $textRaw = (string)($event['message']['text'] ?? '');
+                $text    = trim($textRaw);
+
+                // ทำ normalized key เพื่อกันช่องว่าง/ตัวพิมพ์
+                $key = mb_strtolower(preg_replace('/\s+/u', '', $text));
 
                 // สลับ Rich Menu
-                if (in_array($text, ['เมนู','menu','เริ่มต้น'])) {
+                if (in_array($text, ['เมนู','menu','เริ่มต้น'], true) || in_array($key, ['เมนู','menu','เริ่มต้น'], true)) {
                     $this->setUserRichMenu($userId, $this->richMain);
                     $this->replyText($replyToken, "เปิดเมนูหลักแล้วครับ 😊");
                     continue;
                 }
-                if (in_array($text, ['FAQ','คำถามที่พบบ่อย','เมนูคำตอบ'])) {
+                if (in_array($text, ['FAQ','คำถามที่พบบ่อย','เมนูคำตอบ'], true) || in_array($key, ['faq','คำถามที่พบบ่อย','เมนูคำตอบ'], true)) {
                     $this->setUserRichMenu($userId, $this->richFaq);
                     $this->replyText($replyToken, "เมนู FAQ พร้อมใช้งานครับ ❓");
                     continue;
@@ -58,9 +62,12 @@ class LineBotController extends Controller
                     continue;
                 }
 
-                // ===== หมวด Top10 (คงเดิมจากโค้ดแรก) =====
-                if (in_array($text, ['คาเฟ่Top10','Top10','Top 10','top10'])) {
-                    $cafes = $this->getTop10Cafes(); // อิงเรตติ้งเฉลี่ย + จำนวนรีวิว
+                // ===== หมวด Top10 (เพิ่มการตรวจด้วย key แบบ normalize) =====
+                if (
+                    in_array($text, ['คาเฟ่Top10','Top10','Top 10','top10'], true) ||
+                    in_array($key, ['คาเฟ่top10','top10','top10'], true)
+                ) {
+                    $cafes = $this->getTop10Cafes();
                     $bubbles = [];
 
                     if (!empty($cafes)) {
@@ -110,6 +117,36 @@ class LineBotController extends Controller
                     $this->replyFlex($replyToken, "คาเฟ่ Top 10 เมืองสุรินทร์", [
                         "type" => "carousel", "contents" => $bubbles
                     ]);
+                    continue;
+                }
+
+                // ===== จับ "สไตล์: ..." จากปุ่มกด =====
+                if (preg_match('/^\s*สไตล์\s*:\s*(.+)$/u', $text, $m)) {
+                    $styleName = trim($m[1]);
+                    $cafes = $this->findCafesByFilter('style:'.$styleName);
+
+                    $bubbles = [];
+                    if (!empty($cafes)) {
+                        $cafes = array_slice($cafes, 0, 9);
+                        foreach ($cafes as $c) {
+                            $mapUrl = ($c->lat !== null && $c->lng !== null)
+                                ? "https://maps.google.com/?q={$c->lat},{$c->lng}"
+                                : "https://www.google.com/maps/search/".urlencode(($c->cafe_name ?? '').' '.($c->address ?? ''));
+                            $bubbles[] = $this->bubbleBasic(
+                                $c->cafe_name ?? '-', $c->address ?? '-', '🎨 สไตล์: '.$styleName,
+                                $c->phone ?? '-', $c->lat ?? null, $c->lng ?? null, $mapUrl
+                            );
+                        }
+                    } else {
+                        $bubbles[] = $this->bubbleInfo(
+                            "ยังไม่พบตามสไตล์",
+                            "ลองเลือกสไตล์อื่นหรือดูทั้งหมดบนเว็บ",
+                            "https://nongchangsaren.com/"
+                        );
+                    }
+
+                    $bubbles[] = $this->bubbleMore('ดูเพิ่มเติมบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
+                    $this->replyFlex($replyToken, "คาเฟ่สไตล์: {$styleName}", ["type"=>"carousel","contents"=>$bubbles]);
                     continue;
                 }
 
@@ -172,7 +209,7 @@ class LineBotController extends Controller
                 }
 
                 // ค้นหาคาเฟ่ใกล้ฉัน (คงเดิม)
-                if ($text === 'ค้นหาคาเฟ่ใกล้ฉัน') {
+                if ($text === 'ค้นหาคาเฟ่ใกล้ฉัน' || $key === 'ค้นหาคาเฟ่ใกล้ฉัน') {
                     $this->replyMessage($replyToken, [
                         "type" => "text",
                         "text" => "กรุณาส่งพิกัดของคุณเพื่อค้นหาคาเฟ่ใกล้คุณ 🐘☕",
@@ -190,9 +227,14 @@ class LineBotController extends Controller
             }
 
             // ---------- LOCATION ----------
-            if ($event['type'] === 'message' && $event['message']['type'] === 'location') {
-                $lat = $event['message']['latitude'];
-                $lng = $event['message']['longitude'];
+            if (($event['type'] ?? '') === 'message' && ($event['message']['type'] ?? '') === 'location') {
+                $lat = $event['message']['latitude']  ?? null;
+                $lng = $event['message']['longitude'] ?? null;
+
+                if ($lat === null || $lng === null) {
+                    $this->replyText($replyToken, "ไม่พบพิกัดที่ส่งมา ลองส่งใหม่อีกครั้งนะครับ");
+                    continue;
+                }
 
                 $cafes = DB::select("
                     SELECT cafes.cafe_id, cafes.cafe_name, cafes.address, cafes.lat, cafes.lng, cafes.phone,
@@ -204,7 +246,7 @@ class LineBotController extends Controller
                     FROM cafes
                     WHERE LOWER(COALESCE(status,''))='approved'
                     HAVING distance < 5
-                    ORDER BY distance ASC
+                    ORDER BY distance ASC, cafe_id DESC
                     LIMIT 5
                 ", [$lat, $lng, $lat]);
 
@@ -224,9 +266,7 @@ class LineBotController extends Controller
                     );
                 }
                 $bubbles[] = $this->bubbleMore('ดูเพิ่มเติมบนเว็บไซต์','เปิดเว็บ น้องช้างสะเร็น','https://nongchangsaren.com/');
-                $this->replyFlex($replyToken, "คาเฟ่ใกล้คุณ", [
-                    "type" => "carousel","contents" => $bubbles
-                ]);
+                $this->replyFlex($replyToken, "คาเฟ่ใกล้คุณ", ["type"=>"carousel","contents"=>$bubbles]);
             }
         }
 
@@ -269,7 +309,7 @@ class LineBotController extends Controller
         ])->post("https://api.line.me/v2/bot/user/{$userId}/richmenu/{$richMenuId}");
     }
 
-    // ---------- เมนูแนะนำคาเฟ่ (เวอร์ชันโค้ดที่ 2) ----------
+    // ---------- เมนูแนะนำคาเฟ่ ----------
     private function menuRecommendCarousel(): array
     {
         $bubbles = [];
@@ -349,7 +389,7 @@ class LineBotController extends Controller
         return ["type" => "carousel", "contents" => $bubbles];
     }
 
-    // ---------- Top10 Cafes (คงเดิมจากโค้ดแรก) ----------
+    // ---------- Top10 Cafes ----------
     private function getTop10Cafes(): array
     {
         $rows = DB::select("
@@ -371,9 +411,32 @@ class LineBotController extends Controller
         return $rows;
     }
 
-    // ---------- FAQ Filters (คงเดิมจากโค้ดแรก) ----------
+    // ---------- FAQ / Filters ----------
     private function findCafesByFilter(string $type): array
     {
+        // รองรับ "style:ชื่อสไตล์"
+        if (str_starts_with($type, 'style:')) {
+            $kw = trim(mb_substr($type, 6));
+            if ($kw === '') return [];
+            $like = "%{$kw}%";
+
+            // รองรับทั้ง JSON cafe_styles และคอลัมน์อื่นที่ใส่สไตล์
+            return DB::table('cafes')
+                ->whereRaw("LOWER(COALESCE(status,''))='approved'")
+                ->where('address', 'LIKE', '%สุรินทร์%')
+                ->where(function($q) use ($like) {
+                    $q->whereRaw("(JSON_VALID(cafe_styles) AND JSON_SEARCH(cafe_styles, 'one', ?) IS NOT NULL)", [$like])
+                      ->orWhere('other_style', 'LIKE', $like)
+                      ->orWhere('style', 'LIKE', $like);
+                })
+                ->select('cafe_id','cafe_name','address','lat','lng','phone')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('cafe_id')
+                ->limit(20)
+                ->get()
+                ->all();
+        }
+
         switch ($type) {
             case 'wifi':
                 return DB::select("
@@ -515,7 +578,6 @@ class LineBotController extends Controller
         $phoneText = $phone ?: "ไม่มีข้อมูล";
         $telUri    = $this->buildTelUri($phone);
 
-        // สร้างปุ่มแบบอาเรย์ธรรมดา เพื่อตัดปัญหา parser
         $buttons = [
             [
                 "type" => "button",
