@@ -4,13 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Cafe extends Model
 {
     use HasFactory;
 
     protected $table = 'cafes';
-    protected $primaryKey = 'cafe_id';   // << สำคัญที่สุด
+    protected $primaryKey = 'cafe_id';   // PK จริงในตาราง
     public $incrementing = true;
     protected $keyType = 'int';
 
@@ -29,12 +30,14 @@ class Cafe extends Model
         'other_services'  => 'array',
         'cafe_styles'     => 'array',
         'images'          => 'array',
-        // ถ้าใน DB เป็น TIME ให้ใช้เป็น 'string' หรือเก็บเป็น datetime จริง ๆ
-        'open_time'    => 'datetime:H:i',
-        'close_time'   => 'datetime:H:i',
+        // ถ้าใน DB เป็น TIME แนะนำเก็บเป็น string จะปลอดภัยกว่า
+        'open_time'       => 'string',
+        'close_time'      => 'string',
         'parking'         => 'boolean',
         'credit_card'     => 'boolean',
     ];
+
+    /* ---------------- Relations ---------------- */
 
     public function user()
     {
@@ -65,5 +68,58 @@ class Cafe extends Model
     {
         // ถ้าในตาราง admin ใช้ PK = admin_id
         return $this->belongsTo(AdminID::class, 'admin_id', 'admin_id');
+    }
+
+    /* ---------------- Accessors ---------------- */
+
+    /**
+     * คืน URL รูปภาพแรกของคาเฟ่แบบทนทาน:
+     * - ถ้า images เป็น array: ใช้สมาชิกตัวแรก
+     * - รองรับทั้ง URL เต็ม, public/images, public/storage, uploads
+     * - ถ้าไม่พบให้ใช้ placeholder
+     */
+    public function getImageUrlAttribute(): string
+    {
+        // 1) ดึง path แรกจาก images (array) ถ้ามี
+        $p = null;
+        if (is_array($this->images) && !empty($this->images)) {
+            $first = reset($this->images);
+            if (is_string($first) && $first !== '') {
+                $p = $first;
+            }
+        }
+
+        // 2) fallback: ถ้ามีคอลัมน์ image_path แยก (เผื่อมีในบางสคีมา)
+        if (!$p && isset($this->attributes['image_path']) && $this->attributes['image_path'] !== '') {
+            $p = $this->attributes['image_path'];
+        }
+
+        // 3) ไม่มีข้อมูลภาพเลย → placeholder
+        if (!$p) {
+            return asset('images/placeholder-cafe.jpg');
+        }
+
+        // 4) ถ้าเป็น URL เต็ม
+        if (Str::startsWith($p, ['http://', 'https://', '//'])) {
+            return $p;
+        }
+
+        // 5) ถ้าเป็น path ที่ขึ้นต้นด้วยโฟลเดอร์สาธารณะทั่วไป
+        if (Str::startsWith($p, ['images/', 'storage/', 'uploads/'])) {
+            return asset($p);
+        }
+
+        // 6) ลอง public/storage/<path>
+        if (file_exists(public_path('storage/'.$p))) {
+            return asset('storage/'.$p);
+        }
+
+        // 7) ลอง public/images/<path>
+        if (file_exists(public_path('images/'.$p))) {
+            return asset('images/'.$p);
+        }
+
+        // 8) สุดท้ายใช้ placeholder
+        return asset('images/placeholder-cafe.jpg');
     }
 }
