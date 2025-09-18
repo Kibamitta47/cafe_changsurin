@@ -80,8 +80,9 @@ class Cafe extends Model
      */
     public function getImageUrlAttribute(): string
     {
-        // 1) ดึง path แรกจาก images (array) ถ้ามี
         $p = null;
+
+        // 1) ดึง path แรกจาก images (array) ถ้ามี
         if (is_array($this->images) && !empty($this->images)) {
             $first = reset($this->images);
             if (is_string($first) && $first !== '') {
