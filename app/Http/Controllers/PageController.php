@@ -69,19 +69,19 @@ class PageController extends Controller
     }
 
     /**
-     * Top 10 คาเฟ่ยอดนิยม (ส่งตัวแปร $topRatedCafes ให้ view Top10)
+     * Top 10 คาเฟ่ยอดนิยม (จากการรีวิวเท่านั้น)
      * View: resources/views/Top10.blade.php
      */
     public function showTop10Page()
     {
         $topRatedCafes = Cafe::query()
             ->where('status', 'approved')
-            ->withAvg('reviews', 'rating')        // ได้ฟิลด์ reviews_avg_rating
-            ->orderByDesc('reviews_avg_rating')   // เรียงคะแนนเฉลี่ยมากไปน้อย
-            ->orderByDesc('likes_count')          // เสริมความนิ่งด้วยไลก์/รีวิว
-            ->orderByDesc('review_count')
+            ->withAvg('reviews', 'rating')      // => reviews_avg_rating
+            ->withCount('reviews')              // => reviews_count
+            ->orderByDesc('reviews_avg_rating') // คะแนนเฉลี่ยมาก → น้อย
+            ->orderByDesc('reviews_count')      // เท่ากันให้จำนวนรีวิวมากกว่าอยู่บน
             ->take(10)
-            ->get(['id','cafe_name','image_path','likes_count','review_count']);
+            ->get(['id', 'cafe_name', 'image_path']);
 
         return view('Top10', compact('topRatedCafes'));
     }
@@ -96,7 +96,7 @@ class PageController extends Controller
             ->where('status', 'approved')
             ->orderByDesc('created_at')
             ->take(10)
-            ->get(['id','cafe_name','image_path','created_at']);
+            ->get(['id', 'cafe_name', 'image_path', 'created_at']);
 
         return view('NewlyCafes', compact('newCafes'));
     }
