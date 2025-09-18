@@ -72,18 +72,19 @@ class PageController extends Controller
      * Top 10 คาเฟ่ยอดนิยม (จากการรีวิวเท่านั้น)
      * View: resources/views/Top10.blade.php
      */
-    public function showTop10Page()
+      public function showTop10Page()
     {
         $topRatedCafes = Cafe::query()
             ->where('status', 'approved')
-            ->withAvg('reviews', 'rating')      // => reviews_avg_rating
-            ->withCount('reviews')              // => reviews_count
-            ->orderByDesc('reviews_avg_rating') // คะแนนเฉลี่ยมาก → น้อย
-            ->orderByDesc('reviews_count')      // เท่ากันให้จำนวนรีวิวมากกว่าอยู่บน
-            ->take(10)
-            ->get(['id', 'cafe_name', 'image_path']);
+            ->withAvg('reviews', 'rating')    // => reviews_avg_rating
+            ->withCount('reviews')            // => reviews_count
+            ->orderByDesc('reviews_avg_rating')
+            ->orderByDesc('reviews_count')
+            // ดึงฟิลด์ที่ต้องใช้จริง (หรือจะไม่ใส่ select ก็ได้)
+            ->get(['cafe_id', 'cafe_name', 'images']);
 
-        return view('Top10', compact('topRatedCafes'));
+        // ⬅︎ ให้ชี้ไปที่ไฟล์ resources/views/cafes/top10.blade.php
+        return view('cafes.top10', compact('topRatedCafes'));
     }
 
     /**

@@ -1,4 +1,3 @@
-{{-- resources/views/cafes/top10.blade.php --}}
 <!DOCTYPE html>
 <html lang="th" class="scroll-smooth">
 <head>
@@ -24,10 +23,11 @@
     @else
       <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         @foreach($topRatedCafes as $idx => $cafe)
-          <a href="{{ url('/cafes/'.$cafe->id) }}" class="card overflow-hidden group">
+          {{-- ใช้ cafe_id และ image_url --}}
+          <a href="{{ url('/cafes/'.$cafe->cafe_id) }}" class="card overflow-hidden group">
             <div class="relative h-48 w-full overflow-hidden">
               <img
-                src="{{ asset($cafe->image_path ? 'images/'.$cafe->image_path : 'images/placeholder-cafe.jpg') }}"
+                src="{{ $cafe->image_url }}"
                 alt="{{ $cafe->cafe_name }}"
                 class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105">
               <div class="absolute top-3 left-3 bg-black/70 text-white text-sm px-3 py-1 rounded-full">
@@ -39,16 +39,11 @@
                 {{ $cafe->cafe_name }}
               </h2>
 
-              <div class="flex items-center gap-3 text-sm text-gray-600">
+              <div class="flex items-center gap-4 text-sm text-gray-600">
                 <span class="inline-flex items-center">
-                  ⭐ <span class="ml-1">{{ number_format($cafe->rating_avg ?? 0, 2) }}</span>
+                  ⭐ <span class="ml-1">{{ number_format($cafe->reviews_avg_rating ?? 0, 2) }}</span>
                 </span>
-                <span class="inline-flex items-center">
-                  <i class="fa-regular fa-thumbs-up mr-1"></i>{{ $cafe->likes_count ?? 0 }}
-                </span>
-                <span class="inline-flex items-center">
-                  <i class="fa-regular fa-comment-dots mr-1"></i>{{ $cafe->review_count ?? 0 }}
-                </span>
+                <span>รีวิวทั้งหมด: {{ $cafe->reviews_count ?? 0 }}</span>
               </div>
             </div>
           </a>
