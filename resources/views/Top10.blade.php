@@ -1,89 +1,60 @@
+{{-- resources/views/cafes/top10.blade.php --}}
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" class="scroll-smooth">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>หน้าแนะนำคาเฟ่</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Top10 คาเฟ่ยอดนิยม</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: "Prompt", sans-serif; background: linear-gradient(135deg, #fdfbfb, #ebedee); margin: 0; padding: 0; color: #333; }
-    .title { text-align: center; font-size: 2rem; font-weight: 600; margin-top: 40px; margin-bottom: 10px; color: #444; }
-    .title span { color: #e63946; }
-    .update-time { text-align: center; font-size: 0.95rem; color: #666; margin-bottom: 25px; }
-    .swiper { width: 95%; max-width: 900px; height: 480px; margin: 20px auto 60px; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.15); background: #fff; }
-    .swiper-slide a { display: block; width: 100%; height: 100%; }
-    .swiper-slide img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
-    .swiper-slide:hover img { transform: scale(1.05); }
-    .swiper-button-next, .swiper-button-prev { color: #fff; background: rgba(0,0,0,0.4); border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; transition: background 0.3s ease; }
-    .swiper-button-next:hover, .swiper-button-prev:hover { background: rgba(0,0,0,0.65); }
-    .swiper-pagination-bullet { background: #bbb; opacity: 1; transition: 0.3s; }
-    .swiper-pagination-bullet-active { background: #e63946; transform: scale(1.2); }
+    body { font-family: 'Kanit', sans-serif; background-color: #F8F9FA; }
+    .card { border:1px solid #E5E7EB; border-radius:16px; background:#fff; box-shadow:0 8px 20px rgba(0,0,0,.05); }
   </style>
 </head>
-<body>
-  {{-- Navbar --}}
-  @guest
-    @include('components.1navbar')
-  @endguest
+<body class="min-h-screen">
+  @include('components.2navbar')
 
-  @auth
-    @include('components.2navbar')
-  @endauth
+  <main class="container mx-auto px-4 py-10">
+    <h1 class="text-4xl font-bold text-gray-800 mb-2">⭐ 10 อันดับคาเฟ่ยอดนิยม</h1>
+    <p class="text-gray-500 mb-8">อัปเดตล่าสุด: {{ now()->format('d/m/Y H:i') }} น.</p>
 
-  <h1 class="title">✨ <span>10 คาเฟ่แนะนำ</span> ที่ต้องไปลอง</h1>
-  <p class="update-time">อัปเดตล่าสุด: {{ now()->format('d/m/Y H:i') }} น.</p>
+    @if($topRatedCafes->isEmpty())
+      <div class="card p-6 text-gray-600">ยังไม่มีข้อมูล Top10</div>
+    @else
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        @foreach($topRatedCafes as $idx => $cafe)
+          <a href="{{ url('/cafes/'.$cafe->id) }}" class="card overflow-hidden group">
+            <div class="relative h-48 w-full overflow-hidden">
+              <img
+                src="{{ asset($cafe->image_path ? 'images/'.$cafe->image_path : 'images/placeholder-cafe.jpg') }}"
+                alt="{{ $cafe->cafe_name }}"
+                class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105">
+              <div class="absolute top-3 left-3 bg-black/70 text-white text-sm px-3 py-1 rounded-full">
+                #{{ $idx + 1 }}
+              </div>
+            </div>
+            <div class="p-5">
+              <h2 class="text-xl font-semibold text-gray-800 mb-1 line-clamp-1">
+                {{ $cafe->cafe_name }}
+              </h2>
 
-  @php
-    // กำหนดสไลด์แบบเดียวจบ ดูแลง่าย/ลดความซ้ำซ้อน
-    $slides = [
-      // [id ในระบบ, path รูป, alt]
-      [2,  'Top10_/1.png',  'Little Elephant patisserie & special coffee bar'],
-      [2,  'Top10_/2.png',  'Follow the Sun Home Cafe'],
-      [1,  'Top10_/3.png',  'Follow the Sun Home Cafe'],
-      [11, 'Top10_/4.png',  'Healing Cafe'],
-      [14, 'Top10_/5.png',  'Kind Cafe'],
-      [9,  'Top10_/6.png',  'CHAROENSUK Cafe — เจริญสุข คาเฟ่'],
-      [15, 'Top10_/7.png',  'For Foo Cafe'],
-      [12, 'Top10_/8.png',  'สติ คาเฟ่ — SATI Cafe'],
-      [4,  'Top10_/9.png',  'ดัมมะชาติ Eatery & Coffee by Jaokao Vol.3'],
-      [5,  'Top10_/10.png', 'Journey Roastery & Special Coffee'],
-    ];
-  @endphp
-
-  <div class="swiper mySwiper" aria-label="สไลด์คาเฟ่แนะนำ">
-    <div class="swiper-wrapper">
-      {{-- สไลด์ปก Top 10 --}}
-      <div class="swiper-slide" aria-roledescription="slide">
-        <img src="{{ asset('/images/TOP-10.png') }}" alt="10 อันดับคาเฟ่แนะนำ" />
-      </div>
-
-      {{-- วนลูปสร้างสไลด์ที่เหลือ --}}
-      @foreach ($slides as [$id, $img, $alt])
-        <div class="swiper-slide" aria-roledescription="slide">
-          <a href="{{ url('/cafes/'.$id) }}">
-            <img src="{{ asset('/images/'.$img) }}" alt="{{ $alt }}" />
+              <div class="flex items-center gap-3 text-sm text-gray-600">
+                <span class="inline-flex items-center">
+                  ⭐ <span class="ml-1">{{ number_format($cafe->rating_avg ?? 0, 2) }}</span>
+                </span>
+                <span class="inline-flex items-center">
+                  <i class="fa-regular fa-thumbs-up mr-1"></i>{{ $cafe->likes_count ?? 0 }}
+                </span>
+                <span class="inline-flex items-center">
+                  <i class="fa-regular fa-comment-dots mr-1"></i>{{ $cafe->review_count ?? 0 }}
+                </span>
+              </div>
+            </div>
           </a>
-        </div>
-      @endforeach
-    </div>
-
-    {{-- ปุ่มเลื่อน --}}
-    <div class="swiper-button-next" aria-label="ถัดไป"></div>
-    <div class="swiper-button-prev" aria-label="ก่อนหน้า"></div>
-    {{-- จุดบอกตำแหน่ง --}}
-    <div class="swiper-pagination" aria-hidden="true"></div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-  <script>
-    const swiper = new Swiper(".mySwiper", {
-      loop: true,
-      autoplay: { delay: 3000, disableOnInteraction: false },
-      pagination: { el: ".swiper-pagination", clickable: true },
-      navigation: { nextEl: ".swiper-button-next", prevEl: ".swiper-button-prev" },
-      effect: "slide",
-      speed: 600,
-    });
-  </script>
+        @endforeach
+      </div>
+    @endif
+  </main>
 </body>
 </html>
