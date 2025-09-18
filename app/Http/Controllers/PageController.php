@@ -84,7 +84,7 @@ class PageController extends Controller
             ->get(['cafe_id', 'cafe_name', 'images']);
 
         // ⬅︎ ให้ชี้ไปที่ไฟล์ resources/views/cafes/top10.blade.php
-        return view('cafes.top10', compact('topRatedCafes'));
+        return view('Top10', compact('topRatedCafes'));
     }
 
     /**
