@@ -72,7 +72,7 @@ class PageController extends Controller
      * Top 10 คาเฟ่ยอดนิยม (จากการรีวิวเท่านั้น)
      * View: resources/views/Top10.blade.php
      */
-      public function showTop10Page()
+    public function showTop10Page()
     {
         $topRatedCafes = Cafe::query()
             ->where('status', 'approved')
@@ -80,10 +80,8 @@ class PageController extends Controller
             ->withCount('reviews')            // => reviews_count
             ->orderByDesc('reviews_avg_rating')
             ->orderByDesc('reviews_count')
-            // ดึงฟิลด์ที่ต้องใช้จริง (หรือจะไม่ใส่ select ก็ได้)
             ->get(['cafe_id', 'cafe_name', 'images']);
 
-        // ⬅︎ ให้ชี้ไปที่ไฟล์ resources/views/cafes/top10.blade.php
         return view('Top10', compact('topRatedCafes'));
     }
 
@@ -91,16 +89,16 @@ class PageController extends Controller
      * คาเฟ่เปิดใหม่ (ล่าสุด 10)
      * View: resources/views/NewlyCafes.blade.php
      */
-        public function showNewlyCafesPage()
-{
-    $newCafes = Cafe::query()
-        ->where('status', 'approved')
-        ->orderByDesc('created_at')
-        ->take(10)
-        ->get(['cafe_id', 'cafe_name', 'images', 'created_at']);
+    public function showNewlyCafesPage()
+    {
+        $newCafes = Cafe::query()
+            ->where('status', 'approved')
+            ->orderByDesc('created_at')
+            ->take(10)
+            ->get(['cafe_id','cafe_name','images','created_at']); // ใช้ accessor image_url ใน Blade
 
-    return view('NewlyCafes', compact('newCafes'));
-}
+        return view('NewlyCafes', compact('newCafes'));
+    }
 
     /**
      * FAQ
@@ -110,6 +108,4 @@ class PageController extends Controller
     {
         return view('pages.faq');
     }
-
-    
 }
