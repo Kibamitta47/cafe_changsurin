@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>หน้าแนะนำคาเฟ่</title>
+  <title>คาเฟ่เปิดใหม่</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
   <style>
     body {
@@ -13,7 +13,6 @@
       color: #333;
     }
 
-    /* หัวข้อ */
     .title {
       text-align: center;
       font-size: 2rem;
@@ -22,11 +21,8 @@
       margin-bottom: 10px;
       color: #444;
     }
-    .title span {
-      color: #e63946;
-    }
+    .title span { color: #1d976c; }
 
-    /* วันเวลาอัปเดต */
     .update-time {
       text-align: center;
       font-size: 0.95rem;
@@ -34,7 +30,6 @@
       margin-bottom: 25px;
     }
 
-    /* Swiper */
     .swiper {
       width: 95%;
       max-width: 900px;
@@ -59,11 +54,8 @@
       transition: transform 0.4s ease;
     }
 
-    .swiper-slide:hover img {
-      transform: scale(1.05);
-    }
+    .swiper-slide:hover img { transform: scale(1.05); }
 
-    /* ปุ่มเลื่อน */
     .swiper-button-next,
     .swiper-button-prev {
       color: #fff;
@@ -76,21 +68,18 @@
       justify-content: center;
       transition: background 0.3s ease;
     }
-
     .swiper-button-next:hover,
     .swiper-button-prev:hover {
       background: rgba(0,0,0,0.65);
     }
 
-    /* จุดบอกตำแหน่ง */
     .swiper-pagination-bullet {
       background: #bbb;
       opacity: 1;
       transition: 0.3s;
     }
-
     .swiper-pagination-bullet-active {
-      background: #e63946;
+      background: #1d976c;
       transform: scale(1.2);
     }
   </style>
@@ -105,20 +94,24 @@
       @include('components.2navbar')
   @endauth
 
-  <h1 class="title">✨ <span>พิกัดคาเฟ่เปิดใหม่</span> ที่ต้องไปลอง</h1>
+  <h1 class="title">☕ <span>คาเฟ่เปิดใหม่</span> ที่น่าลองในสุรินทร์</h1>
   <p class="update-time">อัปเดตล่าสุด: {{ now()->format('d/m/Y H:i') }} น.</p>
 
   <div class="swiper mySwiper">
     <div class="swiper-wrapper">
-      <div class="swiper-slide">
-        <img src="{{ asset('/images/คาเฟ่เปิดใหม่.png') }}" alt="คาเฟ่เปิดใหม่" >
-      </div>
-       <div class="swiper-slide">
-        <a href="http://127.0.0.1:8000/cafes/5">
-          <img src="{{ asset('/images/Top10_/10.png') }}" alt="คาเฟ่อันดับ 10">
-        </a>
-      </div>
+      @forelse($newCafes as $cafe)
+        <div class="swiper-slide">
+          <a href="{{ route('cafes.show', $cafe->cafe_id) }}">
+            <img src="{{ $cafe->image_url }}" alt="{{ $cafe->cafe_name }}">
+          </a>
+        </div>
+      @empty
+        <div class="swiper-slide">
+          <img src="{{ asset('images/placeholder-cafe.jpg') }}" alt="ไม่มีคาเฟ่ใหม่">
+        </div>
+      @endforelse
     </div>
+
     <!-- ปุ่มเลื่อน -->
     <div class="swiper-button-next"></div>
     <div class="swiper-button-prev"></div>

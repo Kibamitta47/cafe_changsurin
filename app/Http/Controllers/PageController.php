@@ -91,16 +91,16 @@ class PageController extends Controller
      * คาเฟ่เปิดใหม่ (ล่าสุด 10)
      * View: resources/views/NewlyCafes.blade.php
      */
-    public function showNewlyCafesPage()
-    {
-        $newCafes = Cafe::query()
-            ->where('status', 'approved')
-            ->orderByDesc('created_at')
-            ->take(10)
-            ->get(['id', 'cafe_name', 'image_path', 'created_at']);
+        public function showNewlyCafesPage()
+{
+    $newCafes = Cafe::query()
+        ->where('status', 'approved')
+        ->orderByDesc('created_at')
+        ->take(10)
+        ->get(['cafe_id', 'cafe_name', 'images', 'created_at']);
 
-        return view('NewlyCafes', compact('newCafes'));
-    }
+    return view('NewlyCafes', compact('newCafes'));
+}
 
     /**
      * FAQ
@@ -110,4 +110,6 @@ class PageController extends Controller
     {
         return view('pages.faq');
     }
+
+    
 }
