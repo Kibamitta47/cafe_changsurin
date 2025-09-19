@@ -86,16 +86,17 @@ class PageController extends Controller
     }
 
     /**
-     * คาเฟ่เปิดใหม่ (ล่าสุด 10)
+     * คาเฟ่เปิดใหม่ (จากการติ๊กเลือก is_new_opening)
      * View: resources/views/NewlyCafes.blade.php
      */
     public function showNewlyCafesPage()
     {
         $newCafes = Cafe::query()
-            ->where('status', 'approved')
-            ->orderByDesc('created_at')
+            ->where('status', 'approved')       // ต้องเป็นคาเฟ่ที่อนุมัติแล้ว
+            ->where('is_new_opening', true)     // ✅ เลือกเฉพาะที่ติ๊ก "คาเฟ่เปิดใหม่"
+            ->orderByDesc('updated_at')         // เรียงจากอัปเดตล่าสุด
             ->take(10)
-            ->get(['cafe_id','cafe_name','images','created_at']); // ใช้ accessor image_url ใน Blade
+            ->get(['cafe_id','cafe_name','images','created_at','updated_at']);
 
         return view('NewlyCafes', compact('newCafes'));
     }
