@@ -78,11 +78,13 @@ class AdminAuthController extends Controller
 
     public function home()
     {
+        // การ์ดสรุป
         $totalUsers   = User::count();
         $totalCafes   = Cafe::count();
         $pendingCafes = Cafe::where('status','pending')->count();
         $totalNews    = AddnewsAdmin::count();
 
+        // ผู้สมัครใหม่ 15 วันล่าสุด
         $userRegistrationData = User::select(
                 DB::raw('DATE(created_at) as registration_date'),
                 DB::raw('count(*) as user_count')
@@ -100,12 +102,32 @@ class AdminAuthController extends Controller
             $chartData[]   = $userRegistrationData[$dateString]->user_count ?? 0;
         }
 
-        $cafeStatusData   = Cafe::select('status', DB::raw('count(*) as count'))->groupBy('status')->get();
-        $cafeStatusLabels = $cafeStatusData->pluck('status');
-        $cafeStatusCounts = $cafeStatusData->pluck('count');
+        // ✅ สัดส่วนสถานะคาเฟ่ (ป้ายภาษาไทย + คุมลำดับ)
+        $statusMap = [
+            'approved' => 'อนุมัติแล้ว',
+            'pending'  => 'รอตรวจสอบ',
+            'rejected' => 'ไม่ผ่าน',
+        ];
 
-        $topCafes      = Cafe::where('status','approved')->withAvg('reviews','rating')
-                            ->orderBy('reviews_avg_rating','desc')->take(10)->get();
+        $countsByStatus = Cafe::select('status', DB::raw('COUNT(*) as c'))
+            ->groupBy('status')
+            ->pluck('c', 'status')   // ['approved'=>12, 'pending'=>3, ...]
+            ->toArray();
+
+        $cafeStatusLabels = [];
+        $cafeStatusCounts = [];
+        foreach ($statusMap as $key => $labelTh) {
+            $cafeStatusLabels[] = $labelTh;
+            $cafeStatusCounts[] = (int) ($countsByStatus[$key] ?? 0);
+        }
+
+        // Top 10 คาเฟ่ (คะแนนรีวิวเฉลี่ย)
+        $topCafes = Cafe::where('status','approved')
+                        ->withAvg('reviews','rating')
+                        ->orderBy('reviews_avg_rating','desc')
+                        ->take(10)
+                        ->get();
+
         $topCafeLabels = $topCafes->pluck('cafe_name');
         $topCafeData   = $topCafes->pluck('reviews_avg_rating');
 
