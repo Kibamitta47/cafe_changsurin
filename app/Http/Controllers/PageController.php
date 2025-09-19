@@ -73,17 +73,19 @@ class PageController extends Controller
      * View: resources/views/Top10.blade.php
      */
     public function showTop10Page()
-    {
-        $topRatedCafes = Cafe::query()
-            ->where('status', 'approved')
-            ->withAvg('reviews', 'rating')    // => reviews_avg_rating
-            ->withCount('reviews')            // => reviews_count
-            ->orderByDesc('reviews_avg_rating')
-            ->orderByDesc('reviews_count')
-            ->get(['cafe_id', 'cafe_name', 'images']);
+{
+    $topRatedCafes = Cafe::query()
+        ->where('status', 'approved')
+        ->withAvg('reviews', 'rating')    // => reviews_avg_rating
+        ->withCount('reviews')            // => reviews_count
+        ->orderByDesc('reviews_avg_rating')
+        ->orderByDesc('reviews_count')
+        ->take(10)                        // << เอาแค่ 10 ร้าน
+        ->get(['cafe_id', 'cafe_name', 'images']);
 
-        return view('Top10', compact('topRatedCafes'));
-    }
+    return view('Top10', compact('topRatedCafes'));
+}
+
 
     /**
      * คาเฟ่เปิดใหม่ (จากการติ๊กเลือก is_new_opening)
