@@ -12,7 +12,7 @@ use Illuminate\Validation\Rule;
 use App\Models\User;
 use App\Models\Cafe;
 use App\Models\AddnewsAdmin;
-use App\Models\SearchLog; // ✅ เพิ่มสำหรับสถิติการค้นหา
+use App\Models\SearchLog; // ✅ เพิ่ม
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
 
@@ -22,8 +22,8 @@ use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
 
 class AdminAuthController extends Controller
 {
-    public function showRegister() { 
-        return view('admin.register-admin'); 
+    public function showRegister() {
+        return view('admin.register-admin');
     }
 
     public function register(Request $request)
@@ -43,8 +43,8 @@ class AdminAuthController extends Controller
         return redirect()->route('login.admin')->with('success', 'สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ');
     }
 
-    public function showLogin() { 
-        return view('admin.login-admin'); 
+    public function showLogin() {
+        return view('admin.login-admin');
     }
 
     public function login(Request $request)
@@ -80,17 +80,13 @@ class AdminAuthController extends Controller
 
     public function home()
     {
-        // =========================
-        // การ์ดสรุป
-        // =========================
+        // ====== การ์ดสรุป ======
         $totalUsers   = User::count();
         $totalCafes   = Cafe::count();
         $pendingCafes = Cafe::where('status','pending')->count();
         $totalNews    = AddnewsAdmin::count();
 
-        // =========================
-        // ผู้สมัครใหม่ 15 วันล่าสุด
-        // =========================
+        // ====== ผู้สมัครใหม่ 15 วันล่าสุด ======
         $userRegistrationData = User::select(
                 DB::raw('DATE(created_at) as registration_date'),
                 DB::raw('count(*) as user_count')
@@ -103,24 +99,19 @@ class AdminAuthController extends Controller
         $chartData   = [];
         for ($i=14; $i>=0; $i--) {
             $date = now()->subDays($i);
-            $dateString   = $date->format('Y-m-d');
+            $dateString = $date->format('Y-m-d');
             $chartLabels[] = $date->translatedFormat('j M');
-            $chartData[]   = (int)($userRegistrationData[$dateString]->user_count ?? 0);
+            $chartData[]   = $userRegistrationData[$dateString]->user_count ?? 0;
         }
 
-        // =========================
-        // สัดส่วนสถานะคาเฟ่ (ป้ายภาษาไทย + คุมลำดับ)
-        // =========================
+        // ====== สัดส่วนสถานะคาเฟ่ ======
         $statusMap = [
             'approved' => 'อนุมัติแล้ว',
             'pending'  => 'รอตรวจสอบ',
             'rejected' => 'ไม่ผ่าน',
         ];
-
         $countsByStatus = Cafe::select('status', DB::raw('COUNT(*) as c'))
-            ->groupBy('status')
-            ->pluck('c', 'status')
-            ->toArray();
+            ->groupBy('status')->pluck('c', 'status')->toArray();
 
         $cafeStatusLabels = [];
         $cafeStatusCounts = [];
@@ -129,9 +120,7 @@ class AdminAuthController extends Controller
             $cafeStatusCounts[] = (int) ($countsByStatus[$key] ?? 0);
         }
 
-        // =========================
-        // Top 10 คาเฟ่ (คะแนนรีวิวเฉลี่ย)
-        // =========================
+        // ====== Top 10 คาเฟ่ (คะแนนรีวิวเฉลี่ย) ======
         $topCafes = Cafe::where('status','approved')
                         ->withAvg('reviews','rating')
                         ->orderBy('reviews_avg_rating','desc')
@@ -141,86 +130,74 @@ class AdminAuthController extends Controller
         $topCafeLabels = $topCafes->pluck('cafe_name');
         $topCafeData   = $topCafes->pluck('reviews_avg_rating')->map(fn($v)=> round((float)$v,2));
 
-        // ======================================================
-        // ✅ ชุด "วิเคราะห์การค้นหาคาเฟ่" สำหรับแดชบอร์ด (Chart.js)
-        // ======================================================
+        // =================================================
+        // ✅ Analytics "พฤติกรรมการค้นหา" สำหรับแดชบอร์ด
+        // =================================================
 
-        // ---- 15 วันล่าสุด: แนวโน้มจำนวนการค้นหา ----
+        // --- 15 วันล่าสุด: แนวโน้มจำนวนการค้นหา ---
         $days = collect(range(14,0))->map(fn($d)=>Carbon::today()->subDays($d));
-        $searchTrendLabels = $days->map->translatedFormat('j M')->values();
-
-        $trendRaw = SearchLog::selectRaw('DATE(created_at) as d, COUNT(*) as c')
-            ->where('created_at','>=',Carbon::today()->subDays(14))
+        $trendRaw = SearchLog::select(DB::raw('DATE(created_at) d'), DB::raw('COUNT(*) c'))
+            ->where('created_at','>=', Carbon::today()->subDays(14))
             ->groupBy('d')->pluck('c','d');
 
-        $searchTrendData = $days->map(fn($d)=> (int)($trendRaw[$d->toDateString()] ?? 0))->values();
+        $searchTrendLabels = $days->map(fn($d)=>$d->translatedFormat('j M'));
+        $searchTrendData   = $days->map(fn($d)=> (int) ($trendRaw[$d->format('Y-m-d')] ?? 0));
 
-        // ---- Top 10 Keywords (กันค่าว่าง) ----
-        $topKeywords = SearchLog::whereNotNull('keyword')
-            ->whereRaw("TRIM(keyword) <> ''")
-            ->select('keyword', DB::raw('COUNT(*) as cnt'))
-            ->groupBy('keyword')->orderByDesc('cnt')->limit(10)->get();
+        // --- อัตราพบ/ไม่พบผลลัพธ์ (30 วัน) ---
+        $since30 = Carbon::now()->subDays(30);
+        $found   = SearchLog::where('created_at','>=',$since30)->where('has_results',true)->count();
+        $notFound= SearchLog::where('created_at','>=',$since30)->where('has_results',false)->count();
+        $searchOutcomeLabels = ['พบผลลัพธ์', 'ไม่พบผลลัพธ์'];
+        $searchOutcomeData   = [(int)$found, (int)$notFound];
 
-        $topKeywordLabels = $topKeywords->pluck('keyword');
-        $topKeywordCounts = $topKeywords->pluck('cnt')->map(fn($v)=> (int)$v);
-
-        // ---- อัตราเจอ/ไม่เจอผลลัพธ์ ----
-        $success  = (int) SearchLog::where('results','>',0)->count();
-        $noResult = (int) SearchLog::where('results',0)->count();
-        $searchOutcomeLabels = ['พบคาเฟ่','ไม่พบคาเฟ่'];
-        $searchOutcomeData   = [$success, $noResult];
-
-        // ---- ชั่วโมงยอดนิยม (สัปดาห์ล่าสุด) ----
-        $hourAgg = SearchLog::where('created_at','>=',Carbon::now()->subWeek())
-            ->selectRaw('HOUR(created_at) as h, COUNT(*) as c')
-            ->groupBy('h')->pluck('c','h'); // [hour => count]
-
+        // --- ชั่วโมงยอดนิยม (7 วันล่าสุด) ---
+        $since7 = Carbon::now()->subDays(7);
+        $hourRaw = SearchLog::where('created_at','>=',$since7)
+            ->select(DB::raw('HOUR(created_at) h'), DB::raw('COUNT(*) c'))
+            ->groupBy('h')->pluck('c','h'); // [0=>12, 1=>7, ...]
         $hourLabels = range(0,23);
-        $hourCounts = array_map(fn($h)=> (int)($hourAgg[$h] ?? 0), $hourLabels);
+        $hourCounts = array_map(fn($h)=> (int)($hourRaw[$h] ?? 0), $hourLabels);
 
-        // ---- วันในสัปดาห์ยอดนิยม (4 สัปดาห์ล่าสุด) ----
-        // MySQL WEEKDAY(): 0=Mon..6=Sun
-        $weekdayAgg = SearchLog::where('created_at','>=',Carbon::now()->subWeeks(4))
-            ->selectRaw('WEEKDAY(created_at) as w, COUNT(*) as c')
-            ->groupBy('w')->pluck('c','w');
+        // --- คีย์เวิร์ดยอดฮิต Top 10 (30 วัน) ---
+        // ใช้ normalized_query ถ้ามี; ถ้ายังไม่บันทึก ให้ normalize ด้วย SQL
+        $topKeywords = SearchLog::where('created_at','>=',$since30)
+            ->select(
+                DB::raw("COALESCE(NULLIF(normalized_query,''), LOWER(TRIM(query))) as nq"),
+                DB::raw('COUNT(*) as c')
+            )
+            ->groupBy('nq')
+            ->orderByDesc('c')
+            ->limit(10)
+            ->get();
 
-        $weekdayLabels = ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
+        $topKeywordLabels = $topKeywords->pluck('nq');
+        $topKeywordCounts = $topKeywords->pluck('c')->map(fn($v)=>(int)$v);
+
+        // --- วันในสัปดาห์ยอดนิยม (4 สัปดาห์) ---
+        $since28 = Carbon::now()->subDays(28);
+        // iso_weekday: 1=Mon ... 7=Sun
+        $weekdayRaw = SearchLog::where('created_at','>=',$since28)
+            ->select(DB::raw('WEEKDAY(created_at) wd'), DB::raw('COUNT(*) c'))
+            ->groupBy('wd')->pluck('c','wd'); // 0=Mon ... 6=Sun (MySQL WEEKDAY)
+
+        $weekdayMap = ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
+        $weekdayLabels = $weekdayMap;
         $weekdayCounts = [];
-        for ($i=0;$i<7;$i++){
-            $weekdayCounts[] = (int)($weekdayAgg[$i] ?? 0);
+        for ($i=0; $i<7; $i++) {
+            $weekdayCounts[] = (int) ($weekdayRaw[$i] ?? 0);
         }
 
-        return view('admin.home', [
-            // การ์ดสรุป
-            'totalUsers'        => $totalUsers,
-            'totalCafes'        => $totalCafes,
-            'pendingCafes'      => $pendingCafes,
-            'totalNews'         => $totalNews,
-
-            // ผู้สมัครใหม่ (15 วัน)
-            'chartLabels'       => $chartLabels,
-            'chartData'         => $chartData,
-
-            // สถานะคาเฟ่
-            'cafeStatusLabels'  => $cafeStatusLabels,
-            'cafeStatusCounts'  => $cafeStatusCounts,
-
-            // Top คาเฟ่
-            'topCafeLabels'     => $topCafeLabels,
-            'topCafeData'       => $topCafeData,
-
-            // ✅ Analytics การค้นหา
-            'searchTrendLabels'   => $searchTrendLabels,
-            'searchTrendData'     => $searchTrendData,
-            'topKeywordLabels'    => $topKeywordLabels,
-            'topKeywordCounts'    => $topKeywordCounts,
-            'searchOutcomeLabels' => $searchOutcomeLabels,
-            'searchOutcomeData'   => $searchOutcomeData,
-            'hourLabels'          => $hourLabels,
-            'hourCounts'          => $hourCounts,
-            'weekdayLabels'       => $weekdayLabels,
-            'weekdayCounts'       => $weekdayCounts,
-        ]);
+        return view('admin.home', compact(
+            'totalUsers','totalCafes','pendingCafes','totalNews',
+            'chartLabels','chartData','cafeStatusLabels','cafeStatusCounts',
+            'topCafeLabels','topCafeData',
+            // ชุด analytics การค้นหา
+            'searchTrendLabels','searchTrendData',
+            'searchOutcomeLabels','searchOutcomeData',
+            'hourLabels','hourCounts',
+            'topKeywordLabels','topKeywordCounts',
+            'weekdayLabels','weekdayCounts'
+        ));
     }
 
     public function editProfile()
@@ -248,7 +225,6 @@ class AdminAuthController extends Controller
             }
 
             if ($request->hasFile('profile_image')) {
-                // ลบไฟล์เดิมถ้ามี
                 if (!empty($admin->profile_image) && Storage::disk('public')->exists($admin->profile_image)) {
                     Storage::disk('public')->delete($admin->profile_image);
                 }
@@ -258,7 +234,6 @@ class AdminAuthController extends Controller
                 $driver  = extension_loaded('imagick') ? new ImagickDriver() : new GdDriver();
                 $manager = new ImageManager($driver);
 
-                // ครอปสี่เหลี่ยมจตุรัส 512x512 แล้วบีบเป็น webp
                 $image   = $manager->read($uploaded->getPathname())->cover(512, 512);
                 $encoded = $image->toWebp(75);
 
