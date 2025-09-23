@@ -43,7 +43,7 @@ class LineBotController extends Controller
 
                 // normalize เข้มข้น
                 $lower   = mb_strtolower($text);
-                $norm1   = preg_replace('/[^\p{L}\p{N}:]+/u', '', $lower);
+                $norm1   = preg_replace('/[^\p{L}\p{M}\p{N}:]+/u', '', $lower);
                 $nospace = preg_replace('/\s+/u', '', $norm1);
                 Log::info('[TEXT]', ['raw'=>$text, 'lower'=>$lower, 'norm1'=>$norm1, 'nospace'=>$nospace]);
 
