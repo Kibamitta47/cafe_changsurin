@@ -9,25 +9,16 @@ class SearchLog extends Model
 {
     use HasFactory;
 
-    protected $table = 'search_logs';
-
     protected $fillable = [
-        'query',            // คำค้นที่ผู้ใช้พิมพ์
-        'normalized_query', // คำค้น normalize (lower/trim) ใช้ group ได้แม่น
-        'has_results',      // true/false พบผลลัพธ์ไหม
-        'results_count',    // จำนวนผลลัพธ์ที่พบ
-        'user_id',          // ผู้ใช้ (nullable)
-        'meta',             // JSON เพิ่มเติม (เช่น filters, source)
+        'user_id', 'term', 'filters', 'results_count', 'ip', 'user_agent',
     ];
 
     protected $casts = [
-        'has_results'  => 'boolean',
-        'results_count'=> 'integer',
-        'meta'         => 'array',
+        'filters' => 'array',
     ];
 
     public function user()
     {
-        return $this->belongsTo(\App\Models\User::class);
+        return $this->belongsTo(User::class);
     }
 }
