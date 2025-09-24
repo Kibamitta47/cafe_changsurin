@@ -10,6 +10,7 @@ class SearchLog extends Model
     use HasFactory;
 
     protected $table = 'search_logs';
+
     protected $fillable = [
         'user_id',
         'query',
@@ -22,11 +23,10 @@ class SearchLog extends Model
     ];
 
     protected $casts = [
-        'has_results' => 'boolean',
-        'result_count' => 'integer',
+        'has_results'   => 'boolean',
+        'result_count'  => 'integer',
     ];
 
-    // ถ้ามีระบบ user
     public function user()
     {
         return $this->belongsTo(User::class);
