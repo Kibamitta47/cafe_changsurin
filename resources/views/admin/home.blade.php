@@ -2,24 +2,8 @@
 
 {{-- CDN ของ Chart.js --}}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-{{-- CDN ของ Tailwind CSS --}}
+{{-- CDN ของ Tailwind CSS (ตรวจสอบให้แน่ใจว่าโปรเจกต์ของคุณมี Tailwind) --}}
 <script src="https://cdn.tailwindcss.com"></script>
-
-{{-- ✅ โหลดฟอนต์ไทยให้หน้านี้โดยตรง --}}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-<style>
-  /* บังคับให้ทั้งหน้ากับ canvas ใช้ฟอนต์ไทย */
-  body { font-family: 'Kanit','Noto Sans Thai','Tahoma',sans-serif; }
-  canvas { font-family: 'Kanit','Noto Sans Thai','Tahoma',sans-serif !important; }
-</style>
-
-@php
-    // ใช้พารามิเตอร์ graph=0 เพื่อซ่อนกราฟทั้งหมด หรือส่ง $showGraphs=false จาก Controller ก็ได้
-    $showGraphs = isset($showGraphs) ? (bool)$showGraphs : (request('graph', '1') !== '0');
-@endphp
 
 <div class="min-h-screen bg-slate-50 p-4 sm:p-8">
     <div class="max-w-7xl mx-auto">
@@ -77,232 +61,339 @@
             </div>
         </div>
 
-        {{-- ✅ ชุดกราฟทั้งหมด ห่อด้วยเงื่อนไข --}}
-        @if ($showGraphs)
-            {{-- ✅ Layout ชุดแรก: กราฟเดิม --}}
-            <div class="grid grid-cols-1 xl:grid-cols-5 gap-8 mb-10">
-                {{-- คาเฟ่ยอดนิยม --}}
-                <div class="xl:col-span-3 bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                    <h2 class="text-lg font-bold text-slate-700 mb-4">🌟 คาเฟ่ยอดนิยม (Top 10 รีวิวเฉลี่ย)</h2>
-                    <div class="relative h-[450px]">
-                        <canvas id="topCafesChart"></canvas>
-                    </div>
-                </div>
-
-                {{-- ผู้สมัคร / สถานะคาเฟ่ --}}
-                <div class="xl:col-span-2 flex flex-col gap-8">
-                    <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                        <h2 class="text-lg font-bold text-slate-700 mb-4">📅 ผู้สมัครใหม่ (15 วันล่าสุด)</h2>
-                        <div class="relative h-60">
-                            <canvas id="userRegistrationChart"></canvas>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                        <h2 class="text-lg font-bold text-slate-700 mb-4">☕ สัดส่วนสถานะคาเฟ่</h2>
-                        <div class="relative h-60 flex items-center justify-center">
-                            <canvas id="cafeStatusChart"></canvas>
-                        </div>
-                    </div>
+        {{-- ✅ Layout ชุดแรก: กราฟเดิม --}}
+        <div class="grid grid-cols-1 xl:grid-cols-5 gap-8 mb-10">
+            {{-- คาเฟ่ยอดนิยม --}}
+            <div class="xl:col-span-3 bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                <h2 class="text-lg font-bold text-slate-700 mb-4">🌟 คาเฟ่ยอดนิยม (Top 10 รีวิวเฉลี่ย)</h2>
+                <div class="relative h-[450px]">
+                    <canvas id="topCafesChart"></canvas>
                 </div>
             </div>
 
-            {{-- 🚀 ชุดใหม่: Analytics การค้นหาของผู้ใช้ --}}
-            <div class="mb-6">
-                <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight">การค้นหาของผู้ใช้</h2>
-                <p class="mt-1 text-slate-500">วิเคราะห์พฤติกรรมการค้นหาเพื่อปรับปรุงประสบการณ์ใช้งาน</p>
-            </div>
-
-            {{-- แถวที่ 1: แนวโน้ม + อัตราผลลัพธ์ + ชั่วโมงยอดนิยม --}}
-            <div class="grid grid-cols-1 xl:grid-cols-5 gap-8 mb-10">
-                {{-- แนวโน้ม 15 วันล่าสุด --}}
-                <div class="xl:col-span-3 bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                    <h3 class="text-lg font-bold text-slate-700 mb-4">📈 แนวโน้มการค้นหา (15 วันล่าสุด)</h3>
-                    <div class="relative h-72">
-                        <canvas id="searchTrendChart"></canvas>
+            {{-- ผู้สมัคร / สถานะคาเฟ่ --}}
+            <div class="xl:col-span-2 flex flex-col gap-8">
+                <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                    <h2 class="text-lg font-bold text-slate-700 mb-4">📅 ผู้สมัครใหม่ (15 วันล่าสุด)</h2>
+                    <div class="relative h-60">
+                        <canvas id="userRegistrationChart"></canvas>
                     </div>
                 </div>
 
-                {{-- อัตราพบ/ไม่พบ + ชั่วโมงยอดนิยม --}}
-                <div class="xl:col-span-2 flex flex-col gap-8">
-                    <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                        <h3 class="text-lg font-bold text-slate-700 mb-4">🎯 ผลลัพธ์การค้นหา</h3>
-                        <div class="relative h-56 flex items-center justify-center">
-                            <canvas id="searchOutcomeChart"></canvas>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                        <h3 class="text-lg font-bold text-slate-700 mb-4">🕒 ชั่วโมงที่มีการค้นหามาก (7 วันล่าสุด)</h3>
-                        <div class="relative h-56">
-                            <canvas id="popularHourChart"></canvas>
-                        </div>
+                <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                    <h2 class="text-lg font-bold text-slate-700 mb-4">☕ สัดส่วนสถานะคาเฟ่</h2>
+                    <div class="relative h-60 flex items-center justify-center">
+                        <canvas id="cafeStatusChart"></canvas>
                     </div>
                 </div>
             </div>
+        </div>
 
-            {{-- แถวที่ 2: คีย์เวิร์ดยอดฮิต + วันยอดนิยม --}}
-            <div class="grid grid-cols-1 xl:grid-cols-5 gap-8">
-                {{-- คีย์เวิร์ดยอดฮิต Top 10 --}}
-                <div class="xl:col-span-3 bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                    <h3 class="text-lg font-bold text-slate-700 mb-4">🔎 คีย์เวิร์ดยอดฮิต (Top 10)</h3>
-                    <div class="relative h-[420px]">
-                        <canvas id="topKeywordChart"></canvas>
+        {{-- 🚀 ชุดใหม่: Analytics การค้นหาของผู้ใช้ --}}
+        <div class="mb-6">
+            <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight">การค้นหาของผู้ใช้</h2>
+            <p class="mt-1 text-slate-500">วิเคราะห์พฤติกรรมการค้นหาเพื่อปรับปรุงประสบการณ์ใช้งาน</p>
+        </div>
+
+        {{-- แถวที่ 1: แนวโน้ม + อัตราผลลัพธ์ + ชั่วโมงยอดนิยม --}}
+        <div class="grid grid-cols-1 xl:grid-cols-5 gap-8 mb-10">
+            {{-- แนวโน้ม 15 วันล่าสุด --}}
+            <div class="xl:col-span-3 bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                <h3 class="text-lg font-bold text-slate-700 mb-4">📈 แนวโน้มการค้นหา (15 วันล่าสุด)</h3>
+                <div class="relative h-72">
+                    <canvas id="searchTrendChart"></canvas>
+                </div>
+            </div>
+
+            {{-- อัตราพบ/ไม่พบ + ชั่วโมงยอดนิยม --}}
+            <div class="xl:col-span-2 flex flex-col gap-8">
+                <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                    <h3 class="text-lg font-bold text-slate-700 mb-4">🎯 ผลลัพธ์การค้นหา</h3>
+                    <div class="relative h-56 flex items-center justify-center">
+                        <canvas id="searchOutcomeChart"></canvas>
                     </div>
                 </div>
 
-                {{-- วันในสัปดาห์ยอดนิยม --}}
-                <div class="xl:col-span-2 bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                    <h3 class="text-lg font-bold text-slate-700 mb-4">📅 วันในสัปดาห์ที่มีการค้นหามาก (4 สัปดาห์)</h3>
-                    <div class="relative h-72">
-                        <canvas id="popularWeekdayChart"></canvas>
+                <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                    <h3 class="text-lg font-bold text-slate-700 mb-4">🕒 ชั่วโมงที่มีการค้นหามาก (7 วันล่าสุด)</h3>
+                    <div class="relative h-56">
+                        <canvas id="popularHourChart"></canvas>
                     </div>
                 </div>
             </div>
-        @else
-            {{-- เมื่อซ่อนกราฟ --}}
-            <div class="mb-8">
-                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                    <h2 class="text-lg font-bold text-slate-800 mb-1">โหมดไม่แสดงกราฟ</h2>
-                    <p class="text-slate-600 text-sm">
-                        ปิดการแสดงกราฟทั้งหมดชั่วคราว (เปิดได้โดยเอา <code>?graph=0</code> ออก หรือส่ง <code>$showGraphs=true</code> จากคอนโทรลเลอร์)
-                    </p>
+        </div>
+
+        {{-- แถวที่ 2: คีย์เวิร์ดยอดฮิต + วันยอดนิยม --}}
+        <div class="grid grid-cols-1 xl:grid-cols-5 gap-8">
+            {{-- คีย์เวิร์ดยอดฮิต Top 10 --}}
+            <div class="xl:col-span-3 bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                <h3 class="text-lg font-bold text-slate-700 mb-4">🔎 คีย์เวิร์ดยอดฮิต (Top 10)</h3>
+                <div class="relative h-[420px]">
+                    <canvas id="topKeywordChart"></canvas>
                 </div>
             </div>
-        @endif
+
+            {{-- วันในสัปดาห์ยอดนิยม --}}
+            <div class="xl:col-span-2 bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                <h3 class="text-lg font-bold text-slate-700 mb-4">📅 วันในสัปดาห์ที่มีการค้นหามาก (4 สัปดาห์)</h3>
+                <div class="relative h-72">
+                    <canvas id="popularWeekdayChart"></canvas>
+                </div>
+            </div>
+        </div>
 
     </div>
 </div>
 
-{{-- ✅ Scripts: วาดกราฟเฉพาะเมื่อ $showGraphs = true --}}
-@if ($showGraphs)
+{{-- ✅ Scripts --}}
 <script>
-/* ===== 1) บังคับฟอนต์ไทยให้ Chart.js ===== */
-Chart.defaults.font.family = "'Kanit','Noto Sans Thai','Tahoma',sans-serif";
-Chart.defaults.locale = 'th';
-const __chartFontStyle = document.createElement('style');
-__chartFontStyle.textContent = "canvas{font-family:'Kanit','Noto Sans Thai','Tahoma',sans-serif !important}";
-document.head.appendChild(__chartFontStyle);
+document.addEventListener('DOMContentLoaded', function () {
+    // ====== กราฟเดิม ======
+    // ผู้สมัครสมาชิก
+    const userCtx = document.getElementById('userRegistrationChart');
+    if (userCtx) {
+        new Chart(userCtx, {
+            type: 'bar',
+            data: {
+                labels: {!! json_encode($chartLabels) !!},
+                datasets: [{
+                    label: 'ผู้สมัคร',
+                    data: {!! json_encode($chartData) !!},
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    barPercentage: 0.7,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1, color: '#64748b' }, grid: { color: '#e2e8f0' } },
+                    x: { ticks: { color: '#64748b' }, grid: { display: false } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
 
-/* ===== 2) Helper: ตัดข้อความแบบ grapheme-safe (รักษาวรรณยุกต์) ===== */
-function graphemes(str){
-  const out = [];
-  const re = /\P{M}\p{M}*/gu; // ตัวฐาน + เครื่องหมายประกอบที่ตามหลัง
-  let m; while ((m = re.exec(str ?? '')) !== null) out.push(m[0]);
-  return out.length ? out : Array.from(str ?? '');
-}
-function truncateGrapheme(str, max){
-  const g = graphemes(str);
-  return g.length <= max ? (str ?? '') : g.slice(0, max).join('') + '…';
-}
+    // สถานะคาเฟ่
+    const statusCtx = document.getElementById('cafeStatusChart');
+    if (statusCtx) {
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {!! json_encode($cafeStatusLabels) !!},
+                datasets: [{
+                    data: {!! json_encode($cafeStatusCounts) !!},
+                    backgroundColor: ['#4ade80', '#facc15', '#f87171'],
+                    borderColor: '#fff',
+                    borderWidth: 3,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#334155', font: { size: 13, weight: '500' }, boxWidth: 12, padding: 15 } }
+                }
+            }
+        });
+    }
 
-/* ===== 3) ฟังก์ชันวาดกราฟทั้งหมด ===== */
-function drawAllCharts(){
-  // ผู้สมัคร
-  const userCtx = document.getElementById('userRegistrationChart');
-  if (userCtx) new Chart(userCtx, {
-    type:'bar',
-    data:{ labels:{!! json_encode($chartLabels ?? []) !!},
-      datasets:[{ label:'ผู้สมัคร', data:{!! json_encode($chartData ?? []) !!},
-        backgroundColor:'rgba(59,130,246,0.7)', borderColor:'rgba(59,130,246,1)', borderWidth:1, borderRadius:8, barPercentage:0.7 }]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1, color:'#64748b' }, grid:{ color:'#e2e8f0' } },
-               x:{ ticks:{ color:'#64748b' }, grid:{ display:false } } }, plugins:{ legend:{ display:false } } });
+    // คาเฟ่ยอดนิยม
+    const topCafesCtx = document.getElementById('topCafesChart');
+    if (topCafesCtx) {
+        new Chart(topCafesCtx, {
+            type: 'bar',
+            data: {
+                labels: {!! json_encode($topCafeLabels) !!},
+                datasets: [{
+                    label: 'คะแนนเฉลี่ย',
+                    data: {!! json_encode($topCafeData) !!},
+                    backgroundColor: 'rgba(168, 85, 247, 0.7)',
+                    borderColor: 'rgba(168, 85, 247, 1)',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { beginAtZero: true, max: 5, ticks: { color: '#475569', stepSize: 1 }, grid: { color: '#e2e8f0' } },
+                    y: { ticks: { color: '#475569' }, grid: { display: false } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
 
-  // สถานะคาเฟ่
-  const statusCtx = document.getElementById('cafeStatusChart');
-  if (statusCtx) new Chart(statusCtx, {
-    type:'doughnut',
-    data:{ labels:{!! json_encode($cafeStatusLabels ?? []) !!},
-      datasets:[{ data:{!! json_encode($cafeStatusCounts ?? []) !!},
-        backgroundColor:['#4ade80','#facc15','#f87171'], borderColor:'#fff', borderWidth:3, hoverOffset:8 }]},
-    options:{ responsive:true, maintainAspectRatio:false, cutout:'70%',
-      plugins:{ legend:{ position:'bottom', labels:{ color:'#334155', font:{ size:13, weight:'500' }, boxWidth:12, padding:15 } } } });
+    // ====== กราฟใหม่: Analytics การค้นหา ======
 
-  // คาเฟ่ยอดนิยม
-  const topCafesCtx = document.getElementById('topCafesChart');
-  if (topCafesCtx) new Chart(topCafesCtx, {
-    type:'bar',
-    data:{ labels:{!! json_encode($topCafeLabels ?? []) !!},
-      datasets:[{ label:'คะแนนเฉลี่ย', data:{!! json_encode($topCafeData ?? []) !!},
-        backgroundColor:'rgba(168,85,247,0.7)', borderColor:'rgba(168,85,247,1)', borderWidth:1, borderRadius:8 }]},
-    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      scales:{ x:{ beginAtZero:true, max:5, ticks:{ color:'#475569', stepSize:1 }, grid:{ color:'#e2e8f0' } },
-               y:{ ticks:{ color:'#475569' }, grid:{ display:false } } },
-      plugins:{ legend:{ display:false } } });
+    // 1) แนวโน้มการค้นหา 15 วัน
+    const trendCtx = document.getElementById('searchTrendChart');
+    if (trendCtx) {
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: {!! json_encode($searchTrendLabels) !!},
+                datasets: [{
+                    label: 'จำนวนการค้นหา',
+                    data: {!! json_encode($searchTrendData) !!},
+                    tension: 0.35,
+                    fill: true,
+                    backgroundColor: 'rgba(14, 165, 233, 0.15)',   // sky-500/15
+                    borderColor: 'rgba(14, 165, 233, 1)',          // sky-500
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#475569' } },
+                    x: { grid: { display: false }, ticks: { color: '#475569' } }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { mode: 'index', intersect: false }
+                }
+            }
+        });
+    }
 
-  // แนวโน้มการค้นหา
-  const trendCtx = document.getElementById('searchTrendChart');
-  if (trendCtx) new Chart(trendCtx, {
-    type:'line',
-    data:{ labels:{!! json_encode($searchTrendLabels ?? []) !!},
-      datasets:[{ label:'จำนวนการค้นหา', data:{!! json_encode($searchTrendData ?? []) !!},
-        tension:0.35, fill:true, backgroundColor:'rgba(14,165,233,0.15)', borderColor:'rgba(14,165,233,1)',
-        borderWidth:2, pointRadius:3, pointHoverRadius:5 }]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      scales:{ y:{ beginAtZero:true, grid:{ color:'#e2e8f0' }, ticks:{ color:'#475569' } },
-               x:{ grid:{ display:false }, ticks:{ color:'#475569' } } },
-      plugins:{ legend:{ display:false }, tooltip:{ mode:'index', intersect:false } } });
+    // 2) อัตราพบ/ไม่พบผลลัพธ์
+    const outcomeCtx = document.getElementById('searchOutcomeChart');
+    if (outcomeCtx) {
+        new Chart(outcomeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {!! json_encode($searchOutcomeLabels) !!},
+                datasets: [{
+                    data: {!! json_encode($searchOutcomeData) !!},
+                    backgroundColor: ['#22c55e', '#ef4444'], // เขียว / แดง
+                    borderColor: '#fff',
+                    borderWidth: 3,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '68%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#334155', font: { size: 13, weight: '500' }, boxWidth: 12, padding: 14 } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx){
+                                const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+                                const val = ctx.parsed;
+                                const pct = total ? (val*100/total).toFixed(1) : 0;
+                                return ` ${ctx.label}: ${val} ครั้ง (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 
-  // ผลลัพธ์การค้นหา
-  const outcomeCtx = document.getElementById('searchOutcomeChart');
-  if (outcomeCtx) new Chart(outcomeCtx, {
-    type:'doughnut',
-    data:{ labels:{!! json_encode($searchOutcomeLabels ?? []) !!},
-      datasets:[{ data:{!! json_encode($searchOutcomeData ?? []) !!},
-        backgroundColor:['#22c55e','#ef4444'], borderColor:'#fff', borderWidth:3, hoverOffset:8 }]},
-    options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
-      plugins:{ legend:{ position:'bottom', labels:{ color:'#334155', font:{ size:13, weight:'500' }, boxWidth:12, padding:14 } },
-        tooltip:{ callbacks:{ label: function(ctx){ const total=ctx.dataset.data.reduce((a,b)=>a+b,0);
-          const val=ctx.parsed; const pct = total ? (val*100/total).toFixed(1) : 0; return ` ${ctx.label}: ${val} ครั้ง (${pct}%)`; } } } } });
+    // 3) ชั่วโมงยอดนิยม (สัปดาห์ล่าสุด)
+    const hourCtx = document.getElementById('popularHourChart');
+    if (hourCtx) {
+        new Chart(hourCtx, {
+            type: 'bar',
+            data: {
+                labels: {!! json_encode($hourLabels) !!}.map(h => `${String(h).padStart(2,'0')}:00`),
+                datasets: [{
+                    label: 'จำนวนการค้นหา',
+                    data: {!! json_encode($hourCounts) !!},
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',     // blue-500/70
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1,
+                    borderRadius: 6,
+                    barPercentage: 0.8,
+                    categoryPercentage: 0.9,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#475569' } },
+                    x: { grid: { display: false }, ticks: { color: '#475569', maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
 
-  // ชั่วโมงยอดนิยม
-  const hourCtx = document.getElementById('popularHourChart');
-  if (hourCtx) new Chart(hourCtx, {
-    type:'bar',
-    data:{ labels:{!! json_encode($hourLabels ?? []) !!}.map(h => `${String(h).padStart(2,'0')}:00`),
-      datasets:[{ label:'จำนวนการค้นหา', data:{!! json_encode($hourCounts ?? []) !!},
-        backgroundColor:'rgba(59,130,246,0.7)', borderColor:'rgba(59,130,246,1)', borderWidth:1, borderRadius:6,
-        barPercentage:0.8, categoryPercentage:0.9 }]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      scales:{ y:{ beginAtZero:true, grid:{ color:'#e2e8f0' }, ticks:{ color:'#475569' } },
-               x:{ grid:{ display:false }, ticks:{ color:'#475569', maxRotation:0, autoSkip:true, maxTicksLimit:12 } } },
-      plugins:{ legend:{ display:false } } });
+    // 4) คีย์เวิร์ดยอดฮิต Top 10
+    const topKeyCtx = document.getElementById('topKeywordChart');
+    if (topKeyCtx) {
+        new Chart(topKeyCtx, {
+            type: 'bar',
+            data: {
+                labels: {!! json_encode($topKeywordLabels) !!},
+                datasets: [{
+                    label: 'จำนวนครั้ง',
+                    data: {!! json_encode($topKeywordCounts) !!},
+                    backgroundColor: 'rgba(168, 85, 247, 0.7)',  // purple-500/70
+                    borderColor: 'rgba(168, 85, 247, 1)',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#475569' } },
+                    y: { grid: { display: false }, ticks: { color: '#475569', callback: (v, i, vals) => {
+                        const lbl = {!! json_encode($topKeywordLabels) !!}[i] || '';
+                        return lbl.length > 18 ? lbl.slice(0,18)+'…' : lbl;
+                    }}}
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
 
-  // คีย์เวิร์ดยอดฮิต (ใช้ truncateGrapheme)
-  const topKeyCtx = document.getElementById('topKeywordChart');
-  if (topKeyCtx) {
-    const __labelsTopKeyword = {!! json_encode($topKeywordLabels ?? []) !!};
-    new Chart(topKeyCtx, {
-      type:'bar',
-      data:{ labels: __labelsTopKeyword,
-        datasets:[{ label:'จำนวนครั้ง', data:{!! json_encode($topKeywordCounts ?? []) !!},
-          backgroundColor:'rgba(168,85,247,0.7)', borderColor:'rgba(168,85,247,1)', borderWidth:1, borderRadius:8 }]},
-      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
-        scales:{ x:{ beginAtZero:true, grid:{ color:'#e2e8f0' }, ticks:{ color:'#475569' } },
-                 y:{ grid:{ display:false }, ticks:{ color:'#475569',
-                      callback: (v,i)=> truncateGrapheme(__labelsTopKeyword[i] || '', 18) } } },
-        plugins:{ legend:{ display:false } } });
-  }
-
-  // วันในสัปดาห์ยอดนิยม
-  const weekdayCtx = document.getElementById('popularWeekdayChart');
-  if (weekdayCtx) new Chart(weekdayCtx, {
-    type:'bar',
-    data:{ labels:{!! json_encode($weekdayLabels ?? []) !!},
-      datasets:[{ label:'จำนวนการค้นหา', data:{!! json_encode($weekdayCounts ?? []) !!},
-        backgroundColor:'rgba(16,185,129,0.7)', borderColor:'rgba(16,185,129,1)', borderWidth:1, borderRadius:8, barPercentage:0.7 }]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      scales:{ y:{ beginAtZero:true, grid:{ color:'#e2e8f0' }, ticks:{ color:'#475569' } },
-               x:{ grid:{ display:false }, ticks:{ color:'#475569' } } },
-      plugins:{ legend:{ display:false } } });
-}
-
-/* ===== 4) รอให้ฟอนต์โหลดครบก่อนวาดกราฟ ===== */
-if (document.fonts && document.fonts.ready) {
-  document.fonts.ready.then(drawAllCharts);
-} else {
-  window.addEventListener('load', drawAllCharts);
-}
+    // 5) วันในสัปดาห์ยอดนิยม (4 สัปดาห์)
+    const weekdayCtx = document.getElementById('popularWeekdayChart');
+    if (weekdayCtx) {
+        new Chart(weekdayCtx, {
+            type: 'bar',
+            data: {
+                labels: {!! json_encode($weekdayLabels) !!},
+                datasets: [{
+                    label: 'จำนวนการค้นหา',
+                    data: {!! json_encode($weekdayCounts) !!},
+                    backgroundColor: 'rgba(16, 185, 129, 0.7)',   // emerald-500/70
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    barPercentage: 0.7,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#475569' } },
+                    x: { grid: { display: false }, ticks: { color: '#475569' } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+});
 </script>
-@endif
