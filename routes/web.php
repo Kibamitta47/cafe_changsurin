@@ -18,6 +18,7 @@ use App\Http\Controllers\SearchLogController;
 
 
 
+
 /*
 |--------------------------------------------------------------------------
 | Public Routes
