@@ -5,6 +5,11 @@
 {{-- CDN ของ Tailwind CSS (ตรวจสอบให้แน่ใจว่าโปรเจกต์ของคุณมี Tailwind) --}}
 <script src="https://cdn.tailwindcss.com"></script>
 
+@php
+    // ใช้พารามิเตอร์ graph=0 เพื่อซ่อนกราฟทั้งหมด หรือส่ง $showGraphs=false จาก Controller ก็ได้
+    $showGraphs = isset($showGraphs) ? (bool)$showGraphs : (request('graph', '1') !== '0');
+@endphp
+
 <div class="min-h-screen bg-slate-50 p-4 sm:p-8">
     <div class="max-w-7xl mx-auto">
         
@@ -61,91 +66,105 @@
             </div>
         </div>
 
-        {{-- ✅ Layout ชุดแรก: กราฟเดิม --}}
-        <div class="grid grid-cols-1 xl:grid-cols-5 gap-8 mb-10">
-            {{-- คาเฟ่ยอดนิยม --}}
-            <div class="xl:col-span-3 bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                <h2 class="text-lg font-bold text-slate-700 mb-4">🌟 คาเฟ่ยอดนิยม (Top 10 รีวิวเฉลี่ย)</h2>
-                <div class="relative h-[450px]">
-                    <canvas id="topCafesChart"></canvas>
-                </div>
-            </div>
-
-            {{-- ผู้สมัคร / สถานะคาเฟ่ --}}
-            <div class="xl:col-span-2 flex flex-col gap-8">
-                <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                    <h2 class="text-lg font-bold text-slate-700 mb-4">📅 ผู้สมัครใหม่ (15 วันล่าสุด)</h2>
-                    <div class="relative h-60">
-                        <canvas id="userRegistrationChart"></canvas>
+        {{-- ✅ ชุดกราฟทั้งหมด ห่อด้วยเงื่อนไข --}}
+        @if ($showGraphs)
+            {{-- ✅ Layout ชุดแรก: กราฟเดิม --}}
+            <div class="grid grid-cols-1 xl:grid-cols-5 gap-8 mb-10">
+                {{-- คาเฟ่ยอดนิยม --}}
+                <div class="xl:col-span-3 bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                    <h2 class="text-lg font-bold text-slate-700 mb-4">🌟 คาเฟ่ยอดนิยม (Top 10 รีวิวเฉลี่ย)</h2>
+                    <div class="relative h-[450px]">
+                        <canvas id="topCafesChart"></canvas>
                     </div>
                 </div>
 
-                <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                    <h2 class="text-lg font-bold text-slate-700 mb-4">☕ สัดส่วนสถานะคาเฟ่</h2>
-                    <div class="relative h-60 flex items-center justify-center">
-                        <canvas id="cafeStatusChart"></canvas>
+                {{-- ผู้สมัคร / สถานะคาเฟ่ --}}
+                <div class="xl:col-span-2 flex flex-col gap-8">
+                    <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                        <h2 class="text-lg font-bold text-slate-700 mb-4">📅 ผู้สมัครใหม่ (15 วันล่าสุด)</h2>
+                        <div class="relative h-60">
+                            <canvas id="userRegistrationChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                        <h2 class="text-lg font-bold text-slate-700 mb-4">☕ สัดส่วนสถานะคาเฟ่</h2>
+                        <div class="relative h-60 flex items-center justify-center">
+                            <canvas id="cafeStatusChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        {{-- 🚀 ชุดใหม่: Analytics การค้นหาของผู้ใช้ --}}
-        <div class="mb-6">
-            <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight">การค้นหาของผู้ใช้</h2>
-            <p class="mt-1 text-slate-500">วิเคราะห์พฤติกรรมการค้นหาเพื่อปรับปรุงประสบการณ์ใช้งาน</p>
-        </div>
-
-        {{-- แถวที่ 1: แนวโน้ม + อัตราผลลัพธ์ + ชั่วโมงยอดนิยม --}}
-        <div class="grid grid-cols-1 xl:grid-cols-5 gap-8 mb-10">
-            {{-- แนวโน้ม 15 วันล่าสุด --}}
-            <div class="xl:col-span-3 bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                <h3 class="text-lg font-bold text-slate-700 mb-4">📈 แนวโน้มการค้นหา (15 วันล่าสุด)</h3>
-                <div class="relative h-72">
-                    <canvas id="searchTrendChart"></canvas>
-                </div>
+            {{-- 🚀 ชุดใหม่: Analytics การค้นหาของผู้ใช้ --}}
+            <div class="mb-6">
+                <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight">การค้นหาของผู้ใช้</h2>
+                <p class="mt-1 text-slate-500">วิเคราะห์พฤติกรรมการค้นหาเพื่อปรับปรุงประสบการณ์ใช้งาน</p>
             </div>
 
-            {{-- อัตราพบ/ไม่พบ + ชั่วโมงยอดนิยม --}}
-            <div class="xl:col-span-2 flex flex-col gap-8">
-                <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                    <h3 class="text-lg font-bold text-slate-700 mb-4">🎯 ผลลัพธ์การค้นหา</h3>
-                    <div class="relative h-56 flex items-center justify-center">
-                        <canvas id="searchOutcomeChart"></canvas>
+            {{-- แถวที่ 1: แนวโน้ม + อัตราผลลัพธ์ + ชั่วโมงยอดนิยม --}}
+            <div class="grid grid-cols-1 xl:grid-cols-5 gap-8 mb-10">
+                {{-- แนวโน้ม 15 วันล่าสุด --}}
+                <div class="xl:col-span-3 bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                    <h3 class="text-lg font-bold text-slate-700 mb-4">📈 แนวโน้มการค้นหา (15 วันล่าสุด)</h3>
+                    <div class="relative h-72">
+                        <canvas id="searchTrendChart"></canvas>
                     </div>
                 </div>
 
-                <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                    <h3 class="text-lg font-bold text-slate-700 mb-4">🕒 ชั่วโมงที่มีการค้นหามาก (7 วันล่าสุด)</h3>
-                    <div class="relative h-56">
-                        <canvas id="popularHourChart"></canvas>
+                {{-- อัตราพบ/ไม่พบ + ชั่วโมงยอดนิยม --}}
+                <div class="xl:col-span-2 flex flex-col gap-8">
+                    <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                        <h3 class="text-lg font-bold text-slate-700 mb-4">🎯 ผลลัพธ์การค้นหา</h3>
+                        <div class="relative h-56 flex items-center justify-center">
+                            <canvas id="searchOutcomeChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                        <h3 class="text-lg font-bold text-slate-700 mb-4">🕒 ชั่วโมงที่มีการค้นหามาก (7 วันล่าสุด)</h3>
+                        <div class="relative h-56">
+                            <canvas id="popularHourChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        {{-- แถวที่ 2: คีย์เวิร์ดยอดฮิต + วันยอดนิยม --}}
-        <div class="grid grid-cols-1 xl:grid-cols-5 gap-8">
-            {{-- คีย์เวิร์ดยอดฮิต Top 10 --}}
-            <div class="xl:col-span-3 bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                <h3 class="text-lg font-bold text-slate-700 mb-4">🔎 คีย์เวิร์ดยอดฮิต (Top 10)</h3>
-                <div class="relative h-[420px]">
-                    <canvas id="topKeywordChart"></canvas>
+            {{-- แถวที่ 2: คีย์เวิร์ดยอดฮิต + วันยอดนิยม --}}
+            <div class="grid grid-cols-1 xl:grid-cols-5 gap-8">
+                {{-- คีย์เวิร์ดยอดฮิต Top 10 --}}
+                <div class="xl:col-span-3 bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                    <h3 class="text-lg font-bold text-slate-700 mb-4">🔎 คีย์เวิร์ดยอดฮิต (Top 10)</h3>
+                    <div class="relative h-[420px]">
+                        <canvas id="topKeywordChart"></canvas>
+                    </div>
+                </div>
+
+                {{-- วันในสัปดาห์ยอดนิยม --}}
+                <div class="xl:col-span-2 bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                    <h3 class="text-lg font-bold text-slate-700 mb-4">📅 วันในสัปดาห์ที่มีการค้นหามาก (4 สัปดาห์)</h3>
+                    <div class="relative h-72">
+                        <canvas id="popularWeekdayChart"></canvas>
+                    </div>
                 </div>
             </div>
-
-            {{-- วันในสัปดาห์ยอดนิยม --}}
-            <div class="xl:col-span-2 bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                <h3 class="text-lg font-bold text-slate-700 mb-4">📅 วันในสัปดาห์ที่มีการค้นหามาก (4 สัปดาห์)</h3>
-                <div class="relative h-72">
-                    <canvas id="popularWeekdayChart"></canvas>
+        @else
+            {{-- เมื่อซ่อนกราฟ แสดงโน้ตสั้น ๆ (ถ้าไม่อยากแสดงอะไรเลยลบส่วนนี้ได้) --}}
+            <div class="mb-8">
+                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                    <h2 class="text-lg font-bold text-slate-800 mb-1">โหมดไม่แสดงกราฟ</h2>
+                    <p class="text-slate-600 text-sm">
+                        ปิดการแสดงกราฟทั้งหมดชั่วคราว (เปิดได้โดยเอา <code>?graph=0</code> ออก หรือส่ง <code>$showGraphs=true</code> จากคอนโทรลเลอร์)
+                    </p>
                 </div>
             </div>
-        </div>
+        @endif
 
     </div>
 </div>
 
-{{-- ✅ Scripts --}}
+{{-- ✅ Scripts: สร้างกราฟเฉพาะเมื่อ $showGraphs = true --}}
+@if ($showGraphs)
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     // ====== กราฟเดิม ======
@@ -155,10 +174,10 @@ document.addEventListener('DOMContentLoaded', function () {
         new Chart(userCtx, {
             type: 'bar',
             data: {
-                labels: {!! json_encode($chartLabels) !!},
+                labels: {!! json_encode($chartLabels ?? []) !!},
                 datasets: [{
                     label: 'ผู้สมัคร',
-                    data: {!! json_encode($chartData) !!},
+                    data: {!! json_encode($chartData ?? []) !!},
                     backgroundColor: 'rgba(59, 130, 246, 0.7)',
                     borderColor: 'rgba(59, 130, 246, 1)',
                     borderWidth: 1,
@@ -184,9 +203,9 @@ document.addEventListener('DOMContentLoaded', function () {
         new Chart(statusCtx, {
             type: 'doughnut',
             data: {
-                labels: {!! json_encode($cafeStatusLabels) !!},
+                labels: {!! json_encode($cafeStatusLabels ?? []) !!},
                 datasets: [{
-                    data: {!! json_encode($cafeStatusCounts) !!},
+                    data: {!! json_encode($cafeStatusCounts ?? []) !!},
                     backgroundColor: ['#4ade80', '#facc15', '#f87171'],
                     borderColor: '#fff',
                     borderWidth: 3,
@@ -210,10 +229,10 @@ document.addEventListener('DOMContentLoaded', function () {
         new Chart(topCafesCtx, {
             type: 'bar',
             data: {
-                labels: {!! json_encode($topCafeLabels) !!},
+                labels: {!! json_encode($topCafeLabels ?? []) !!},
                 datasets: [{
                     label: 'คะแนนเฉลี่ย',
-                    data: {!! json_encode($topCafeData) !!},
+                    data: {!! json_encode($topCafeData ?? []) !!},
                     backgroundColor: 'rgba(168, 85, 247, 0.7)',
                     borderColor: 'rgba(168, 85, 247, 1)',
                     borderWidth: 1,
@@ -241,14 +260,14 @@ document.addEventListener('DOMContentLoaded', function () {
         new Chart(trendCtx, {
             type: 'line',
             data: {
-                labels: {!! json_encode($searchTrendLabels) !!},
+                labels: {!! json_encode($searchTrendLabels ?? []) !!},
                 datasets: [{
                     label: 'จำนวนการค้นหา',
-                    data: {!! json_encode($searchTrendData) !!},
+                    data: {!! json_encode($searchTrendData ?? []) !!},
                     tension: 0.35,
                     fill: true,
-                    backgroundColor: 'rgba(14, 165, 233, 0.15)',   // sky-500/15
-                    borderColor: 'rgba(14, 165, 233, 1)',          // sky-500
+                    backgroundColor: 'rgba(14, 165, 233, 0.15)',
+                    borderColor: 'rgba(14, 165, 233, 1)',
                     borderWidth: 2,
                     pointRadius: 3,
                     pointHoverRadius: 5,
@@ -275,10 +294,10 @@ document.addEventListener('DOMContentLoaded', function () {
         new Chart(outcomeCtx, {
             type: 'doughnut',
             data: {
-                labels: {!! json_encode($searchOutcomeLabels) !!},
+                labels: {!! json_encode($searchOutcomeLabels ?? []) !!},
                 datasets: [{
-                    data: {!! json_encode($searchOutcomeData) !!},
-                    backgroundColor: ['#22c55e', '#ef4444'], // เขียว / แดง
+                    data: {!! json_encode($searchOutcomeData ?? []) !!},
+                    backgroundColor: ['#22c55e', '#ef4444'],
                     borderColor: '#fff',
                     borderWidth: 3,
                     hoverOffset: 8
@@ -311,11 +330,11 @@ document.addEventListener('DOMContentLoaded', function () {
         new Chart(hourCtx, {
             type: 'bar',
             data: {
-                labels: {!! json_encode($hourLabels) !!}.map(h => `${String(h).padStart(2,'0')}:00`),
+                labels: {!! json_encode($hourLabels ?? []) !!}.map(h => `${String(h).padStart(2,'0')}:00`),
                 datasets: [{
                     label: 'จำนวนการค้นหา',
-                    data: {!! json_encode($hourCounts) !!},
-                    backgroundColor: 'rgba(59, 130, 246, 0.7)',     // blue-500/70
+                    data: {!! json_encode($hourCounts ?? []) !!},
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
                     borderColor: 'rgba(59, 130, 246, 1)',
                     borderWidth: 1,
                     borderRadius: 6,
@@ -341,11 +360,11 @@ document.addEventListener('DOMContentLoaded', function () {
         new Chart(topKeyCtx, {
             type: 'bar',
             data: {
-                labels: {!! json_encode($topKeywordLabels) !!},
+                labels: {!! json_encode($topKeywordLabels ?? []) !!},
                 datasets: [{
                     label: 'จำนวนครั้ง',
-                    data: {!! json_encode($topKeywordCounts) !!},
-                    backgroundColor: 'rgba(168, 85, 247, 0.7)',  // purple-500/70
+                    data: {!! json_encode($topKeywordCounts ?? []) !!},
+                    backgroundColor: 'rgba(168, 85, 247, 0.7)',
                     borderColor: 'rgba(168, 85, 247, 1)',
                     borderWidth: 1,
                     borderRadius: 8,
@@ -358,7 +377,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 scales: {
                     x: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#475569' } },
                     y: { grid: { display: false }, ticks: { color: '#475569', callback: (v, i, vals) => {
-                        const lbl = {!! json_encode($topKeywordLabels) !!}[i] || '';
+                        const lbl = {!! json_encode($topKeywordLabels ?? []) !!}[i] || '';
                         return lbl.length > 18 ? lbl.slice(0,18)+'…' : lbl;
                     }}}
                 },
@@ -373,11 +392,11 @@ document.addEventListener('DOMContentLoaded', function () {
         new Chart(weekdayCtx, {
             type: 'bar',
             data: {
-                labels: {!! json_encode($weekdayLabels) !!},
+                labels: {!! json_encode($weekdayLabels ?? []) !!},
                 datasets: [{
                     label: 'จำนวนการค้นหา',
-                    data: {!! json_encode($weekdayCounts) !!},
-                    backgroundColor: 'rgba(16, 185, 129, 0.7)',   // emerald-500/70
+                    data: {!! json_encode($weekdayCounts ?? []) !!},
+                    backgroundColor: 'rgba(16, 185, 129, 0.7)',
                     borderColor: 'rgba(16, 185, 129, 1)',
                     borderWidth: 1,
                     borderRadius: 8,
@@ -397,3 +416,4 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 </script>
+@endif
