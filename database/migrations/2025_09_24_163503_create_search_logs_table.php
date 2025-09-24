@@ -7,12 +7,11 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        if (Schema::hasTable('search_logs')) return;
+
         Schema::create('search_logs', function (Blueprint $table) {
             $table->id();
-
-            // ถ้าต้องการ FK ทีหลังค่อยเติม — ตอนนี้ทำเป็น index ธรรมดาไปก่อน
-            $table->unsignedBigInteger('user_id')->nullable()->index();
-
+            $table->unsignedBigInteger('user_id')->nullable()->index(); // ไม่ผูก FK
             $table->string('query', 255);
             $table->string('normalized_query', 255)->nullable()->index();
             $table->json('filters')->nullable();
