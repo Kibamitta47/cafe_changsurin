@@ -205,7 +205,16 @@
             </label>
 
             <button class="w-full bg-cyan-600 text-white font-semibold py-2 rounded-lg"
-                    @click="mobileFilterOpen = false">ใช้ตัวกรอง</button>
+              @click="
+                mobileFilterOpen = false;
+                // ✅ ยิง log เมื่อกดใช้ตัวกรอง (mobile)
+                sendSearchLogWeb({
+                  keyword: searchTerm,
+                  filters,
+                  resultsCafe: filteredCafes.length,
+                  resultsNews: filteredNews.length
+                });
+            ">ใช้ตัวกรอง</button>
           </div>
         </div>
       </div>
@@ -296,6 +305,19 @@
                       <input type="checkbox" x-model="filters.styles" :value="style"
                              class="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500">
                       <span class="ml-2" x-text="style"></span>
+                    </label>
+                  </template>
+                </div>
+              </div>
+
+              <div class="border-t border-slate-200 pt-3">
+                <h4 class="font-semibold text-slate-700 mb-2 text-sm">ช่องทางชำระเงิน</h4>
+                <div class="space-y-1">
+                  <template x-for="m in availableFilters.paymentMethods" :key="m">
+                    <label class="flex items-center text-slate-600 text-sm">
+                      <input type="checkbox" x-model="filters.paymentMethods" :value="m"
+                             class="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500">
+                      <span class="ml-2" x-text="m"></span>
                     </label>
                   </template>
                 </div>
@@ -558,68 +580,68 @@
   {{-- Footer --}}
   @include('components.footer')
 
-  {{-- ================== JS: Log Helpers (LINE-style form post + debounce + กันสแปม + ไม่สร้างกราฟ) ================== --}}
+  {{-- ================== JS ================== --}}
   <script>
-    function debounce(fn, delay = 600) {
-      let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), delay); };
+    /** ============================
+     * ✅ Helpers ส่ง Log การค้นหา (source=web)
+     * วางไว้บนสุดก่อน pageController
+     * ============================ */
+    const __SEARCH_LOG_COOLDOWN_MS = 8000; // กันสแปม 8 วิ/เนื้อหาเดียวกัน
+    function debounce(fn, wait=400){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), wait); }; }
+    function getCsrf(){ const el=document.querySelector('meta[name="csrf-token"]'); return el?el.content:''; }
+    function nowIso(){ return new Date().toISOString(); }
+    function canSendSearchLog(signature){
+      try{
+        const key='web_search_log_cooldown';
+        const last = JSON.parse(localStorage.getItem(key) || '{}');
+        const ok = !last.ts || (Date.now()-last.ts) > __SEARCH_LOG_COOLDOWN_MS || last.sig !== signature;
+        if(ok){ localStorage.setItem(key, JSON.stringify({ ts:Date.now(), sig:signature })); }
+        return ok;
+      }catch(_){ return true; }
     }
+    async function postJson(url, payload){
+      const res = await fetch(url, {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Accept':'application/json',
+          'X-Requested-With':'XMLHttpRequest',
+          'X-CSRF-TOKEN': getCsrf()
+        },
+        credentials:'same-origin',
+        body: JSON.stringify(payload)
+      });
+      if(!res.ok){ console.warn('log-search failed', res.status); }
+    }
+    const sendSearchLogWeb = debounce(({ keyword, filters, resultsCafe=0, resultsNews=0 })=>{
+      const cleanedKeyword = (keyword ?? '').toString().trim();
+      const signature = JSON.stringify({k:cleanedKeyword, f:filters});
+      if(!canSendSearchLog(signature)) return;
 
-    // ส่งรูปแบบเดียวกับฝั่ง LINE: application/x-www-form-urlencoded
-    const logWebSearchLineStyle = (() => {
-      let lastHash = null, lastAt = 0;
-      const throttleMs = 1000;
-
-      return function(payload) {
-        try {
-          const qs = new URLSearchParams(payload).toString();
-          if (qs === lastHash && (Date.now() - lastAt) < throttleMs) return;
-          lastHash = qs; lastAt = Date.now();
-
-          fetch('{{ route('log.search') }}', {
-            method: 'POST',
-            headers: {
-              'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-              'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-              'Accept': 'application/json, text/plain, */*',
-              'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: qs,
-            credentials: 'same-origin'
-          }).catch(()=>{});
-        } catch {}
-      }
-    })();
-
-    // สร้าง payload ให้เข้ากับ controller เดียวกับ LINE
-    function makeLineStylePayload({ query, filtersSnapshot, cafeCount, newsCount }) {
-      const userId = @json(auth()->id());
-      return {
-        // เหมือนฝั่ง LINE
-        channel: 'web',              // แยกช่องทางให้ชัดเจน
-        type: 'search',              // หรือ 'filter'
-        text: (query ?? '').toString(),     // keyword เหมือนข้อความที่ผู้ใช้พิมพ์
-        graph: 0,                    // ❌ ไม่ต้องสร้างกราฟ
-        page: 'welcome',
-
-        // ข้อมูลประกอบ
-        filters_json: JSON.stringify(filtersSnapshot || {}),
-        result_cafes: String(cafeCount ?? 0),
-        result_news: String(newsCount ?? 0),
-        result_total: String((cafeCount ?? 0) + (newsCount ?? 0)),
-
-        // context
-        user_id: userId ?? '',
-        url: window.location.href,
-        ref: document.referrer || '',
-        ua: navigator.userAgent
+      const payload = {
+        source: 'web',
+        keyword: cleanedKeyword,
+        results_count: (resultsCafe||0) + (resultsNews||0),
+        results_breakdown: { cafes: resultsCafe||0, news: resultsNews||0 },
+        filters: {
+          rating: filters?.rating ?? 0,
+          is_new_opening: !!filters?.isNewOpening,
+          days: filters?.days ?? [],
+          time: filters?.time ?? '',
+          price_ranges: filters?.priceRanges ?? [],
+          styles: filters?.styles ?? [],
+          facilities: filters?.facilities ?? [],
+          payment_methods: filters?.paymentMethods ?? [],
+          other_services: filters?.otherServices ?? []
+        },
+        user_agent: navigator.userAgent,
+        searched_at: nowIso()
       };
-    }
+      postJson("{{ route('log.search') }}", payload).catch(()=>{});
+    }, 600);
 
-    const logWebSearchLineStyleDebounced = debounce(logWebSearchLineStyle, 700);
-  </script>
+    /** ============================ */
 
-  {{-- ================== JS: App ================== --}}
-  <script>
     function newsCarousel(config) {
       return {
         activeSlide: 1, totalSlides: config.totalSlides, autoplayInterval: null, autoplay: config.autoplay || false,
@@ -670,11 +692,42 @@
 
         initializeAllData() {
           this.loadCafeData();
-          this.loadNewsData();
+          this.loadNewsData(); // ข่าว dedupe
           this.extractAvailableFilters();
-          this.$watch('searchTerm', () => this.applyFilters()); // คุมทั้งคาเฟ่ + ข่าว
-          this.$watch('filters', () => this.applyFilters(), { deep: true });
-          this.$watch('selectedHour', (h) => { this.filters.time = h ? `${h}:00` : ''; this.applyFilters(); });
+
+          // ✅ ยิง log เมื่อพิมพ์ค้นหา
+          this.$watch('searchTerm', () => {
+            this.applyFilters();
+            sendSearchLogWeb({
+              keyword: this.searchTerm,
+              filters: this.filters,
+              resultsCafe: this.filteredCafes.length,
+              resultsNews: this.filteredNews.length
+            });
+          });
+
+          // ✅ ยิง log เมื่อเปลี่ยนตัวกรอง
+          this.$watch('filters', () => {
+            this.applyFilters();
+            sendSearchLogWeb({
+              keyword: this.searchTerm,
+              filters: this.filters,
+              resultsCafe: this.filteredCafes.length,
+              resultsNews: this.filteredNews.length
+            });
+          }, { deep: true });
+
+          // ✅ เวลาเปิดทำการ
+          this.$watch('selectedHour', (h) => {
+            this.filters.time = h ? `${h}:00` : '';
+            this.applyFilters();
+            sendSearchLogWeb({
+              keyword: this.searchTerm,
+              filters: this.filters,
+              resultsCafe: this.filteredCafes.length,
+              resultsNews: this.filteredNews.length
+            });
+          });
         },
 
         // ===== ข่าว: โหลด + กันซ้ำ =====
@@ -749,7 +802,7 @@
 
         setRatingFilter(star) { this.filters.rating = (this.filters.rating === star) ? 0 : star; },
 
-        // ===== กรองทั้งคาเฟ่ + ข่าว และยิง Log (LINE-style) หลังกรอง =====
+        // ===== กรองทั้งคาเฟ่ + ข่าว =====
         applyFilters() {
           this.displayedCafeCount = this.cafesPerPage;
           const q = normalize(this.searchTerm);
@@ -788,28 +841,6 @@
           const dedupById   = uniqueBy(filtered, n => n.id ?? normalizeTitle(n.title));
           const dedupByName = uniqueBy(dedupById, n => `${normalizeTitle(n.title)}`);
           this.filteredNews = dedupByName;
-
-          // --- ส่ง Log แบบ LINE ---
-          const filtersSnapshot = {
-            rating: this.filters.rating,
-            isNewOpening: this.filters.isNewOpening,
-            time: this.filters.time || '',
-            days: this.filters.days || [],
-            priceRanges: this.filters.priceRanges || [],
-            styles: this.filters.styles || [],
-            facilities: this.filters.facilities || [],
-            paymentMethods: this.filters.paymentMethods || [],
-            otherServices: this.filters.otherServices || [],
-          };
-
-          const payload = makeLineStylePayload({
-            query: this.searchTerm,
-            filtersSnapshot,
-            cafeCount: this.filteredCafes.length,
-            newsCount: this.filteredNews.length
-          });
-
-          logWebSearchLineStyleDebounced(payload);
         },
 
         clearFilters() {
@@ -817,14 +848,6 @@
           this.selectedHour = '';
           this.searchTerm = '';
           this.filteredNews = [...this.allNews];
-
-          const payload = makeLineStylePayload({
-            query: '',
-            filtersSnapshot: this.filters,
-            cafeCount: this.allCafes.length,
-            newsCount: this.allNews.length
-          });
-          logWebSearchLineStyleDebounced(payload);
         },
 
         isLiked(id) { return Array.isArray(this.likedCafeIds) && this.likedCafeIds.includes(id); },

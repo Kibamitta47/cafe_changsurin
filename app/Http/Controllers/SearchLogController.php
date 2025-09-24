@@ -2,61 +2,49 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\SearchLog;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class SearchLogController extends Controller
 {
     public function store(Request $request)
     {
-        // รองรับทั้งกรณีส่ง query อย่างเดียว หรือส่ง filters มาด้วย
+        // รับเฉพาะฟิลด์ตาม migration เท่านั้น
         $data = $request->validate([
-            'query'         => 'nullable|string|max:255',
-            'result_count'  => 'required|integer|min:0',
-            'source'        => 'nullable|string|max:50', // เช่น web-filter | web-search
-            'filters'       => 'nullable|array',         // รายละเอียดตัวกรองทั้งหมด (optional)
-            'filters.rating'           => 'nullable|integer|min:0|max:5',
-            'filters.isNewOpening'     => 'nullable|boolean',
-            'filters.time'             => 'nullable|string|max:10',
-            'filters.days'             => 'nullable|array',
-            'filters.days.*'           => 'string|max:20',
-            'filters.priceRanges'      => 'nullable|array',
-            'filters.priceRanges.*'    => 'string|max:10', // '฿', '฿฿', ...
-            'filters.styles'           => 'nullable|array',
-            'filters.styles.*'         => 'string|max:255',
-            'filters.facilities'       => 'nullable|array',
-            'filters.facilities.*'     => 'string|max:255',
-            'filters.paymentMethods'   => 'nullable|array',
-            'filters.paymentMethods.*' => 'string|max:255',
-            'filters.otherServices'    => 'nullable|array',
-            'filters.otherServices.*'  => 'string|max:255',
+            'query'            => 'required|string|max:2000',
+            'normalized_query' => 'nullable|string|max:2000',
+            'has_results'      => 'required|boolean',
+            'result_count'     => 'required|integer|min:0',
+            'source'           => 'nullable|string|max:50', // web/line/api
         ]);
 
-        $query = trim((string)($data['query'] ?? ''));
-        $normalized = mb_strtolower($query);
-
-        // ต้นทาง (fallback เป็น web-filter)
-        $source = $data['source'] ?? 'web-filter';
-
-        // เก็บรายละเอียดฟิลเตอร์ไว้ใน metadata (ถ้าส่งมา)
-        $metadata = [];
-        if (isset($data['filters']) && is_array($data['filters'])) {
-            $metadata['filters'] = $data['filters'];
+        // กันสแปมระยะสั้น (8 วิ) ตาม query+filter เดิม ๆ จาก same user/ip
+        $identity = Auth::id() ?: $request->ip();
+        $sig = md5(json_encode([
+            'q' => (string)$data['query'],
+            'n' => (string)($data['normalized_query'] ?? ''),
+            's' => (string)($data['source'] ?? 'web'),
+        ]));
+        $lockKey = "searchlog:cooldown:{$identity}:{$sig}";
+        if (Cache::has($lockKey)) {
+            return response()->json(['status' => 'ok', 'skipped' => true]);
         }
+        Cache::put($lockKey, 1, now()->addSeconds(8));
 
-        SearchLog::create([
-            'user_id'          => Auth::id(),
-            'query'            => $query,
-            'normalized_query' => $query === '' ? null : $normalized,
-            'has_results'      => (int)$data['result_count'] > 0,
-            'result_count'     => (int)$data['result_count'],
-            'source'           => $source,
-            'ip'               => $request->ip(),
-            'user_agent'       => $request->userAgent(),
-            'metadata'         => empty($metadata) ? null : $metadata,
+        // บันทึก
+        $log = SearchLog::create([
+            'user_id'         => Auth::id(),
+            'query'           => $data['query'],
+            'normalized_query'=> $data['normalized_query'] ?? null,
+            'has_results'     => (bool)$data['has_results'],
+            'result_count'    => (int)$data['result_count'],
+            'source'          => $data['source'] ?? 'web',
+            'ip'              => $request->ip(),
+            'user_agent'      => $request->userAgent(),
         ]);
 
-        return response()->json(['status' => 'ok']);
+        return response()->json(['status' => 'success', 'id' => $log->id]);
     }
 }
