@@ -472,7 +472,7 @@
         <!-- Right: News -->
         <aside id="news" class="col-span-12 lg:col-span-3 py-4 sm:py-6">
           <div class="lg:sticky lg:top-24">
-            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm space-y-4">
+            <div class="bg-white p-4 sm:p-6 rounded-2xl shadowสม space-y-4">
               <div class="flex items-center justify-between">
                 <h2 class="text-lg sm:text-xl font-bold text-slate-800">ข่าวทั้งหมด</h2>
                 <button class="lg:hidden text-sm text-cyan-600" @click="$refs.newsList.classList.toggle('hidden')">ซ่อน/แสดง</button>
@@ -572,7 +572,82 @@
   {{-- Footer --}}
   @include('components.footer')
 
-  {{-- ================== JS ================== --}}
+  {{-- ================== JS: Log Helpers (debounce + ส่ง log + กันสแปม) ================== --}}
+  <script>
+    // debounce utility
+    function debounce(fn, delay = 600) {
+      let t;
+      return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn(...args), delay);
+      };
+    }
+
+    // ส่ง log ไป backend พร้อมกันสแปม
+    const sendSearchLog = (() => {
+      let lastHash = null;
+      let lastAt = 0;
+      const throttleMs = 1200; // กันสแปมอย่างน้อย 1.2s ต่อ payload เดิม
+
+      return function(payload) {
+        try {
+          const now = Date.now();
+          const json = JSON.stringify(payload);
+          const hash = json; // simple hash: ใช้ข้อความตรงๆก็พอ
+
+          if (hash === lastHash && (now - lastAt) < throttleMs) {
+            return; // ข้ามถ้าเหมือนเดิมและยังไม่พ้นช่วง throttle
+          }
+
+          lastHash = hash;
+          lastAt = now;
+
+          fetch('{{ route('log.search') }}', {
+            method: 'POST',
+            headers: {
+              'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: json,
+            credentials: 'same-origin'
+          }).catch(err => console.error('SearchLog error:', err));
+        } catch (e) {
+          console.error('SearchLog serialize error', e);
+        }
+      };
+    })();
+
+    // สร้าง payload กลาง
+    function buildLogPayload({ query, filtersSnapshot, cafeCount, newsCount }) {
+      const userId = @json(auth()->id());
+      return {
+        source: 'web',              // แยกจาก LINE (ที่คุณมีอยู่)
+        action: 'search_or_filter', // ใช้ทั้งจากช่องค้นหา + ตัวกรอง
+        query_raw: query ?? '',
+        query_normalized: (query ?? '').toString().trim().toLowerCase(),
+        filters: filtersSnapshot,
+        result: {
+          cafes: cafeCount ?? 0,
+          news: newsCount ?? 0,
+          total: (cafeCount ?? 0) + (newsCount ?? 0),
+          has_results: ( (cafeCount ?? 0) + (newsCount ?? 0) ) > 0
+        },
+        context: {
+          url: window.location.href,
+          referrer: document.referrer || null,
+          user_id: userId || null,
+          ua: navigator.userAgent
+        },
+        occurred_at: new Date().toISOString()
+      };
+    }
+    // เวอร์ชัน debounce สำหรับใช้เรียกจาก applyFilters()
+    const sendSearchLogDebounced = debounce(sendSearchLog, 700);
+  </script>
+
+  {{-- ================== JS: App ================== --}}
   <script>
     function newsCarousel(config) {
       return {
@@ -641,9 +716,7 @@
             image: el.dataset.image,
             dateString: el.dataset.dateString
           }));
-          // กันซ้ำรอบที่ 1: ตาม id (ถ้ามี)
           let uniq = uniqueBy(raw, n => n.id ?? normalizeTitle(n.title));
-          // กันซ้ำรอบที่ 2: ตามชื่อข่าว normalize
           uniq = uniqueBy(uniq, n => `${normalizeTitle(n.title)}`);
           this.allNews = uniq;
           this.filteredNews = [...this.allNews];
@@ -705,7 +778,7 @@
 
         setRatingFilter(star) { this.filters.rating = (this.filters.rating === star) ? 0 : star; },
 
-        // ===== กรองทั้งคาเฟ่ + ข่าว และกันข่าวซ้ำหลังกรอง =====
+        // ===== กรองทั้งคาเฟ่ + ข่าว และบันทึก Log หลังกรอง =====
         applyFilters() {
           this.displayedCafeCount = this.cafesPerPage;
           const q = normalize(this.searchTerm);
@@ -744,13 +817,43 @@
           const dedupById   = uniqueBy(filtered, n => n.id ?? normalizeTitle(n.title));
           const dedupByName = uniqueBy(dedupById, n => `${normalizeTitle(n.title)}`);
           this.filteredNews = dedupByName;
+
+          // --- ✅ ยิง Log (debounce + กันซ้ำ) ---
+          const filtersSnapshot = {
+            rating: this.filters.rating,
+            isNewOpening: this.filters.isNewOpening,
+            time: this.filters.time || '',
+            days: this.filters.days || [],
+            priceRanges: this.filters.priceRanges || [],
+            styles: this.filters.styles || [],
+            facilities: this.filters.facilities || [],
+            paymentMethods: this.filters.paymentMethods || [],
+            otherServices: this.filters.otherServices || [],
+          };
+
+          const payload = buildLogPayload({
+            query: this.searchTerm,
+            filtersSnapshot,
+            cafeCount: this.filteredCafes.length,
+            newsCount: this.filteredNews.length
+          });
+
+          sendSearchLogDebounced(payload);
         },
 
         clearFilters() {
           this.filters = { rating:0, time:'', days:[], isNewOpening:false, priceRanges:[], styles:[], facilities:[], paymentMethods:[], otherServices:[] };
           this.selectedHour = '';
           this.searchTerm = '';
-          this.filteredNews = [...this.allNews]; // ✅ รีเซ็ตข่าว (ไม่ซ้ำ)
+          this.filteredNews = [...this.allNews];
+          // ยิง log หลังล้างตัวกรอง
+          const payload = buildLogPayload({
+            query: '',
+            filtersSnapshot: this.filters,
+            cafeCount: this.allCafes.length,
+            newsCount: this.allNews.length
+          });
+          sendSearchLogDebounced(payload);
         },
 
         isLiked(id) { return Array.isArray(this.likedCafeIds) && this.likedCafeIds.includes(id); },
