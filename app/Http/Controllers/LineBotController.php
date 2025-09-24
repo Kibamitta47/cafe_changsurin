@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use App\Models\SearchLog; // ✅ เพิ่มใช้โมเดล SearchLog
 use Carbon\Carbon;
 use Throwable;
 
@@ -62,8 +63,9 @@ class LineBotController extends Controller
                 // ----- เมนูแนะนำคาเฟ่ -----
                 if ($this->isRecommendTrigger($text)) {
                     Log::info('[ROUTE] recommend menu');
-                    $menu = $this->menuRecommendCarousel(); // เมนูจากโค้ดที่ 2 (ตกแต่งใหม่)
+                    $menu = $this->menuRecommendCarousel();
                     $this->safeReplyFlex($replyToken, "เมนูแนะนำคาเฟ่เมืองสุรินทร์", $menu);
+                    // (เมนูนี้เป็น UI แนะนำ ยังไม่ถือเป็นการค้นหา จึงไม่ log)
                     continue;
                 }
 
@@ -77,8 +79,11 @@ class LineBotController extends Controller
                     Log::info('[ROUTE] Top10 (v2 logic)');
                     try {
                         $cafes = $this->getTop10Cafes();
-                        $bubbles = [];
 
+                        // ✅ Log การค้นหา
+                        $this->logSearch($request, 'top10', count($cafes), !empty($cafes), 'line');
+
+                        $bubbles = [];
                         if (!empty($cafes)) {
                             foreach ($cafes as $c) {
                                 $note = '⭐ ' . number_format((float)($c->avg_rating ?? 0), 1)
@@ -110,6 +115,10 @@ class LineBotController extends Controller
 
                     try {
                         $cafes = $this->findCafesByFilter('style:' . $styleName);
+
+                        // ✅ Log การค้นหา
+                        $this->logSearch($request, 'style:'.$styleName, count($cafes), !empty($cafes), 'line');
+
                         $bubbles = [];
                         if (!empty($cafes)) {
                             $cafes = array_slice($cafes, 0, 9);
@@ -164,6 +173,9 @@ class LineBotController extends Controller
                     try {
                         $cafes = $this->findCafesByFilter($filterKey);
 
+                        // ✅ Log การค้นหา
+                        $this->logSearch($request, 'faq:'.$filterKey, count($cafes), !empty($cafes), 'line');
+
                         $bubbles = [];
                         if (!empty($cafes)) {
                             $cafes = array_slice($cafes, 0, 9);
@@ -211,6 +223,7 @@ class LineBotController extends Controller
                             "action" => ["type" => "location","label" => "📍 แชร์ตำแหน่งของฉัน"]
                         ]]]
                     ]);
+                    // (รอรับ location แล้วค่อย log)
                     continue;
                 }
 
@@ -243,6 +256,9 @@ class LineBotController extends Controller
                         ORDER BY distance ASC, cafe_id DESC
                         LIMIT 5
                     ", [$lat, $lng, $lat]);
+
+                    // ✅ Log การค้นหา (nearby)
+                    $this->logSearch($request, 'nearby:'.round($lat,5).','.round($lng,5), count($cafes), !empty($cafes), 'line');
 
                     $bubbles = [];
                     if (!empty($cafes)) {
@@ -307,16 +323,14 @@ class LineBotController extends Controller
     // ---------- เมนูแนะนำคาเฟ่ (ตกแต่ง) ----------
     private function menuRecommendCarousel(): array
     {
-        // สีธีม
         $blue     = "#1E88E5";
         $green    = "#2ECC71";
-        $lavender = "#8A63F6";
         $bgSoft   = "#F7FAFF";
         $chipBg   = ["#8A63F6","#00BCD4","#FF7043","#26A69A","#5C6BC0","#AB47BC","#42A5F5","#7CB342","#EC407A"];
 
         $bubbles = [];
 
-        // Bubble 1: Hero + ปุ่มหมวด
+        // Bubble 1
         $bubbles[] = [
             "type" => "bubble",
             "body" => [
@@ -355,7 +369,7 @@ class LineBotController extends Controller
             "styles" => ["footer" => ["separator" => true]]
         ];
 
-        // Bubble 2: ชิปสไตล์ (Grid 3 คอลัมน์)
+        // Bubble 2: ชิปสไตล์
         $styleLabels = ['มินิมอล','โมเดิร์น','โคซี่/อบอุ่น','ยุโรป','ธรรมชาติ/สวน','ลอฟท์','อินดัสเทรียล','วินเทจ','อาร์ต/แกลเลอรี่'];
         $chips = [];
         foreach ($styleLabels as $i => $label) {
@@ -421,7 +435,7 @@ class LineBotController extends Controller
         return ["type" => "carousel", "contents" => $bubbles];
     }
 
-    // ---------- Top10 (โค้ดที่ 2: popularity score) ----------
+    // ---------- Top10 ----------
     private function getTop10Cafes(): array
     {
         $reviewsAgg = DB::raw("
@@ -667,7 +681,7 @@ class LineBotController extends Controller
         }
     }
 
-    // ---------- Flex Components (ตกแต่ง) ----------
+    // ---------- Flex Components ----------
     private function bubbleBasic($name, $addr, $sub, $phone, $lat, $lng, $mapUrl = null): array
     {
         $mapUrl    = $mapUrl ?: "https://maps.google.com/?q={$lat},{$lng}";
@@ -859,5 +873,24 @@ class LineBotController extends Controller
         $digits = preg_replace('/[^0-9+]/', '', $raw);
         if (!$digits) return null;
         return "tel:{$digits}";
+    }
+
+    // ---------- SearchLog helper ----------
+    private function logSearch(Request $request, string $query, int $count, bool $has, string $source): void
+    {
+        try {
+            SearchLog::create([
+                'user_id'          => null, // LINE user ไม่ได้ map ผู้ใช้ระบบเว็บ
+                'query'            => $query,
+                'normalized_query' => mb_strtolower(trim($query)),
+                'has_results'      => $has,
+                'result_count'     => $count,
+                'source'           => $source,
+                'ip'               => $request->ip(),
+                'user_agent'       => $request->userAgent(),
+            ]);
+        } catch (Throwable $e) {
+            Log::warning('SearchLog save failed (LINE): '.$e->getMessage());
+        }
     }
 }

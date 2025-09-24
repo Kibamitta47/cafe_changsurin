@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cafe;
+use App\Models\SearchLog; // ✅ ใช้บันทึกการค้นหาเว็บ
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -160,7 +161,6 @@ class UserCafeController extends Controller
     {
         $user = Auth::user();
 
-        // ป้องกันซ้ำด้วย unique index (ดู migration ด้านล่าง)
         $user->likedCafes()->toggle($cafe->cafe_id);
 
         $isLiked = $user->likedCafes()
@@ -168,5 +168,40 @@ class UserCafeController extends Controller
             ->exists();
 
         return response()->json(['status' => 'success','is_liked' => $isLiked]);
+    }
+
+    // ✅ เมธอดค้นหา + บันทึก SearchLog
+    public function search(Request $request): View
+    {
+        $q = trim((string)$request->input('q', ''));
+
+        $results = Cafe::query()
+            ->where('status', 'approved')
+            ->where(function ($qq) use ($q) {
+                $qq->where('cafe_name', 'LIKE', "%{$q}%")
+                   ->orWhere('address', 'LIKE', "%{$q}%");
+            })
+            ->orderByDesc('created_at')
+            ->get();
+
+        try {
+            SearchLog::create([
+                'user_id'          => Auth::id(),
+                'query'            => $q,
+                'normalized_query' => mb_strtolower($q),
+                'has_results'      => $results->isNotEmpty(),
+                'result_count'     => $results->count(),
+                'source'           => 'web',
+                'ip'               => $request->ip(),
+                'user_agent'       => $request->userAgent(),
+            ]);
+        } catch (\Throwable $e) {
+            // กันพังหน้าเว็บ ถ้า log fail
+        }
+
+        return view('user.cafes.search-results', [
+            'results' => $results,
+            'query'   => $q,
+        ]);
     }
 }

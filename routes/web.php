@@ -88,6 +88,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/cafes/{cafe}/edit', [UserCafeController::class, 'edit'])->name('user.cafes.edit');
     Route::put('/cafes/{cafe}', [UserCafeController::class, 'update'])->name('user.cafes.update');
     Route::delete('/cafes/{cafe}', [UserCafeController::class, 'destroy'])->name('user.cafes.destroy');
+    Route::get('/cafes/search', [UserCafeController::class, 'search'])->name('cafes.search');
+
 
     // Liked Cafes
 Route::middleware('auth')->group(function () {
