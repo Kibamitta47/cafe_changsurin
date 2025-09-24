@@ -165,285 +165,137 @@
 
 {{-- ✅ Scripts: สร้างกราฟเฉพาะเมื่อ $showGraphs = true --}}
 @if ($showGraphs)
-<!-- ✅ วางไฟล์นี้หลัง CDN ของ Chart.js และก่อนปิด </body>  -->
+@if ($showGraphs)
 <script>
-/* =============== ฟอนต์ไทยสำหรับ Chart.js =============== */
+// ===== 1) บังคับฟอนต์ไทยให้ Chart.js =====
 Chart.defaults.font.family = "'Kanit','Noto Sans Thai','Tahoma',sans-serif";
 Chart.defaults.locale = 'th';
-// กันบางเคสที่ canvas ดึงฟอนต์อื่น
 const __chartFontStyle = document.createElement('style');
 __chartFontStyle.textContent = "canvas{font-family:'Kanit','Noto Sans Thai','Tahoma',sans-serif !important}";
 document.head.appendChild(__chartFontStyle);
 
-/* =============== Helper: ตัดข้อความแบบ grapheme-safe =============== */
-/** แยก "กลุ่มอักขระ" (ตัวอักษรหลัก + วรรณยุกต์) */
+// ===== 2) Helper: ตัดข้อความแบบ grapheme-safe (รักษาวรรณยุกต์) =====
 function graphemes(str){
   const out = [];
-  // กลุ่ม = อักขระที่ไม่ใช่เครื่องหมายประกอบ + เครื่องหมายประกอบที่ตามหลัง
-  const re = /\P{M}\p{M}*/gu;
-  let m;
-  while ((m = re.exec(str)) !== null) out.push(m[0]);
-  return out.length ? out : Array.from(str); // fallback
+  const re = /\P{M}\p{M}*/gu; // ตัวฐาน + เครื่องหมายประกอบที่ตามหลัง
+  let m; while ((m = re.exec(str ?? '')) !== null) out.push(m[0]);
+  return out.length ? out : Array.from(str ?? '');
 }
-/** ตัดความยาวโดยไม่ทำให้สระ/วรรณยุกต์หลุด */
 function truncateGrapheme(str, max){
-  const g = graphemes(str ?? '');
-  if (g.length <= max) return str ?? '';
-  return g.slice(0, max).join('') + '…';
+  const g = graphemes(str);
+  return g.length <= max ? (str ?? '') : g.slice(0, max).join('') + '…';
 }
 
-/* =============== วาดกราฟทั้งหมด =============== */
-document.addEventListener('DOMContentLoaded', function () {
-  // ===== ผู้สมัครสมาชิก =====
+// ===== 3) ฟังก์ชันวาดกราฟทั้งหมด (ย้ายจาก DOMContentLoaded มาไว้ที่นี่) =====
+function drawAllCharts(){
+  // ผู้สมัคร
   const userCtx = document.getElementById('userRegistrationChart');
-  if (userCtx) {
-    new Chart(userCtx, {
-      type: 'bar',
-      data: {
-        labels: {!! json_encode($chartLabels ?? []) !!},
-        datasets: [{
-          label: 'ผู้สมัคร',
-          data: {!! json_encode($chartData ?? []) !!},
-          backgroundColor: 'rgba(59,130,246,0.7)',
-          borderColor: 'rgba(59,130,246,1)',
-          borderWidth: 1,
-          borderRadius: 8,
-          barPercentage: 0.7,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: { beginAtZero: true, ticks: { stepSize: 1, color: '#64748b' }, grid: { color: '#e2e8f0' } },
-          x: { ticks: { color: '#64748b' }, grid: { display: false } }
-        },
-        plugins: { legend: { display: false } }
-      }
-    });
-  }
+  if (userCtx) new Chart(userCtx, {
+    type:'bar',
+    data:{ labels:{!! json_encode($chartLabels ?? []) !!},
+      datasets:[{ label:'ผู้สมัคร', data:{!! json_encode($chartData ?? []) !!},
+        backgroundColor:'rgba(59,130,246,0.7)', borderColor:'rgba(59,130,246,1)', borderWidth:1, borderRadius:8, barPercentage:0.7 }]}
+    ,options:{ responsive:true, maintainAspectRatio:false,
+      scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1, color:'#64748b' }, grid:{ color:'#e2e8f0' } },
+               x:{ ticks:{ color:'#64748b' }, grid:{ display:false } } }, plugins:{ legend:{ display:false } } });
 
-  // ===== สถานะคาเฟ่ =====
+  // สถานะคาเฟ่
   const statusCtx = document.getElementById('cafeStatusChart');
-  if (statusCtx) {
-    new Chart(statusCtx, {
-      type: 'doughnut',
-      data: {
-        labels: {!! json_encode($cafeStatusLabels ?? []) !!},
-        datasets: [{
-          data: {!! json_encode($cafeStatusCounts ?? []) !!},
-          backgroundColor: ['#4ade80', '#facc15', '#f87171'],
-          borderColor: '#fff',
-          borderWidth: 3,
-          hoverOffset: 8
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '70%',
-        plugins: {
-          legend: { position: 'bottom', labels: { color: '#334155', font: { size: 13, weight: '500' }, boxWidth: 12, padding: 15 } }
-        }
-      }
-    });
-  }
+  if (statusCtx) new Chart(statusCtx, {
+    type:'doughnut',
+    data:{ labels:{!! json_encode($cafeStatusLabels ?? []) !!},
+      datasets:[{ data:{!! json_encode($cafeStatusCounts ?? []) !!},
+        backgroundColor:['#4ade80','#facc15','#f87171'], borderColor:'#fff', borderWidth:3, hoverOffset:8 }]},
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'70%',
+      plugins:{ legend:{ position:'bottom', labels:{ color:'#334155', font:{ size:13, weight:'500' }, boxWidth:12, padding:15 } } } });
 
-  // ===== คาเฟ่ยอดนิยม =====
+  // คาเฟ่ยอดนิยม
   const topCafesCtx = document.getElementById('topCafesChart');
-  if (topCafesCtx) {
-    new Chart(topCafesCtx, {
-      type: 'bar',
-      data: {
-        labels: {!! json_encode($topCafeLabels ?? []) !!},
-        datasets: [{
-          label: 'คะแนนเฉลี่ย',
-          data: {!! json_encode($topCafeData ?? []) !!},
-          backgroundColor: 'rgba(168,85,247,0.7)',
-          borderColor: 'rgba(168,85,247,1)',
-          borderWidth: 1,
-          borderRadius: 8,
-        }]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: { beginAtZero: true, max: 5, ticks: { color: '#475569', stepSize: 1 }, grid: { color: '#e2e8f0' } },
-          y: { ticks: { color: '#475569' }, grid: { display: false } }
-        },
-        plugins: { legend: { display: false } }
-      }
-    });
-  }
+  if (topCafesCtx) new Chart(topCafesCtx, {
+    type:'bar',
+    data:{ labels:{!! json_encode($topCafeLabels ?? []) !!},
+      datasets:[{ label:'คะแนนเฉลี่ย', data:{!! json_encode($topCafeData ?? []) !!},
+        backgroundColor:'rgba(168,85,247,0.7)', borderColor:'rgba(168,85,247,1)', borderWidth:1, borderRadius:8 }]},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      scales:{ x:{ beginAtZero:true, max:5, ticks:{ color:'#475569', stepSize:1 }, grid:{ color:'#e2e8f0' } },
+               y:{ ticks:{ color:'#475569' }, grid:{ display:false } } },
+      plugins:{ legend:{ display:false } } });
 
-  // ===== แนวโน้มการค้นหา (15 วัน) =====
+  // แนวโน้มการค้นหา
   const trendCtx = document.getElementById('searchTrendChart');
-  if (trendCtx) {
-    new Chart(trendCtx, {
-      type: 'line',
-      data: {
-        labels: {!! json_encode($searchTrendLabels ?? []) !!},
-        datasets: [{
-          label: 'จำนวนการค้นหา',
-          data: {!! json_encode($searchTrendData ?? []) !!},
-          tension: 0.35,
-          fill: true,
-          backgroundColor: 'rgba(14,165,233,0.15)',
-          borderColor: 'rgba(14,165,233,1)',
-          borderWidth: 2,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#475569' } },
-          x: { grid: { display: false }, ticks: { color: '#475569' } }
-        },
-        plugins: {
-          legend: { display: false },
-          tooltip: { mode: 'index', intersect: false }
-        }
-      }
-    });
-  }
+  if (trendCtx) new Chart(trendCtx, {
+    type:'line',
+    data:{ labels:{!! json_encode($searchTrendLabels ?? []) !!},
+      datasets:[{ label:'จำนวนการค้นหา', data:{!! json_encode($searchTrendData ?? []) !!},
+        tension:0.35, fill:true, backgroundColor:'rgba(14,165,233,0.15)', borderColor:'rgba(14,165,233,1)',
+        borderWidth:2, pointRadius:3, pointHoverRadius:5 }]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{ y:{ beginAtZero:true, grid:{ color:'#e2e8f0' }, ticks:{ color:'#475569' } },
+               x:{ grid:{ display:false }, ticks:{ color:'#475569' } } },
+      plugins:{ legend:{ display:false }, tooltip:{ mode:'index', intersect:false } } });
 
-  // ===== ผลลัพธ์การค้นหา (พบ/ไม่พบ) =====
+  // ผลลัพธ์การค้นหา
   const outcomeCtx = document.getElementById('searchOutcomeChart');
-  if (outcomeCtx) {
-    new Chart(outcomeCtx, {
-      type: 'doughnut',
-      data: {
-        labels: {!! json_encode($searchOutcomeLabels ?? []) !!},
-        datasets: [{
-          data: {!! json_encode($searchOutcomeData ?? []) !!},
-          backgroundColor: ['#22c55e', '#ef4444'],
-          borderColor: '#fff',
-          borderWidth: 3,
-          hoverOffset: 8
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '68%',
-        plugins: {
-          legend: { position: 'bottom', labels: { color: '#334155', font: { size: 13, weight: '500' }, boxWidth: 12, padding: 14 } },
-          tooltip: {
-            callbacks: {
-              label: function(ctx){
-                const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
-                const val = ctx.parsed;
-                const pct = total ? (val*100/total).toFixed(1) : 0;
-                return ` ${ctx.label}: ${val} ครั้ง (${pct}%)`;
-              }
-            }
-          }
-        }
-      }
-    });
-  }
+  if (outcomeCtx) new Chart(outcomeCtx, {
+    type:'doughnut',
+    data:{ labels:{!! json_encode($searchOutcomeLabels ?? []) !!},
+      datasets:[{ data:{!! json_encode($searchOutcomeData ?? []) !!},
+        backgroundColor:['#22c55e','#ef4444'], borderColor:'#fff', borderWidth:3, hoverOffset:8 }]},
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
+      plugins:{ legend:{ position:'bottom', labels:{ color:'#334155', font:{ size:13, weight:'500' }, boxWidth:12, padding:14 } },
+        tooltip:{ callbacks:{ label: function(ctx){ const total=ctx.dataset.data.reduce((a,b)=>a+b,0);
+          const val=ctx.parsed; const pct = total ? (val*100/total).toFixed(1) : 0; return ` ${ctx.label}: ${val} ครั้ง (${pct}%)`; } } } } });
 
-  // ===== ชั่วโมงยอดนิยม (7 วัน) =====
+  // ชั่วโมงยอดนิยม
   const hourCtx = document.getElementById('popularHourChart');
-  if (hourCtx) {
-    new Chart(hourCtx, {
-      type: 'bar',
-      data: {
-        labels: {!! json_encode($hourLabels ?? []) !!}.map(h => `${String(h).padStart(2,'0')}:00`),
-        datasets: [{
-          label: 'จำนวนการค้นหา',
-          data: {!! json_encode($hourCounts ?? []) !!},
-          backgroundColor: 'rgba(59,130,246,0.7)',
-          borderColor: 'rgba(59,130,246,1)',
-          borderWidth: 1,
-          borderRadius: 6,
-          barPercentage: 0.8,
-          categoryPercentage: 0.9,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#475569' } },
-          x: { grid: { display: false }, ticks: { color: '#475569', maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } }
-        },
-        plugins: { legend: { display: false } }
-      }
-    });
-  }
+  if (hourCtx) new Chart(hourCtx, {
+    type:'bar',
+    data:{ labels:{!! json_encode($hourLabels ?? []) !!}.map(h => `${String(h).padStart(2,'0')}:00`),
+      datasets:[{ label:'จำนวนการค้นหา', data:{!! json_encode($hourCounts ?? []) !!},
+        backgroundColor:'rgba(59,130,246,0.7)', borderColor:'rgba(59,130,246,1)', borderWidth:1, borderRadius:6,
+        barPercentage:0.8, categoryPercentage:0.9 }]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{ y:{ beginAtZero:true, grid:{ color:'#e2e8f0' }, ticks:{ color:'#475569' } },
+               x:{ grid:{ display:false }, ticks:{ color:'#475569', maxRotation:0, autoSkip:true, maxTicksLimit:12 } } },
+      plugins:{ legend:{ display:false } } });
 
-  // ===== คีย์เวิร์ดยอดฮิต Top 10 (จุดที่แก้ให้รองรับสระ/วรรณยุกต์) =====
+  // คีย์เวิร์ดยอดฮิต (สำคัญ: ใช้ truncateGrapheme)
   const topKeyCtx = document.getElementById('topKeywordChart');
   if (topKeyCtx) {
     const __labelsTopKeyword = {!! json_encode($topKeywordLabels ?? []) !!};
     new Chart(topKeyCtx, {
-      type: 'bar',
-      data: {
-        labels: __labelsTopKeyword,
-        datasets: [{
-          label: 'จำนวนครั้ง',
-          data: {!! json_encode($topKeywordCounts ?? []) !!},
-          backgroundColor: 'rgba(168,85,247,0.7)',
-          borderColor: 'rgba(168,85,247,1)',
-          borderWidth: 1,
-          borderRadius: 8,
-        }]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#475569' } },
-          y: {
-            grid: { display: false },
-            ticks: {
-              color: '#475569',
-              // ✅ ย่อด้วย truncateGrapheme เพื่อไม่ให้สระ/วรรณยุกต์หลุด
-              callback: (v, i) => truncateGrapheme(__labelsTopKeyword[i] || '', 18)
-            }
-          }
-        },
-        plugins: { legend: { display: false } }
-      }
-    });
+      type:'bar',
+      data:{ labels: __labelsTopKeyword,
+        datasets:[{ label:'จำนวนครั้ง', data:{!! json_encode($topKeywordCounts ?? []) !!},
+          backgroundColor:'rgba(168,85,247,0.7)', borderColor:'rgba(168,85,247,1)', borderWidth:1, borderRadius:8 }]},
+      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        scales:{ x:{ beginAtZero:true, grid:{ color:'#e2e8f0' }, ticks:{ color:'#475569' } },
+                 y:{ grid:{ display:false }, ticks:{ color:'#475569',
+                      callback: (v,i)=> truncateGrapheme(__labelsTopKeyword[i] || '', 18) } } },
+        plugins:{ legend:{ display:false } } });
   }
 
-  // ===== วันในสัปดาห์ยอดนิยม =====
+  // วันในสัปดาห์ยอดนิยม
   const weekdayCtx = document.getElementById('popularWeekdayChart');
-  if (weekdayCtx) {
-    new Chart(weekdayCtx, {
-      type: 'bar',
-      data: {
-        labels: {!! json_encode($weekdayLabels ?? []) !!},
-        datasets: [{
-          label: 'จำนวนการค้นหา',
-          data: {!! json_encode($weekdayCounts ?? []) !!},
-          backgroundColor: 'rgba(16,185,129,0.7)',
-          borderColor: 'rgba(16,185,129,1)',
-          borderWidth: 1,
-          borderRadius: 8,
-          barPercentage: 0.7,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#475569' } },
-          x: { grid: { display: false }, ticks: { color: '#475569' } }
-        },
-        plugins: { legend: { display: false } }
-      }
-    });
-  }
-});
+  if (weekdayCtx) new Chart(weekdayCtx, {
+    type:'bar',
+    data:{ labels:{!! json_encode($weekdayLabels ?? []) !!},
+      datasets:[{ label:'จำนวนการค้นหา', data:{!! json_encode($weekdayCounts ?? []) !!},
+        backgroundColor:'rgba(16,185,129,0.7)', borderColor:'rgba(16,185,129,1)', borderWidth:1, borderRadius:8, barPercentage:0.7 }]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{ y:{ beginAtZero:true, grid:{ color:'#e2e8f0' }, ticks:{ color:'#475569' } },
+               x:{ grid:{ display:false }, ticks:{ color:'#475569' } } },
+      plugins:{ legend:{ display:false } } });
+}
+
+// ===== 4) รอให้ฟอนต์โหลดครบก่อนวาดกราฟ =====
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(drawAllCharts);
+} else {
+  // fallback: รอ window.onload
+  window.addEventListener('load', drawAllCharts);
+}
 </script>
+@endif
 
 @endif
