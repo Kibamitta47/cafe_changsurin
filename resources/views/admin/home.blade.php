@@ -2,8 +2,19 @@
 
 {{-- CDN ของ Chart.js --}}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-{{-- CDN ของ Tailwind CSS (ตรวจสอบให้แน่ใจว่าโปรเจกต์ของคุณมี Tailwind) --}}
+{{-- CDN ของ Tailwind CSS --}}
 <script src="https://cdn.tailwindcss.com"></script>
+
+{{-- ✅ โหลดฟอนต์ไทยให้หน้านี้โดยตรง --}}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  /* บังคับให้ทั้งหน้ากับ canvas ใช้ฟอนต์ไทย */
+  body { font-family: 'Kanit','Noto Sans Thai','Tahoma',sans-serif; }
+  canvas { font-family: 'Kanit','Noto Sans Thai','Tahoma',sans-serif !important; }
+</style>
 
 @php
     // ใช้พารามิเตอร์ graph=0 เพื่อซ่อนกราฟทั้งหมด หรือส่ง $showGraphs=false จาก Controller ก็ได้
@@ -149,7 +160,7 @@
                 </div>
             </div>
         @else
-            {{-- เมื่อซ่อนกราฟ แสดงโน้ตสั้น ๆ (ถ้าไม่อยากแสดงอะไรเลยลบส่วนนี้ได้) --}}
+            {{-- เมื่อซ่อนกราฟ --}}
             <div class="mb-8">
                 <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                     <h2 class="text-lg font-bold text-slate-800 mb-1">โหมดไม่แสดงกราฟ</h2>
@@ -163,18 +174,17 @@
     </div>
 </div>
 
-{{-- ✅ Scripts: สร้างกราฟเฉพาะเมื่อ $showGraphs = true --}}
-@if ($showGraphs)
+{{-- ✅ Scripts: วาดกราฟเฉพาะเมื่อ $showGraphs = true --}}
 @if ($showGraphs)
 <script>
-// ===== 1) บังคับฟอนต์ไทยให้ Chart.js =====
+/* ===== 1) บังคับฟอนต์ไทยให้ Chart.js ===== */
 Chart.defaults.font.family = "'Kanit','Noto Sans Thai','Tahoma',sans-serif";
 Chart.defaults.locale = 'th';
 const __chartFontStyle = document.createElement('style');
 __chartFontStyle.textContent = "canvas{font-family:'Kanit','Noto Sans Thai','Tahoma',sans-serif !important}";
 document.head.appendChild(__chartFontStyle);
 
-// ===== 2) Helper: ตัดข้อความแบบ grapheme-safe (รักษาวรรณยุกต์) =====
+/* ===== 2) Helper: ตัดข้อความแบบ grapheme-safe (รักษาวรรณยุกต์) ===== */
 function graphemes(str){
   const out = [];
   const re = /\P{M}\p{M}*/gu; // ตัวฐาน + เครื่องหมายประกอบที่ตามหลัง
@@ -186,7 +196,7 @@ function truncateGrapheme(str, max){
   return g.length <= max ? (str ?? '') : g.slice(0, max).join('') + '…';
 }
 
-// ===== 3) ฟังก์ชันวาดกราฟทั้งหมด (ย้ายจาก DOMContentLoaded มาไว้ที่นี่) =====
+/* ===== 3) ฟังก์ชันวาดกราฟทั้งหมด ===== */
 function drawAllCharts(){
   // ผู้สมัคร
   const userCtx = document.getElementById('userRegistrationChart');
@@ -194,8 +204,8 @@ function drawAllCharts(){
     type:'bar',
     data:{ labels:{!! json_encode($chartLabels ?? []) !!},
       datasets:[{ label:'ผู้สมัคร', data:{!! json_encode($chartData ?? []) !!},
-        backgroundColor:'rgba(59,130,246,0.7)', borderColor:'rgba(59,130,246,1)', borderWidth:1, borderRadius:8, barPercentage:0.7 }]}
-    ,options:{ responsive:true, maintainAspectRatio:false,
+        backgroundColor:'rgba(59,130,246,0.7)', borderColor:'rgba(59,130,246,1)', borderWidth:1, borderRadius:8, barPercentage:0.7 }]},
+    options:{ responsive:true, maintainAspectRatio:false,
       scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1, color:'#64748b' }, grid:{ color:'#e2e8f0' } },
                x:{ ticks:{ color:'#64748b' }, grid:{ display:false } } }, plugins:{ legend:{ display:false } } });
 
@@ -259,7 +269,7 @@ function drawAllCharts(){
                x:{ grid:{ display:false }, ticks:{ color:'#475569', maxRotation:0, autoSkip:true, maxTicksLimit:12 } } },
       plugins:{ legend:{ display:false } } });
 
-  // คีย์เวิร์ดยอดฮิต (สำคัญ: ใช้ truncateGrapheme)
+  // คีย์เวิร์ดยอดฮิต (ใช้ truncateGrapheme)
   const topKeyCtx = document.getElementById('topKeywordChart');
   if (topKeyCtx) {
     const __labelsTopKeyword = {!! json_encode($topKeywordLabels ?? []) !!};
@@ -288,14 +298,11 @@ function drawAllCharts(){
       plugins:{ legend:{ display:false } } });
 }
 
-// ===== 4) รอให้ฟอนต์โหลดครบก่อนวาดกราฟ =====
+/* ===== 4) รอให้ฟอนต์โหลดครบก่อนวาดกราฟ ===== */
 if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(drawAllCharts);
 } else {
-  // fallback: รอ window.onload
   window.addEventListener('load', drawAllCharts);
 }
 </script>
-@endif
-
 @endif
