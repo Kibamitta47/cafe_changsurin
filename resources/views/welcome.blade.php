@@ -302,19 +302,6 @@
               </div>
 
               <div class="border-t border-slate-200 pt-3">
-                <h4 class="font-semibold text-slate-700 mb-2 text-sm">ช่องทางชำระเงิน</h4>
-                <div class="space-y-1">
-                  <template x-for="m in availableFilters.paymentMethods" :key="m">
-                    <label class="flex items-center text-slate-600 text-sm">
-                      <input type="checkbox" x-model="filters.paymentMethods" :value="m"
-                             class="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500">
-                      <span class="ml-2" x-text="m"></span>
-                    </label>
-                  </template>
-                </div>
-              </div>
-
-              <div class="border-t border-slate-200 pt-3">
                 <h4 class="font-semibold text-slate-700 mb-2 text-sm">สิ่งอำนวยความสะดวก</h4>
                 <div class="space-y-1 max-h-40 overflow-y-auto pr-2">
                   <template x-for="f in availableFilters.facilities" :key="f">
@@ -417,7 +404,6 @@
                         <i class="fa-regular fa-clock w-4 h-4 mr-1.5 text-indigo-500 shrink-0"></i>
                         <span x-text="`${cafe.openDay}${cafe.closeDay ? ' - ' + cafe.closeDay : ''}${cafe.openTime ? `, ${cafe.openTime} น. - ${cafe.closeTime} น.` : ''}`"></span>
                       </div>
-                      <!-- ✅ ใช้ priceText ที่ normalize แล้ว -->
                       <div x-show="cafe.priceLevel" class="flex items-center">
                         <i class="fa-solid fa-tags w-4 h-4 mr-1.5 text-green-500 shrink-0"></i>
                         <span>ราคา: </span><span class="ml-1" x-text="cafe.priceText"></span>
@@ -472,7 +458,7 @@
         <!-- Right: News -->
         <aside id="news" class="col-span-12 lg:col-span-3 py-4 sm:py-6">
           <div class="lg:sticky lg:top-24">
-            <div class="bg-white p-4 sm:p-6 rounded-2xl shadowสม space-y-4">
+            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm space-y-4">
               <div class="flex items-center justify-between">
                 <h2 class="text-lg sm:text-xl font-bold text-slate-800">ข่าวทั้งหมด</h2>
                 <button class="lg:hidden text-sm text-cyan-600" @click="$refs.newsList.classList.toggle('hidden')">ซ่อน/แสดง</button>
@@ -572,79 +558,64 @@
   {{-- Footer --}}
   @include('components.footer')
 
-  {{-- ================== JS: Log Helpers (debounce + ส่ง log + กันสแปม) ================== --}}
+  {{-- ================== JS: Log Helpers (LINE-style form post + debounce + กันสแปม + ไม่สร้างกราฟ) ================== --}}
   <script>
-    // debounce utility
     function debounce(fn, delay = 600) {
-      let t;
-      return (...args) => {
-        clearTimeout(t);
-        t = setTimeout(() => fn(...args), delay);
-      };
+      let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), delay); };
     }
 
-    // ส่ง log ไป backend พร้อมกันสแปม
-    const sendSearchLog = (() => {
-      let lastHash = null;
-      let lastAt = 0;
-      const throttleMs = 1200; // กันสแปมอย่างน้อย 1.2s ต่อ payload เดิม
+    // ส่งรูปแบบเดียวกับฝั่ง LINE: application/x-www-form-urlencoded
+    const logWebSearchLineStyle = (() => {
+      let lastHash = null, lastAt = 0;
+      const throttleMs = 1000;
 
       return function(payload) {
         try {
-          const now = Date.now();
-          const json = JSON.stringify(payload);
-          const hash = json; // simple hash: ใช้ข้อความตรงๆก็พอ
-
-          if (hash === lastHash && (now - lastAt) < throttleMs) {
-            return; // ข้ามถ้าเหมือนเดิมและยังไม่พ้นช่วง throttle
-          }
-
-          lastHash = hash;
-          lastAt = now;
+          const qs = new URLSearchParams(payload).toString();
+          if (qs === lastHash && (Date.now() - lastAt) < throttleMs) return;
+          lastHash = qs; lastAt = Date.now();
 
           fetch('{{ route('log.search') }}', {
             method: 'POST',
             headers: {
               'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
+              'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+              'Accept': 'application/json, text/plain, */*',
               'X-Requested-With': 'XMLHttpRequest'
             },
-            body: json,
+            body: qs,
             credentials: 'same-origin'
-          }).catch(err => console.error('SearchLog error:', err));
-        } catch (e) {
-          console.error('SearchLog serialize error', e);
-        }
-      };
+          }).catch(()=>{});
+        } catch {}
+      }
     })();
 
-    // สร้าง payload กลาง
-    function buildLogPayload({ query, filtersSnapshot, cafeCount, newsCount }) {
+    // สร้าง payload ให้เข้ากับ controller เดียวกับ LINE
+    function makeLineStylePayload({ query, filtersSnapshot, cafeCount, newsCount }) {
       const userId = @json(auth()->id());
       return {
-        source: 'web',              // แยกจาก LINE (ที่คุณมีอยู่)
-        action: 'search_or_filter', // ใช้ทั้งจากช่องค้นหา + ตัวกรอง
-        query_raw: query ?? '',
-        query_normalized: (query ?? '').toString().trim().toLowerCase(),
-        filters: filtersSnapshot,
-        result: {
-          cafes: cafeCount ?? 0,
-          news: newsCount ?? 0,
-          total: (cafeCount ?? 0) + (newsCount ?? 0),
-          has_results: ( (cafeCount ?? 0) + (newsCount ?? 0) ) > 0
-        },
-        context: {
-          url: window.location.href,
-          referrer: document.referrer || null,
-          user_id: userId || null,
-          ua: navigator.userAgent
-        },
-        occurred_at: new Date().toISOString()
+        // เหมือนฝั่ง LINE
+        channel: 'web',              // แยกช่องทางให้ชัดเจน
+        type: 'search',              // หรือ 'filter'
+        text: (query ?? '').toString(),     // keyword เหมือนข้อความที่ผู้ใช้พิมพ์
+        graph: 0,                    // ❌ ไม่ต้องสร้างกราฟ
+        page: 'welcome',
+
+        // ข้อมูลประกอบ
+        filters_json: JSON.stringify(filtersSnapshot || {}),
+        result_cafes: String(cafeCount ?? 0),
+        result_news: String(newsCount ?? 0),
+        result_total: String((cafeCount ?? 0) + (newsCount ?? 0)),
+
+        // context
+        user_id: userId ?? '',
+        url: window.location.href,
+        ref: document.referrer || '',
+        ua: navigator.userAgent
       };
     }
-    // เวอร์ชัน debounce สำหรับใช้เรียกจาก applyFilters()
-    const sendSearchLogDebounced = debounce(sendSearchLog, 700);
+
+    const logWebSearchLineStyleDebounced = debounce(logWebSearchLineStyle, 700);
   </script>
 
   {{-- ================== JS: App ================== --}}
@@ -699,9 +670,9 @@
 
         initializeAllData() {
           this.loadCafeData();
-          this.loadNewsData(); // ✅ ข่าว dedupe ตั้งแต่โหลด
+          this.loadNewsData();
           this.extractAvailableFilters();
-          this.$watch('searchTerm', () => this.applyFilters()); // ✅ ช่องค้นหาเดียว คุมทั้งคาเฟ่+ข่าว
+          this.$watch('searchTerm', () => this.applyFilters()); // คุมทั้งคาเฟ่ + ข่าว
           this.$watch('filters', () => this.applyFilters(), { deep: true });
           this.$watch('selectedHour', (h) => { this.filters.time = h ? `${h}:00` : ''; this.applyFilters(); });
         },
@@ -778,7 +749,7 @@
 
         setRatingFilter(star) { this.filters.rating = (this.filters.rating === star) ? 0 : star; },
 
-        // ===== กรองทั้งคาเฟ่ + ข่าว และบันทึก Log หลังกรอง =====
+        // ===== กรองทั้งคาเฟ่ + ข่าว และยิง Log (LINE-style) หลังกรอง =====
         applyFilters() {
           this.displayedCafeCount = this.cafesPerPage;
           const q = normalize(this.searchTerm);
@@ -818,7 +789,7 @@
           const dedupByName = uniqueBy(dedupById, n => `${normalizeTitle(n.title)}`);
           this.filteredNews = dedupByName;
 
-          // --- ✅ ยิง Log (debounce + กันซ้ำ) ---
+          // --- ส่ง Log แบบ LINE ---
           const filtersSnapshot = {
             rating: this.filters.rating,
             isNewOpening: this.filters.isNewOpening,
@@ -831,14 +802,14 @@
             otherServices: this.filters.otherServices || [],
           };
 
-          const payload = buildLogPayload({
+          const payload = makeLineStylePayload({
             query: this.searchTerm,
             filtersSnapshot,
             cafeCount: this.filteredCafes.length,
             newsCount: this.filteredNews.length
           });
 
-          sendSearchLogDebounced(payload);
+          logWebSearchLineStyleDebounced(payload);
         },
 
         clearFilters() {
@@ -846,14 +817,14 @@
           this.selectedHour = '';
           this.searchTerm = '';
           this.filteredNews = [...this.allNews];
-          // ยิง log หลังล้างตัวกรอง
-          const payload = buildLogPayload({
+
+          const payload = makeLineStylePayload({
             query: '',
             filtersSnapshot: this.filters,
             cafeCount: this.allCafes.length,
             newsCount: this.allNews.length
           });
-          sendSearchLogDebounced(payload);
+          logWebSearchLineStyleDebounced(payload);
         },
 
         isLiked(id) { return Array.isArray(this.likedCafeIds) && this.likedCafeIds.includes(id); },
