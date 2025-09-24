@@ -14,6 +14,7 @@ use App\Http\Controllers\LineBotController;
 use App\Http\Controllers\UserReviewController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SearchLogController;
 
 
 
@@ -157,3 +158,4 @@ Route::middleware('auth:admin')->prefix('admin')->name('admin.')->group(function
 Route::get('/cafes/{cafe}', [AdminCafeController::class, 'show'])->name('cafes.show');
 
 Route::post('/line/webhook', [LineBotController::class, 'webhook']);
+Route::post('/log-search', [SearchLogController::class, 'store'])->name('log.search');

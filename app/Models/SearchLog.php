@@ -20,6 +20,7 @@ class SearchLog extends Model
         'source',
         'ip',
         'user_agent',
+        'metadata',
     ];
 
     protected $casts = [
