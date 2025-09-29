@@ -14,7 +14,21 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
      */
     public function register(): void
     {
-        // Telescope::night();
+        // เปิดได้เฉพาะ local หรือเมื่อระบุให้เปิดอย่างชัดเจนผ่าน config/env
+        $enabled = (bool) (config('telescope.enabled') ?? env('TELESCOPE_ENABLED', false));
+
+        if (!app()->environment('local') || !$enabled) {
+            // ป้องกันไม่ให้มีการอัดข้อมูลหรือเขียน DB ใด ๆ บนโปรดักชัน
+            if (class_exists(Telescope::class)) {
+                Telescope::stopRecording();
+                Telescope::filter(fn () => false);
+            }
+            return;
+        }
+
+        // ==== ด้านล่างนี้จะทำงานเฉพาะใน local/dev เท่านั้น ====
+
+        // Telescope::night(); // เปิด dark theme ได้ถ้าต้องการ
 
         $this->hideSensitiveRequestDetails();
 
